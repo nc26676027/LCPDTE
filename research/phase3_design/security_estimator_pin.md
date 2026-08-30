@@ -34,6 +34,9 @@ files from changing the executed estimator semantics.
 - micromamba SHA-256:
   `9689782d863c05a1bf5d2d371ba527104e7a4eb4310c1637d8653b751aed9c82`
 - SageMath: `10.9`
+- Canonical Sage version-record SHA-256 (exact content `10.9\n`, with CRLF
+  normalized to LF):
+  `65c57161b58002a9784f3b056b693ebe515469e80c9a11afe3d4423e671af8a0`
 - Explicit package records: 389
 - Canonical explicit-lock SHA-256 (CRLF normalized to LF):
   `9f5fb0b9e49d71352b40e64adca1955fe4b874999a5c817112b2eaabcc2f0d5d`
@@ -52,9 +55,10 @@ downloaded micromamba binary against the fixed hash and runtime version. It
 requires the tracked explicit lock and its fixed hash, creates a missing Sage
 prefix only from that lock, compares an existing prefix's complete URL+SHA
 export with the lock, and checks the runtime Sage version against the tracked
-record. The lock grammar and hashes admit only Git's LF/CRLF representation
-difference; any other content mismatch fails without changing a tracked
-artifact.
+record. The record and runtime output are both authenticated as exactly one
+`10.9` line with a terminating newline. The lock grammar and hashes admit only
+Git's LF/CRLF representation difference; any other content mismatch fails
+without changing a tracked artifact.
 
 Generating a replacement lock is a separate, explicit maintenance operation:
 
@@ -64,9 +68,11 @@ wsl.exe bash -lc 'cd /mnt/d/WorkSpace/LCPDTE && LCPDTE_TOOLCHAIN_DIR=/var/tmp/lc
 
 Refresh mode requires a fresh Sage prefix, solves the declared Sage
 10.9/Python 3.12 environment, and is the only mode allowed to update the lock
-and Sage version record. Its printed digest must be reviewed and pinned in the
-installer and this document before normal mode can consume a changed lock.
-Refresh is dependency maintenance, not a security-estimator result.
+and Sage version record. The same full-file version validator gates generated
+output before either record is published. Its printed digest must be reviewed
+and pinned in the installer and this document before normal mode can consume a
+changed lock. Refresh is dependency maintenance, not a security-estimator
+result.
 
 ## Current execution boundary
 

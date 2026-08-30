@@ -73,6 +73,7 @@ micromamba_url="https://github.com/mamba-org/micromamba-releases/releases/downlo
 micromamba_bin="${micromamba_dir}/micromamba"
 sage_version="10.9"
 explicit_lock_sha256="9f5fb0b9e49d71352b40e64adca1955fe4b874999a5c817112b2eaabcc2f0d5d"
+sage_version_record_sha256="65c57161b58002a9784f3b056b693ebe515469e80c9a11afe3d4423e671af8a0"
 
 temporary_binary=""
 live_export=""
@@ -80,10 +81,12 @@ normalized_lock=""
 normalized_live=""
 refresh_export=""
 refresh_version=""
+runtime_version_output=""
 cleanup() {
   for temporary_path in \
     "${temporary_binary}" "${live_export}" "${normalized_lock}" \
-    "${normalized_live}" "${refresh_export}" "${refresh_version}"; do
+    "${normalized_live}" "${refresh_export}" "${refresh_version}" \
+    "${runtime_version_output}"; do
     if [[ -n "${temporary_path}" && -f "${temporary_path}" ]]; then
       rm -f -- "${temporary_path}"
     fi
@@ -173,9 +176,43 @@ normalize_explicit_lock() {
   sed -n '/^https:\/\// {s/\r$//;p;}' "${source_path}" > "${output_path}"
 }
 
-canonical_lock_sha256() {
-  local lock_path="$1"
-  sed 's/\r$//' "${lock_path}" | sha256sum | awk '{print $1}'
+canonical_crlf_sha256() {
+  local input_path="$1"
+  sed 's/\r$//' "${input_path}" | sha256sum | awk '{print $1}'
+}
+
+validated_sage_version=""
+validate_sage_version_file() {
+  local version_path="$1"
+  local description="$2"
+  local actual_sha256=""
+  local line=""
+  local -a version_lines=()
+
+  if [[ ! -f "${version_path}" || ! -s "${version_path}" ]]; then
+    printf '%s is missing, empty, or not a regular file: %s\n' \
+      "${description}" "${version_path}" >&2
+    return 1
+  fi
+
+  # Authenticate the complete canonical byte stream. This admits only Git's
+  # LF/CRLF representation difference: the pinned stream is exactly
+  # "10.9\n", including its single terminating newline.
+  actual_sha256="$(canonical_crlf_sha256 "${version_path}")"
+  if [[ "${actual_sha256}" != "${sage_version_record_sha256}" ]]; then
+    printf '%s SHA-256 mismatch: got %s, want %s\n' \
+      "${description}" "${actual_sha256}" "${sage_version_record_sha256}" >&2
+    return 1
+  fi
+
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    version_lines+=("${line%$'\r'}")
+  done < "${version_path}"
+  if (( ${#version_lines[@]} != 1 )) || [[ "${version_lines[0]}" != "${sage_version}" ]]; then
+    printf '%s must contain exactly one %s line\n' "${description}" "${sage_version}" >&2
+    return 1
+  fi
+  validated_sage_version="${version_lines[0]}"
 }
 
 if [[ "${refresh_lock}" == true ]]; then
@@ -194,10 +231,7 @@ if [[ "${refresh_lock}" == true ]]; then
 
   refresh_version="$(mktemp "${lock_dir}/sage-version.refresh.XXXXXX")"
   "${sage_prefix}/bin/sage" --version > "${refresh_version}"
-  if [[ "$(tr -d '\r\n' < "${refresh_version}")" != "${sage_version}" ]]; then
-    printf 'refreshed Sage version does not match %s\n' "${sage_version}" >&2
-    exit 1
-  fi
+  validate_sage_version_file "${refresh_version}" "refreshed Sage version output"
 
   # Publish the lock and matching version record only after both candidates
   # validate; refresh is the sole mode permitted to replace either record.
@@ -206,7 +240,7 @@ if [[ "${refresh_lock}" == true ]]; then
   mv -- "${refresh_version}" "${version_record}"
   refresh_version=""
 
-  refreshed_sha256="$(canonical_lock_sha256 "${explicit_lock}")"
+  refreshed_sha256="$(canonical_crlf_sha256 "${explicit_lock}")"
   printf 'REFRESH_LOCK_WRITTEN packages=%d sha256=%s\n' \
     "${validated_package_count}" "${refreshed_sha256}"
   printf '%s\n' \
@@ -219,7 +253,7 @@ if [[ ! -s "${explicit_lock}" ]]; then
   printf '%s\n' 'Use --refresh-lock with a fresh toolchain directory to generate a reviewed replacement.' >&2
   exit 1
 fi
-actual_lock_sha256="$(canonical_lock_sha256 "${explicit_lock}")"
+actual_lock_sha256="$(canonical_crlf_sha256 "${explicit_lock}")"
 if [[ "${actual_lock_sha256}" != "${explicit_lock_sha256}" ]]; then
   printf 'explicit lock SHA-256 mismatch: got %s, want %s\n' \
     "${actual_lock_sha256}" "${explicit_lock_sha256}" >&2
@@ -254,17 +288,12 @@ if ! cmp -s -- "${normalized_lock}" "${normalized_live}"; then
   exit 1
 fi
 
-if [[ ! -s "${version_record}" ]]; then
-  printf 'tracked Sage version record is missing or empty: %s\n' "${version_record}" >&2
-  exit 1
-fi
-recorded_sage_version="$(tr -d '\r\n' < "${version_record}")"
-actual_sage_version="$("${sage_prefix}/bin/sage" --version)"
-if [[ "${recorded_sage_version}" != "${sage_version}" || "${actual_sage_version}" != "${sage_version}" ]]; then
-  printf 'Sage version mismatch: runtime=%s record=%s pin=%s\n' \
-    "${actual_sage_version}" "${recorded_sage_version}" "${sage_version}" >&2
-  exit 1
-fi
+validate_sage_version_file "${version_record}" "tracked Sage version record"
+recorded_sage_version="${validated_sage_version}"
+runtime_version_output="$(mktemp "${toolchain_root}/sage-version-runtime.XXXXXX")"
+"${sage_prefix}/bin/sage" --version > "${runtime_version_output}"
+validate_sage_version_file "${runtime_version_output}" "Sage runtime version output"
+actual_sage_version="${validated_sage_version}"
 
 packages_sha256="$(sha256sum "${normalized_lock}" | awk '{print $1}')"
 printf 'TOOLCHAIN_OK micromamba=%s sage=%s packages=%d lock_sha256=%s packages_sha256=%s\n' \

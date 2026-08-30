@@ -4,6 +4,9 @@
 - Estimator commit: `53da5982597709ba0fdf94ea37a84d822310fd84`
 - Estimator tree: `7cb765baf3bb401580c08f678dcee8c6f35e66d1`
 - SageMath: `10.9`
+- Canonical Sage version-record SHA-256 (exact content `10.9\n`, with CRLF
+  normalized to LF):
+  `65c57161b58002a9784f3b056b693ebe515469e80c9a11afe3d4423e671af8a0`
 - micromamba release/runtime: `2.8.1-0` / `2.8.1`
 - micromamba SHA-256:
   `9689782d863c05a1bf5d2d371ba527104e7a4eb4310c1637d8653b751aed9c82`
