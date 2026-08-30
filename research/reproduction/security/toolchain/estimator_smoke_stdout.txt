@@ -1,0 +1,4 @@
+ESTIMATOR_PIN_OK commit=53da5982597709ba0fdf94ea37a84d822310fd84 tree=7cb765baf3bb401580c08f678dcee8c6f35e66d1
+ESTIMATOR_WORKTREE_OK semantic=exact-or-crlf-only untracked=0
+ESTIMATOR_IMPORT_OK source=pinned-git-archive
+attacks=dual_hybrid,usvp
