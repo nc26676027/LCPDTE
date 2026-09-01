@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"dt_go/integer/homchain"
-	"dt_go/integer/securityparams"
+	"github.com/nc26676027/LCPDTE/integer/homchain"
+	"github.com/nc26676027/LCPDTE/integer/securityparams"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
 	"github.com/tuneinsight/lattigo/v6/core/rlwe"

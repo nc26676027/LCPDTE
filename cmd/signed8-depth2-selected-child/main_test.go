@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"dt_go/integer/homchain"
+	"github.com/nc26676027/LCPDTE/integer/homchain"
 )
 
 const acceptedSigned8Depth2SelectedChildSHA256 = "4dc5d51f0cc8034d8a57ee5b64bee1cfe7041eabeb78aca4ea14adcfde012b97"

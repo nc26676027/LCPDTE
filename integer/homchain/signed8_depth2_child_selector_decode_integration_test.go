@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"dt_go/integer/treeplan"
+	"github.com/nc26676027/LCPDTE/integer/treeplan"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
 	ckksdft "github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
 	ckkslintrans "github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"

@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"testing"
 
-	"dt_go/integer/treeplan"
-	"dt_go/treeio"
+	"github.com/nc26676027/LCPDTE/integer/treeplan"
+	"github.com/nc26676027/LCPDTE/treeio"
 )
 
 func sparseFixture() treeio.RawTree {

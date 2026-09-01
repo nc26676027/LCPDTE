@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math"
 
-	"dt_go/integer/treeplan"
-	"dt_go/treeio"
+	"github.com/nc26676027/LCPDTE/integer/treeplan"
+	"github.com/nc26676027/LCPDTE/treeio"
 )
 
 // MaxMaterializedDepth bounds complete-tree padding before allocation. The HE

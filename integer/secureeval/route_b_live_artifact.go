@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"dt_go/integer/secureprofile"
+	"github.com/nc26676027/LCPDTE/integer/secureprofile"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
 )

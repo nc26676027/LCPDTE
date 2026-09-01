@@ -5,7 +5,7 @@ import (
 	"math"
 	"math/big"
 
-	"dt_go/integer/z2n"
+	"github.com/nc26676027/LCPDTE/integer/z2n"
 	"github.com/tuneinsight/lattigo/v6/utils/bignum"
 )
 

@@ -11,8 +11,8 @@ import (
 	"sort"
 	"time"
 
-	"dt_go/integer/homchain"
-	"dt_go/integer/z2n"
+	"github.com/nc26676027/LCPDTE/integer/homchain"
+	"github.com/nc26676027/LCPDTE/integer/z2n"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
 	ckkslintrans "github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"
 	commonlintrans "github.com/tuneinsight/lattigo/v6/circuits/common/lintrans"

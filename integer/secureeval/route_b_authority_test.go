@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"dt_go/integer/secureprofile"
+	"github.com/nc26676027/LCPDTE/integer/secureprofile"
 )
 
 type scriptedPhysicalMemoryResult struct {

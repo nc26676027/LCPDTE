@@ -6,8 +6,8 @@ import (
 	"sort"
 	"testing"
 
-	"dt_go/integer/homchain"
-	"dt_go/integer/z2n"
+	"github.com/nc26676027/LCPDTE/integer/homchain"
+	"github.com/nc26676027/LCPDTE/integer/z2n"
 	"github.com/tuneinsight/lattigo/v6/core/rlwe"
 	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
 	"github.com/tuneinsight/lattigo/v6/utils/bignum"

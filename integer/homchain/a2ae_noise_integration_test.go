@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"dt_go/integer/homchain"
-	"dt_go/integer/z2n"
+	"github.com/nc26676027/LCPDTE/integer/homchain"
+	"github.com/nc26676027/LCPDTE/integer/z2n"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
 	ckksdft "github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/mod1"

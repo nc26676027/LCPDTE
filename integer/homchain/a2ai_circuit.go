@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strings"
 
-	"dt_go/integer/z2n"
+	"github.com/nc26676027/LCPDTE/integer/z2n"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
 	ckksdft "github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
 	ckkslintrans "github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"

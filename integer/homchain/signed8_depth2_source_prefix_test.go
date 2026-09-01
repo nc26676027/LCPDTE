@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"dt_go/integer/treeplan"
+	"github.com/nc26676027/LCPDTE/integer/treeplan"
 
 	"github.com/tuneinsight/lattigo/v6/core/rlwe"
 	"github.com/tuneinsight/lattigo/v6/schemes/ckks"

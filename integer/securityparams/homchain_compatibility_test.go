@@ -3,8 +3,8 @@ package securityparams_test
 import (
 	"testing"
 
-	"dt_go/integer/homchain"
-	"dt_go/integer/securityparams"
+	"github.com/nc26676027/LCPDTE/integer/homchain"
+	"github.com/nc26676027/LCPDTE/integer/securityparams"
 )
 
 func TestFunctionalManifestParametersMatchAcceptedA2BChain(t *testing.T) {

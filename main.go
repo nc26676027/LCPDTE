@@ -1,9 +1,9 @@
 package main
 
 import (
-	"dt_go/he"
-	"dt_go/tree"
-	"dt_go/treeio"
+	"github.com/nc26676027/LCPDTE/he"
+	"github.com/nc26676027/LCPDTE/tree"
+	"github.com/nc26676027/LCPDTE/treeio"
 	"fmt"
 	"math"
 	"flag"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"dt_go/integer/treeplan"
+	"github.com/nc26676027/LCPDTE/integer/treeplan"
 )
 
 // OrderedForestView identifies how a forest's split operands are represented.

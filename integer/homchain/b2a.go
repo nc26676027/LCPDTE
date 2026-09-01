@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"dt_go/integer/z2n"
+	"github.com/nc26676027/LCPDTE/integer/z2n"
 	ckkslintrans "github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"
 	"github.com/tuneinsight/lattigo/v6/core/rlwe"
 	"github.com/tuneinsight/lattigo/v6/ring"

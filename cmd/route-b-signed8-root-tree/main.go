@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"dt_go/integer/secureeval"
+	"github.com/nc26676027/LCPDTE/integer/secureeval"
 )
 
 type resultEnvelope struct {

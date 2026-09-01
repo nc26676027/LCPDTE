@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	inteval "dt_go/integer/evaluator"
-	"dt_go/integer/z2n"
+	inteval "github.com/nc26676027/LCPDTE/integer/evaluator"
+	"github.com/nc26676027/LCPDTE/integer/z2n"
 	"github.com/tuneinsight/lattigo/v6/core/rlwe"
 	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
 )

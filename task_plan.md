@@ -165,12 +165,12 @@ and private remote delivery remain later gates.
 ### Phase 8: Integer CKKS library productization and acceptance handoff
 
 - [x] Fetch/prune and inventory all local, remote and worktree branches before any merge or deletion.
-- [ ] Reconcile the dirty `main` worktree into a scoped, reviewable source tree; remove only proven generated/transient artifacts.
-- [ ] Define the deep public module seam for integer CKKS values, operations, conversion, comparison and evaluator construction while keeping Route-B construction internals private.
-- [ ] Build vertical TDD slices through the public interface using independent plaintext oracles.
-- [ ] Add runnable Lattigo-style examples for basic integer operators, 8-bit A2B/B2A/comparison, and the bounded signed-int8 tree flow.
-- [ ] Document supported semantics, parameter/security limits and exact acceptance commands.
-- [ ] Run affected tests continuously, then the complete package suite and explicit `go vet` once at the end.
+- [x] Reconcile the dirty `main` worktree into a scoped, reviewable source tree; remove only proven generated/transient artifacts.
+- [x] Define the deep public module seam for integer CKKS values, operations, conversion, comparison and evaluator construction while keeping Route-B construction internals private.
+- [x] Build vertical TDD slices through the public interface using independent plaintext oracles.
+- [x] Add runnable Lattigo-style examples for basic integer operators, 8-bit A2B/B2A/comparison, and the bounded signed-int8 tree flow.
+- [x] Document supported semantics, parameter/security limits and exact acceptance commands.
+- [x] Run affected tests continuously, then the complete package suite and explicit `go vet` once at the end.
 - [ ] Run independent Standards/Spec code review, resolve actionable findings, and commit the acceptance candidate on `main` without pushing it.
 - **Status:** in progress; branch consolidation is complete as a verified no-op because only `main` exists
 
@@ -277,6 +277,10 @@ and private remote delivery remain later gates.
 | Third persistent-log patch again included a progress anchor in the findings hunk | 1 | Applied the findings and progress updates as separate exact patches and stopped composing cross-file anchors from memory. |
 | Host command policy rejected exact-path recursive deletion of the four ignored `tmp` directories | 1 | Attempted a recoverable move to a validated user-temp quarantine instead of retrying deletion. |
 | Host command policy also rejected the validated recoverable directory move before execution | 2 | Stopped destructive cleanup attempts; retained the ignored directories and continued with Git-clean productization. |
+| First `ckksint.Context` GREEN attempt forwarded a two-result call beside an operation label | 1 | Assigned the evaluator value and error explicitly before passing them to the wrapper. |
+| Independently keyed demo contexts shared equal pointers to zero-sized ownership tokens | 1 | Made the private token non-zero-sized; the public cross-context rejection test now passes. |
+| First productization checkpoint patch targeted `task_plan.md` twice in one patch envelope | 1 | Consolidated both task-plan hunks under one file update operation. |
+| `go list ./...` traversed an ignored, inaccessible Conda library inside the policy-blocked `tmp` tree | 1 | Added an ignored nested `tmp/go.mod` boundary; standard module enumeration and `go vet ./...` now pass without destructive cleanup. |
 
 ## Checkpoint Policy
 

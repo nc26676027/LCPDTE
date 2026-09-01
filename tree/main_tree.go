@@ -2,7 +2,7 @@ package tree
 
 import (
 	"container/heap"
-	"dt_go/he"
+	"github.com/nc26676027/LCPDTE/he"
 	"time"
 )
 

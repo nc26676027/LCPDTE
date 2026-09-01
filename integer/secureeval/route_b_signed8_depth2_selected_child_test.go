@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"dt_go/integer/homchain"
+	"github.com/nc26676027/LCPDTE/integer/homchain"
 	"github.com/tuneinsight/lattigo/v6/core/rlwe"
 	"github.com/tuneinsight/lattigo/v6/ring"
 	"github.com/tuneinsight/lattigo/v6/schemes/ckks"

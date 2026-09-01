@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"dt_go/integer/z2n"
+	"github.com/nc26676027/LCPDTE/integer/z2n"
 )
 
 func TestA2BTwoLUTOracleExhaustiveWidthFour(t *testing.T) {

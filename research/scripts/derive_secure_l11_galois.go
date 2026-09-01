@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sort"
 
-	"dt_go/integer/securityparams"
+	"github.com/nc26676027/LCPDTE/integer/securityparams"
 	ckksdft "github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
 )
 

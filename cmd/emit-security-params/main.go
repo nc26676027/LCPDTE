@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"dt_go/integer/securityparams"
+	"github.com/nc26676027/LCPDTE/integer/securityparams"
 )
 
 func main() {

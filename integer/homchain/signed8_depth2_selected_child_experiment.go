@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"time"
 
-	"dt_go/integer/treeplan"
+	"github.com/nc26676027/LCPDTE/integer/treeplan"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/mod1"
 	"github.com/tuneinsight/lattigo/v6/core/rlwe"

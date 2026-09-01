@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"testing"
 
-	"dt_go/integer/treecompile"
-	"dt_go/integer/treeplan"
-	"dt_go/treeio"
+	"github.com/nc26676027/LCPDTE/integer/treecompile"
+	"github.com/nc26676027/LCPDTE/integer/treeplan"
+	"github.com/nc26676027/LCPDTE/treeio"
 )
 
 func signedTestPolicy(t *testing.T) ComparisonPolicy {

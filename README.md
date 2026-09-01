@@ -8,17 +8,38 @@ Implementation of the **LCPDTE** protocol — a CKKS-based non-interactive Priva
 
 ---
 
-## Requirements
+## Integer CKKS library
 
-**Go 1.26.4** — [Download](https://go.dev/dl/go1.26.4.linux-amd64.tar.gz)
+The supported Go library entry point is
+`github.com/nc26676027/LCPDTE/ckksint`. It packages the Gao--Zheng modular
+integer representation, full 8-bit A2B/B2A, signed comparison, and the
+selected-child depth-2 evaluator behind opaque values and context-owned keys.
+Runnable programs are under [`examples/ckksint`](examples/ckksint); the API and
+security boundary are documented in [`ckksint/README.md`](ckksint/README.md).
 
 ```bash
-wget https://go.dev/dl/go1.26.4.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.26.4.linux-amd64.tar.gz
-export PATH=$PATH:/usr/local/go/bin
+go test -count=1 ./ckksint
+go run ./examples/ckksint/basic
+go run ./examples/ckksint/conversion
+go run ./examples/ckksint/depth2
 ```
 
-This project was built and tested on **Linux** (Ubuntu). Other platforms are not officially supported.
+The example constructors are functional tests with deliberately insecure
+parameters. They are labeled `DemoOnly` and are not production defaults.
+
+---
+
+## Requirements
+
+**Go 1.23.11** (the version declared by `go.mod`) or a compatible newer Go
+toolchain.
+
+```bash
+go version
+```
+
+The upstream LCPDTE experiments target Linux. The integer CKKS library and its
+acceptance examples are also tested on Windows.
 
 ---
 
@@ -38,10 +59,9 @@ All results in the paper were obtained on the following hardware:
 
 ## Running Experiments
 
-All experiments are run from the `dt_go/` directory:
+Run experiments from the repository root:
 
 ```bash
-cd dt_go
 go run . -m <mode>
 ```
 

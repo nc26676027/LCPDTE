@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"dt_go/integer/secureeval"
+	"github.com/nc26676027/LCPDTE/integer/secureeval"
 )
 
 func TestCanonicalProfileIsJSONRoundTrippable(t *testing.T) {

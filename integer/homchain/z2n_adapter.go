@@ -3,7 +3,7 @@ package homchain
 import (
 	"fmt"
 
-	"dt_go/integer/z2n"
+	"github.com/nc26676027/LCPDTE/integer/z2n"
 )
 
 // NewSpecificationsFromRing obtains the closed-form U/V matrices and the

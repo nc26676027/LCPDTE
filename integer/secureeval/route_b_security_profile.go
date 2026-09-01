@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"reflect"
 
-	"dt_go/integer/securityparams"
+	"github.com/nc26676027/LCPDTE/integer/securityparams"
 )
 
 const (

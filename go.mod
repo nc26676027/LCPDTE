@@ -1,4 +1,4 @@
-module dt_go
+module github.com/nc26676027/LCPDTE
 
 go 1.23.11
 

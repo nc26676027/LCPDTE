@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"dt_go/integer/treeplan"
+	"github.com/nc26676027/LCPDTE/integer/treeplan"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
 	ckkslintrans "github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"
 	ckkspolynomial "github.com/tuneinsight/lattigo/v6/circuits/ckks/polynomial"

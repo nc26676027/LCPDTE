@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"dt_go/integer/securityparams"
+	"github.com/nc26676027/LCPDTE/integer/securityparams"
 )
 
 func TestGaoN16ArtifactCapacityPlanDerivesExactConservativeBounds(t *testing.T) {

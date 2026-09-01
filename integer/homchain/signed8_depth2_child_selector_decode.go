@@ -1,7 +1,7 @@
 package homchain
 
 import (
-	"dt_go/integer/z2n"
+	"github.com/nc26676027/LCPDTE/integer/z2n"
 	"fmt"
 	"math"
 	"reflect"

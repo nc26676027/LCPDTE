@@ -6,9 +6,9 @@ import (
 	"slices"
 	"testing"
 
-	"dt_go/integer/homchain"
-	"dt_go/integer/secureprofile"
-	"dt_go/integer/securityparams"
+	"github.com/nc26676027/LCPDTE/integer/homchain"
+	"github.com/nc26676027/LCPDTE/integer/secureprofile"
+	"github.com/nc26676027/LCPDTE/integer/securityparams"
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
 )
 

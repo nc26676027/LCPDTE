@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"dt_go/integer/homchain"
+	"github.com/nc26676027/LCPDTE/integer/homchain"
 )
 
 type resultEnvelope struct {
