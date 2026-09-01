@@ -44,19 +44,57 @@ type Evaluator struct {
 
 // NewEvaluator creates a new [Evaluator].
 func NewEvaluator(btpParams Parameters, evk *EvaluationKeys) (eval *Evaluator, err error) {
+	prepared, err := PrepareParameters(btpParams)
+	if err != nil {
+		return nil, err
+	}
+	return newEvaluatorFromPrepared(prepared, evk)
+}
 
-	eval = &Evaluator{}
+type evaluatorDFTMatrixSource interface {
+	Matrices(params ckks.Parameters, coeffsToSlots, slotsToCoeffs dft.MatrixLiteral) (c2s, s2c dft.Matrix, err error)
+}
 
-	paramsN1 := btpParams.ResidualParameters
-	paramsN2 := btpParams.BootstrappingParameters
+type generatedEvaluatorDFTMatrixSource struct{}
+
+func (generatedEvaluatorDFTMatrixSource) Matrices(params ckks.Parameters, coeffsToSlots, slotsToCoeffs dft.MatrixLiteral) (c2s, s2c dft.Matrix, err error) {
+	encoder := ckks.NewEncoder(params)
+	if c2s, err = dft.NewMatrixFromLiteral(params, coeffsToSlots, encoder); err != nil {
+		return dft.Matrix{}, dft.Matrix{}, err
+	}
+	if s2c, err = dft.NewMatrixFromLiteral(params, slotsToCoeffs, encoder); err != nil {
+		return dft.Matrix{}, dft.Matrix{}, err
+	}
+	return c2s, s2c, nil
+}
+
+func newEvaluatorFromPrepared(prepared PreparedParameters, evk *EvaluationKeys) (eval *Evaluator, err error) {
+	return newEvaluatorFromPreparedWithDFTMatrixSource(prepared, evk, generatedEvaluatorDFTMatrixSource{})
+}
+
+func newEvaluatorFromPreparedWithDFTMatrixSource(prepared PreparedParameters, evk *EvaluationKeys, matrixSource evaluatorDFTMatrixSource) (eval *Evaluator, err error) {
+	if err = prepared.Verify(); err != nil {
+		return nil, fmt.Errorf("cannot NewBootstrapper: invalid prepared parameters: %w", err)
+	}
+	if matrixSource == nil {
+		return nil, fmt.Errorf("cannot NewBootstrapper: DFT matrix source is nil")
+	}
+
+	eval = &Evaluator{
+		Parameters:     prepared.EffectiveParameters(),
+		Mod1Parameters: prepared.Mod1Parameters(),
+	}
+
+	paramsN1 := eval.ResidualParameters
+	paramsN2 := eval.BootstrappingParameters
 
 	switch paramsN1.RingType() {
 	case ring.Standard:
-		if paramsN1.N() != paramsN2.N() && (evk.EvkN1ToN2 == nil || evk.EvkN2ToN1 == nil) {
+		if paramsN1.N() != paramsN2.N() && (evk == nil || evk.EvkN1ToN2 == nil || evk.EvkN2ToN1 == nil) {
 			return nil, fmt.Errorf("cannot NewBootstrapper: evk.(BootstrappingKeys) is missing EvkN1ToN2 and EvkN2ToN1")
 		}
 	case ring.ConjugateInvariant:
-		if evk.EvkCmplxToReal == nil || evk.EvkRealToCmplx == nil {
+		if evk == nil || evk.EvkCmplxToReal == nil || evk.EvkRealToCmplx == nil {
 			return nil, fmt.Errorf("cannot NewBootstrapper: evk.(BootstrappingKeys) is missing EvkN1ToN2 and EvkN2ToN1")
 		}
 
@@ -64,12 +102,7 @@ func NewEvaluator(btpParams Parameters, evk *EvaluationKeys) (eval *Evaluator, e
 		if eval.DomainSwitcher, err = ckks.NewDomainSwitcher(paramsN2, evk.EvkCmplxToReal, evk.EvkRealToCmplx); err != nil {
 			return nil, fmt.Errorf("cannot NewBootstrapper: ckks.NewDomainSwitcher: %w", err)
 		}
-
-		// The switch to standard to conjugate invariant multiplies the scale by 2
-		btpParams.SlotsToCoeffsParameters.Scaling = new(big.Float).SetFloat64(0.5)
 	}
-
-	eval.Parameters = btpParams
 
 	if paramsN1.N() != paramsN2.N() {
 		eval.xPow2N1 = rlwe.GenXPow2NTT(paramsN1.RingQ().AtLevel(0), paramsN2.LogN(), false)
@@ -77,49 +110,21 @@ func NewEvaluator(btpParams Parameters, evk *EvaluationKeys) (eval *Evaluator, e
 		eval.xPow2InvN2 = rlwe.GenXPow2NTT(paramsN2.RingQ(), paramsN2.LogN(), true)
 	}
 
-	if btpParams.Mod1ParametersLiteral.Mod1Type == mod1.SinContinuous && btpParams.Mod1ParametersLiteral.DoubleAngle != 0 {
-		return nil, fmt.Errorf("cannot use double angle formula for Mod1Type = Sin -> must use Mod1Type = Cos")
-	}
-
-	if btpParams.Mod1ParametersLiteral.Mod1Type == mod1.CosDiscrete && btpParams.Mod1ParametersLiteral.Mod1Degree < 2*(btpParams.Mod1ParametersLiteral.K-1) {
-		return nil, fmt.Errorf("Mod1Type 'mod1.CosDiscrete' uses a minimum degree of 2*(K-1) but EvalMod degree is smaller")
-	}
-
-	switch btpParams.CircuitOrder {
-	case ModUpThenEncode:
-		if btpParams.CoeffsToSlotsParameters.LevelQ-btpParams.CoeffsToSlotsParameters.Depth(true) != btpParams.Mod1ParametersLiteral.LevelQ {
-			return nil, fmt.Errorf("starting level and depth of CoeffsToSlotsParameters inconsistent starting level of Mod1ParametersLiteral")
-		}
-
-		if btpParams.Mod1ParametersLiteral.LevelQ-btpParams.Mod1ParametersLiteral.Depth() != btpParams.SlotsToCoeffsParameters.LevelQ {
-			return nil, fmt.Errorf("starting level and depth of Mod1ParametersLiteral inconsistent starting level of CoeffsToSlotsParameters")
-		}
-	case DecodeThenModUp:
-		if btpParams.BootstrappingParameters.MaxLevel()-btpParams.CoeffsToSlotsParameters.Depth(true) != btpParams.Mod1ParametersLiteral.LevelQ {
-			return nil, fmt.Errorf("starting level and depth of Mod1ParametersLiteral inconsistent starting level of CoeffsToSlotsParameters")
-		}
-	case Custom:
-	default:
-		return nil, fmt.Errorf("invalid CircuitOrder value")
-	}
-
-	if err = eval.initialize(btpParams); err != nil {
-		return
+	if eval.C2SDFTMatrix, eval.S2CDFTMatrix, err = matrixSource.Matrices(paramsN2, eval.CoeffsToSlotsParameters, eval.SlotsToCoeffsParameters); err != nil {
+		return nil, err
 	}
 
 	if err = eval.checkKeys(evk); err != nil {
 		return
 	}
 
-	params := btpParams.BootstrappingParameters
-
 	eval.EvaluationKeys = evk
 
-	eval.Evaluator = ckks.NewEvaluator(params, evk)
+	eval.Evaluator = ckks.NewEvaluator(paramsN2, evk)
 
-	eval.DFTEvaluator = dft.NewEvaluator(params, eval.Evaluator)
+	eval.DFTEvaluator = dft.NewEvaluator(paramsN2, eval.Evaluator)
 
-	eval.Mod1Evaluator = mod1.NewEvaluator(eval.Evaluator, polynomial.NewEvaluator(params, eval.Evaluator), eval.Mod1Parameters)
+	eval.Mod1Evaluator = mod1.NewEvaluator(eval.Evaluator, polynomial.NewEvaluator(paramsN2, eval.Evaluator), eval.Mod1Parameters)
 
 	return
 }
@@ -131,6 +136,7 @@ func (eval Evaluator) ShallowCopy() *Evaluator {
 	heEvaluator := eval.Evaluator.ShallowCopy()
 
 	paramsN1 := eval.ResidualParameters
+	paramsN2 := eval.BootstrappingParameters
 
 	var DomainSwitcher ckks.DomainSwitcher
 	if paramsN1.RingType() == ring.ConjugateInvariant {
@@ -150,14 +156,17 @@ func (eval Evaluator) ShallowCopy() *Evaluator {
 		xPow2N2:        eval.xPow2N2,
 		xPow2InvN2:     eval.xPow2InvN2,
 		DomainSwitcher: DomainSwitcher,
-		DFTEvaluator:   dft.NewEvaluator(paramsN1, heEvaluator),
-		Mod1Evaluator:  mod1.NewEvaluator(heEvaluator, polynomial.NewEvaluator(paramsN1, heEvaluator), eval.Mod1Parameters),
+		DFTEvaluator:   dft.NewEvaluator(paramsN2, heEvaluator),
+		Mod1Evaluator:  mod1.NewEvaluator(heEvaluator, polynomial.NewEvaluator(paramsN2, heEvaluator), eval.Mod1Parameters),
 		SkDebug:        eval.SkDebug,
 	}
 }
 
 // CheckKeys checks if all the necessary keys are present in the instantiated [Evaluator]
 func (eval Evaluator) checkKeys(evk *EvaluationKeys) (err error) {
+	if evk == nil || evk.MemEvaluationKeySet == nil {
+		return fmt.Errorf("rlwe.EvaluationKeySet is nil")
+	}
 
 	if _, err = evk.GetRelinearizationKey(); err != nil {
 		return
@@ -176,67 +185,6 @@ func (eval Evaluator) checkKeys(evk *EvaluationKeys) (err error) {
 	if evk.EvkSparseToDense == nil && eval.EphemeralSecretWeight != 0 {
 		return fmt.Errorf("rlwe.EvaluationKey key sparse to dense is nil")
 	}
-
-	return
-}
-
-func (eval *Evaluator) initialize(btpParams Parameters) (err error) {
-	eval.Parameters = btpParams
-	params := btpParams.BootstrappingParameters
-
-	if eval.Mod1Parameters, err = mod1.NewParametersFromLiteral(params, btpParams.Mod1ParametersLiteral); err != nil {
-		return
-	}
-
-	// [-K, K]
-	K := eval.Mod1Parameters.K
-
-	// Correcting factor for approximate division by Q
-	// The second correcting factor for approximate multiplication by Q is included in the coefficients of the EvalMod polynomials
-	qDiff := eval.Mod1Parameters.QDiff
-
-	// If the scale used during the EvalMod step is smaller than Q0, then we cannot increase the scale during
-	// the EvalMod step to get a free division by MessageRatio, and we need to do this division (totally or partly)
-	// during the CoeffstoSlots step
-	qDiv := eval.Mod1Parameters.ScalingFactor().Float64() / math.Exp2(math.Round(math.Log2(float64(params.Q()[0]))))
-
-	// Sets qDiv to 1 if there is enough room for the division to happen using scale manipulation.
-	if qDiv > 1 {
-		qDiv = 1
-	}
-
-	encoder := ckks.NewEncoder(params)
-
-	// CoeffsToSlots vectors
-	// Change of variable for the evaluation of the Chebyshev polynomial + cancelling factor for the DFT and SubSum + eventual scaling factor for the double angle formula
-
-	scale := eval.BootstrappingParameters.DefaultScale().Float64()
-	offset := eval.Mod1Parameters.ScalingFactor().Float64() / eval.Mod1Parameters.MessageRatio()
-
-	C2SScaling := new(big.Float).SetFloat64(qDiv / (K * qDiff))
-	StCScaling := new(big.Float).SetFloat64(scale / offset)
-
-	if btpParams.CoeffsToSlotsParameters.Scaling == nil {
-		eval.CoeffsToSlotsParameters.Scaling = C2SScaling
-	} else {
-		eval.CoeffsToSlotsParameters.Scaling = new(big.Float).Mul(btpParams.CoeffsToSlotsParameters.Scaling, C2SScaling)
-	}
-
-	if btpParams.SlotsToCoeffsParameters.Scaling == nil {
-		eval.SlotsToCoeffsParameters.Scaling = StCScaling
-	} else {
-		eval.SlotsToCoeffsParameters.Scaling = new(big.Float).Mul(btpParams.SlotsToCoeffsParameters.Scaling, StCScaling)
-	}
-
-	if eval.C2SDFTMatrix, err = dft.NewMatrixFromLiteral(params, eval.CoeffsToSlotsParameters, encoder); err != nil {
-		return
-	}
-
-	if eval.S2CDFTMatrix, err = dft.NewMatrixFromLiteral(params, eval.SlotsToCoeffsParameters, encoder); err != nil {
-		return
-	}
-
-	encoder = nil // For the GC
 
 	return
 }
@@ -641,13 +589,19 @@ func (eval Evaluator) ScaleDown(ctIn *rlwe.Ciphertext) (*rlwe.Ciphertext, *rlwe.
 
 // ModUp raise the modulus from q to Q, scales the message  and applies the Trace if the ciphertext is sparsely packed.
 func (eval Evaluator) ModUp(ctIn *rlwe.Ciphertext) (ctOut *rlwe.Ciphertext, err error) {
+	return eval.modUpCore(ctIn, nil)
+}
+
+func (eval Evaluator) modUpCore(ctIn *rlwe.Ciphertext, recorder *modUpTraceRecorder) (ctOut *rlwe.Ciphertext, err error) {
 
 	// Switch to the sparse key
+	recorder.setStage(ModUpTraceStageDenseToSparse)
 	if eval.EvkDenseToSparse != nil {
 		if err := eval.ApplyEvaluationKey(ctIn, eval.EvkDenseToSparse, ctIn); err != nil {
 			return nil, err
 		}
 	}
+	recorder.setStage(ModUpTraceStageCoefficientLift)
 
 	params := eval.BootstrappingParameters
 
@@ -693,6 +647,7 @@ func (eval Evaluator) ModUp(ctIn *rlwe.Ciphertext) (ctOut *rlwe.Ciphertext, err 
 	}
 
 	if eval.EvkSparseToDense != nil {
+		recorder.setStage(ModUpTraceStageSparseToDense)
 
 		ks := eval.Evaluator.Evaluator
 
@@ -729,6 +684,7 @@ func (eval Evaluator) ModUp(ctIn *rlwe.Ciphertext) (ctOut *rlwe.Ciphertext, err 
 		ringQ.NTT(ctIn.Value[0], ctIn.Value[0])
 
 		// Scale the message from Q0/|m| to QL/|m|, where QL is the largest modulus used during the bootstrapping.
+		recorder.setStage(ModUpTraceStageScale)
 		if scale := (eval.Mod1Parameters.ScalingFactor().Float64() / eval.Mod1Parameters.MessageRatio()) / ctIn.Scale.Float64(); scale > 1 {
 
 			scalar := uint64(math.Round(scale))
@@ -751,6 +707,7 @@ func (eval Evaluator) ModUp(ctIn *rlwe.Ciphertext) (ctOut *rlwe.Ciphertext, err 
 		ctTmp.MetaData = ctIn.MetaData
 
 		// Switch back to the dense key
+		recorder.setStage(ModUpTraceStageSparseToDense)
 		ks.GadgetProductHoisted(levelQ, ks.BuffDecompQP, &eval.EvkSparseToDense.GadgetCiphertext, ctTmp)
 		ringQ.Add(ctIn.Value[0], ctTmp.Value[0], ctIn.Value[0])
 
@@ -775,6 +732,7 @@ func (eval Evaluator) ModUp(ctIn *rlwe.Ciphertext) (ctOut *rlwe.Ciphertext, err 
 		ringQ.NTT(ctIn.Value[1], ctIn.Value[1])
 
 		// Scale the message from Q0/|m| to QL/|m|, where QL is the largest modulus used during the bootstrapping.
+		recorder.setStage(ModUpTraceStageScale)
 		if scale := (eval.Mod1Parameters.ScalingFactor().Float64() / eval.Mod1Parameters.MessageRatio()) / ctIn.Scale.Float64(); scale > 1 {
 
 			scalar := uint64(math.Round(scale))
@@ -787,7 +745,16 @@ func (eval Evaluator) ModUp(ctIn *rlwe.Ciphertext) (ctOut *rlwe.Ciphertext, err 
 	}
 
 	//SubSum X -> (N/dslots) * Y^dslots
-	return ctIn, eval.Trace(ctIn, eval.CoeffsToSlotsParameters.LogSlots, ctIn)
+	if recorder == nil {
+		return ctIn, eval.Trace(ctIn, eval.CoeffsToSlotsParameters.LogSlots, ctIn)
+	}
+	recorder.beginTrace()
+	traceReport, traceErr := eval.TraceObserved(ctIn, eval.CoeffsToSlotsParameters.LogSlots, ctIn)
+	recorder.setTraceReport(traceReport)
+	if traceErr != nil && traceReport.FailureKind() == rlwe.TraceDispatchFailurePanic {
+		return nil, traceErr
+	}
+	return ctIn, traceErr
 }
 
 // CoeffsToSlots applies the homomorphic decoding

@@ -14,6 +14,8 @@ type Polynomial struct {
 }
 
 // NewPolynomial imports exactly n coefficients into the Ring's precision.
+// Mixed caller precisions are accepted, but every imported coefficient must
+// retain enough significance for Gao--Zheng's epsilon-shifted canonicalizer.
 func (r *Ring) NewPolynomial(coefficients []*big.Float) (Polynomial, error) {
 	n := int(r.bits)
 	if len(coefficients) != n {
@@ -25,6 +27,9 @@ func (r *Ring) NewPolynomial(coefficients []*big.Float) (Polynomial, error) {
 			return Polynomial{}, fmt.Errorf("z2n: coefficient %d is nil", i)
 		}
 		result.coefficients[i].Set(coefficient)
+	}
+	if err := r.validate(result); err != nil {
+		return Polynomial{}, fmt.Errorf("z2n: import polynomial: %w", err)
 	}
 	return result, nil
 }
@@ -162,12 +167,29 @@ func (r *Ring) validate(value Polynomial) error {
 	if value.bits != r.bits || len(value.coefficients) != int(r.bits) {
 		return fmt.Errorf("z2n: polynomial belongs to word size %d, ring uses %d", value.bits, r.bits)
 	}
+	if value.precision != r.prec {
+		return fmt.Errorf("z2n: polynomial precision %d differs from ring precision %d", value.precision, r.prec)
+	}
+	epsilon := r.canonicalEpsilon()
 	for i, coefficient := range value.coefficients {
 		if coefficient == nil {
 			return fmt.Errorf("z2n: polynomial coefficient %d is nil", i)
 		}
+		if coefficient.Prec() != r.prec {
+			return fmt.Errorf("z2n: polynomial coefficient %d has precision %d, want %d", i, coefficient.Prec(), r.prec)
+		}
+		if shifted := r.newFloat().Sub(coefficient, epsilon); shifted.Cmp(coefficient) == 0 {
+			return fmt.Errorf(
+				"z2n: polynomial coefficient %d cannot resolve canonical epsilon 2^(-%d) at %d-bit precision",
+				i, int(r.bits)+1, r.prec,
+			)
+		}
 	}
 	return nil
+}
+
+func (r *Ring) canonicalEpsilon() *big.Float {
+	return r.newFloat().SetMantExp(r.newFloat().SetInt64(1), -int(r.bits)-1)
 }
 
 func (r *Ring) validatePair(lhs, rhs Polynomial) error {

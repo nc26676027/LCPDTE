@@ -157,6 +157,51 @@ func NewEvaluator(params ckks.Parameters, eval *ckks.Evaluator) *Evaluator {
 
 // NewMatrixFromLiteral generates the factorized DFT/IDFT matrices for the homomorphic encoding/decoding.
 func NewMatrixFromLiteral(params ckks.Parameters, d MatrixLiteral, encoder *ckks.Encoder) (Matrix, error) {
+	noteDefaultWholeConstruction()
+	return newMatrixFromLiteral(params, d, encoder, params.EncodingPrecision())
+}
+
+// NewMatrixFromLiteralWithGeneratorPrecision generates the factorized DFT/IDFT
+// matrices with an explicit precision for the cleartext matrix generation. The
+// supplied encoder must use the same precision and parameters.
+func NewMatrixFromLiteralWithGeneratorPrecision(params ckks.Parameters, d MatrixLiteral, encoder *ckks.Encoder, generatorPrecision uint) (Matrix, error) {
+	noteExplicitWholeConstruction()
+	if err := validateMatrixGeneratorEncoder(params, encoder, generatorPrecision); err != nil {
+		return Matrix{}, err
+	}
+
+	return newMatrixFromLiteral(params, d, encoder, generatorPrecision)
+}
+
+// NewMatrixFromLiteralWithGeneratorPrecisionStreaming generates and encodes one
+// cleartext DFT/IDFT factor at a time. The numeric factor becomes unreachable as
+// soon as its encoded linear transformation has been appended and the callback
+// returns.
+func NewMatrixFromLiteralWithGeneratorPrecisionStreaming(params ckks.Parameters, d MatrixLiteral, encoder *ckks.Encoder, generatorPrecision uint) (Matrix, error) {
+	noteExplicitWholeConstruction()
+	if err := validateMatrixGeneratorEncoder(params, encoder, generatorPrecision); err != nil {
+		return Matrix{}, err
+	}
+
+	return newMatrixFromLiteralStreaming(params, d, encoder, generatorPrecision)
+}
+
+func validateMatrixGeneratorEncoder(params ckks.Parameters, encoder *ckks.Encoder, generatorPrecision uint) error {
+	if encoder == nil {
+		return fmt.Errorf("cannot NewDFTMatrixFromLiteral: encoder is nil")
+	}
+	if encoder.Prec() != generatorPrecision {
+		return fmt.Errorf("cannot NewDFTMatrixFromLiteral: generator precision %d differs from encoder precision %d", generatorPrecision, encoder.Prec())
+	}
+	encoderParams := encoder.GetParameters()
+	if !encoderParams.Equal(&params) {
+		return fmt.Errorf("cannot NewDFTMatrixFromLiteral: encoder parameters differ from matrix parameters")
+	}
+
+	return nil
+}
+
+func newMatrixFromLiteral(params ckks.Parameters, d MatrixLiteral, encoder *ckks.Encoder, generatorPrecision uint) (Matrix, error) {
 
 	logSlots := d.LogSlots
 	logdSlots := logSlots
@@ -166,7 +211,7 @@ func NewMatrixFromLiteral(params ckks.Parameters, d MatrixLiteral, encoder *ckks
 
 	// CoeffsToSlots vectors
 	matrices := []ltcommon.LinearTransformation{}
-	pVecDFT := d.GenMatrices(params.LogN(), params.EncodingPrecision())
+	pVecDFT := d.genMatrices(params.LogN(), generatorPrecision)
 
 	nbModuliPerRescale := params.LevelsConsumedPerRescaling()
 
@@ -209,6 +254,69 @@ func NewMatrixFromLiteral(params ckks.Parameters, d MatrixLiteral, encoder *ckks
 		}
 
 		level -= nbModuliPerRescale
+	}
+
+	return Matrix{MatrixLiteral: d, Matrices: matrices}, nil
+}
+
+func newMatrixFromLiteralStreaming(params ckks.Parameters, d MatrixLiteral, encoder *ckks.Encoder, generatorPrecision uint) (Matrix, error) {
+	logdSlots := d.LogSlots
+	if maxLogSlots := params.LogMaxDimensions().Cols; logdSlots < maxLogSlots && d.Format == RepackImagAsReal {
+		logdSlots++
+	}
+
+	nbModuliPerRescale := params.LevelsConsumedPerRescaling()
+	level := d.LevelQ
+	group := 0
+	remainingInGroup := 0
+	var scale rlwe.Scale
+	nextGroup := func() {
+		remainingInGroup = d.Levels[group]
+		scale = rlwe.NewScale(params.Q()[level])
+		for j := 1; j < nbModuliPerRescale; j++ {
+			scale = scale.Mul(rlwe.NewScale(params.Q()[level-j]))
+		}
+		if remainingInGroup > 1 {
+			y := new(big.Float).SetPrec(scale.Value.Prec()).SetInt64(1)
+			y.Quo(y, new(big.Float).SetPrec(scale.Value.Prec()).SetInt64(int64(remainingInGroup)))
+			scale.Value = *bignum.Pow(&scale.Value, y)
+		}
+	}
+
+	matrices := make([]ltcommon.LinearTransformation, 0, d.Depth(false))
+	if len(d.Levels) != 0 {
+		nextGroup()
+	}
+	err := d.forEachMatrixFactorWithFreshRoots(params.LogN(), generatorPrecision, func(factor ltcommon.Diagonals[*bignum.Complex]) error {
+		ltparams := ltcommon.Parameters{
+			DiagonalsIndexList:        factor.DiagonalsIndexList(),
+			LevelQ:                    d.LevelQ,
+			LevelP:                    d.LevelP,
+			Scale:                     scale,
+			LogDimensions:             ring.Dimensions{Rows: 0, Cols: logdSlots},
+			LogBabyStepGiantStepRatio: d.LogBSGSRatio,
+		}
+
+		mat := ltcommon.NewTransformation(params, ltparams)
+		err := ltcommon.Encode(encoder, factor, mat)
+		factor = nil
+		if err != nil {
+			return err
+		}
+		matrices = append(matrices, mat)
+
+		remainingInGroup--
+		if remainingInGroup == 0 {
+			level -= nbModuliPerRescale
+			group++
+			if group < len(d.Levels) {
+				nextGroup()
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return Matrix{}, fmt.Errorf("cannot NewDFTMatrixFromLiteral: %w", err)
 	}
 
 	return Matrix{MatrixLiteral: d, Matrices: matrices}, nil
@@ -489,6 +597,63 @@ func ifftPlainVec(logN, dslots int, roots []*bignum.Complex, pow5 []int) (a, b, 
 	return
 }
 
+func fftPlainVecLevel(logN, dslots, index int, roots []*bignum.Complex, pow5 []int) (a, b, c []*bignum.Complex) {
+	return plainVecLevel(logN, dslots, 2<<index, false, roots, pow5)
+}
+
+func ifftPlainVecLevel(logN, dslots, index int, roots []*bignum.Complex, pow5 []int) (a, b, c []*bignum.Complex) {
+	return plainVecLevel(logN, dslots, (1<<logN)>>index, true, roots, pow5)
+}
+
+// plainVecLevel returns one freshly allocated FFT layer. Each coefficient is a
+// deep copy of its root so bit-reversal can reorder the layer without mutating
+// the shared root table or another factor.
+func plainVecLevel(logN, dslots, m int, inverse bool, roots []*bignum.Complex, pow5 []int) (a, b, c []*bignum.Complex) {
+	N := 1 << logN
+	size := 1
+	if 2*N == dslots {
+		size = 2
+	}
+
+	prec := roots[0].Prec()
+	a = make([]*bignum.Complex, dslots)
+	b = make([]*bignum.Complex, dslots)
+	c = make([]*bignum.Complex, dslots)
+	for i := 0; i < dslots; i++ {
+		a[i] = bignum.NewComplex().SetPrec(prec)
+		b[i] = bignum.NewComplex().SetPrec(prec)
+		c[i] = bignum.NewComplex().SetPrec(prec)
+	}
+
+	tt := m >> 1
+	for i := 0; i < N; i += m {
+		gap := N / m
+		mask := (m << 2) - 1
+		for j := 0; j < m>>1; j++ {
+			k := (pow5[j] & mask) * gap
+			if inverse {
+				k = ((m << 2) - (pow5[j] & mask)) * gap
+			}
+
+			idx1 := i + j
+			idx2 := i + j + tt
+			for u := 0; u < size; u++ {
+				a[idx1+u*N].Set(roots[0])
+				a[idx2+u*N].Neg(roots[k])
+				if inverse {
+					b[idx1+u*N].Set(roots[0])
+					c[idx2+u*N].Set(roots[k])
+				} else {
+					b[idx1+u*N].Set(roots[k])
+					c[idx2+u*N].Set(roots[0])
+				}
+			}
+		}
+	}
+
+	return
+}
+
 func addMatrixRotToList(pVec map[int]bool, rotations []int, N1, slots int, repack bool) []int {
 
 	if len(pVec) < 3 {
@@ -641,8 +806,45 @@ func nextLevelfftIndexMap(vec map[int]bool, logL, N, nextLevel int, ltType Type,
 	return
 }
 
-// GenMatrices returns the ordered list of factors of the non-zero diagonals of the IDFT (encoding) or DFT (decoding) matrix.
-func (d MatrixLiteral) GenMatrices(LogN int, prec uint) (plainVector []ltcommon.Diagonals[*bignum.Complex]) {
+// ForEachMatrixFactor calls emit synchronously for each ordered factor of the
+// non-zero diagonals of the IDFT (encoding) or DFT (decoding) matrix. Generation
+// stops immediately when emit returns an error.
+func (d MatrixLiteral) ForEachMatrixFactor(logN int, prec uint, emit func(ltcommon.Diagonals[*bignum.Complex]) error) error {
+	noteRawNumericConstruction()
+	return d.forEachMatrixFactorWithFreshRoots(logN, prec, emit)
+}
+
+func (d MatrixLiteral) forEachMatrixFactorWithFreshRoots(logN int, prec uint, emit func(ltcommon.Diagonals[*bignum.Complex]) error) error {
+	return d.forEachMatrixFactorWithFreshRootsObserved(logN, prec, matrixFactorGenerationObserver{}, emit)
+}
+
+func (d MatrixLiteral) forEachMatrixFactorWithFreshRootsObserved(logN int, prec uint, observer matrixFactorGenerationObserver, emit func(ltcommon.Diagonals[*bignum.Complex]) error) error {
+	roots := ckks.GetRootsBigComplex((1<<d.LogSlots)<<2, prec)
+	err := d.forEachMatrixFactorObserved(logN, prec, roots, observer, emit)
+	roots = nil
+	if observer.generatorReturned != nil {
+		observer.generatorReturned(err)
+	}
+	return err
+}
+
+func (d MatrixLiteral) forEachMatrixFactor(logN int, prec uint, roots []*bignum.Complex, emit func(ltcommon.Diagonals[*bignum.Complex]) error) error {
+	return d.forEachMatrixFactorObserved(logN, prec, roots, matrixFactorGenerationObserver{}, emit)
+}
+
+type matrixFactorGenerationObserver struct {
+	factorDelta       func(int)
+	layerDelta        func(int)
+	factorDropped     func(int)
+	generatorReturned func(error)
+}
+
+func (d MatrixLiteral) forEachMatrixFactorObserved(logN int, prec uint, roots []*bignum.Complex, observer matrixFactorGenerationObserver, emit func(ltcommon.Diagonals[*bignum.Complex]) error) error {
+	notify := func(callback func(int), delta int) {
+		if callback != nil {
+			callback(delta)
+		}
+	}
 
 	logSlots := d.LogSlots
 	slots := 1 << logSlots
@@ -652,11 +854,10 @@ func (d MatrixLiteral) GenMatrices(LogN int, prec uint) (plainVector []ltcommon.
 	imagRepack := d.Format == RepackImagAsReal
 
 	logdSlots := logSlots
-	if logdSlots < LogN-1 && imagRepack {
+	if logdSlots < logN-1 && imagRepack {
 		logdSlots++
 	}
 
-	roots := ckks.GetRootsBigComplex(slots<<2, prec)
 	pow5 := make([]int, (slots<<1)+1)
 	pow5[0] = 1
 	for i := 1; i < (slots<<1)+1; i++ {
@@ -664,79 +865,20 @@ func (d MatrixLiteral) GenMatrices(LogN int, prec uint) (plainVector []ltcommon.
 		pow5[i] &= (slots << 2) - 1
 	}
 
-	var fftLevel, depth, nextfftLevel int
-
-	fftLevel = logSlots
-
-	var a, b, c [][]*bignum.Complex
-	if ltType == HomomorphicEncode {
-		a, b, c = ifftPlainVec(logSlots, 1<<logdSlots, roots, pow5)
-	} else {
-		a, b, c = fftPlainVec(logSlots, 1<<logdSlots, roots, pow5)
-	}
-
-	plainVector = make([]ltcommon.Diagonals[*bignum.Complex], maxDepth)
-
 	// We compute the chain of merge in order or reverse order depending if its DFT or InvDFT because
 	// the way the levels are collapsed has an impact on the total number of rotations and keys to be
 	// stored. Ex. instead of using 255 + 64 plaintext vectors, we can use 127 + 128 plaintext vectors
 	// by reversing the order of the merging.
 	merge := make([]int, maxDepth)
+	fftLevel := logSlots
 	for i := 0; i < maxDepth; i++ {
-
-		depth = int(math.Ceil(float64(fftLevel) / float64(maxDepth-i)))
-
+		depth := int(math.Ceil(float64(fftLevel) / float64(maxDepth-i)))
 		if ltType == HomomorphicEncode {
 			merge[i] = depth
 		} else {
 			merge[len(merge)-i-1] = depth
-
 		}
-
 		fftLevel -= depth
-	}
-
-	fftLevel = logSlots
-	for i := 0; i < maxDepth; i++ {
-
-		if logSlots != logdSlots && ltType == HomomorphicDecode && i == 0 && imagRepack {
-
-			// Special initial matrix for the repacking before DFT
-			plainVector[i] = genRepackMatrix(logSlots, prec, bitreversed)
-
-			// Merges this special initial matrix with the first layer of DFT
-			plainVector[i] = multiplyFFTMatrixWithNextFFTLevel(plainVector[i], logSlots, 2*slots, fftLevel, a[logSlots-fftLevel], b[logSlots-fftLevel], c[logSlots-fftLevel], ltType, bitreversed)
-
-			// Continues the merging with the next layers if the total depth requires it.
-			nextfftLevel = fftLevel - 1
-			for j := 0; j < merge[i]-1; j++ {
-				plainVector[i] = multiplyFFTMatrixWithNextFFTLevel(plainVector[i], logSlots, 2*slots, nextfftLevel, a[logSlots-nextfftLevel], b[logSlots-nextfftLevel], c[logSlots-nextfftLevel], ltType, bitreversed)
-				nextfftLevel--
-			}
-
-		} else {
-			// First layer of the i-th level of the DFT
-			plainVector[i] = genFFTDiagMatrix(logSlots, fftLevel, a[logSlots-fftLevel], b[logSlots-fftLevel], c[logSlots-fftLevel], ltType, bitreversed)
-
-			// Merges the layer with the next levels of the DFT if the total depth requires it.
-			nextfftLevel = fftLevel - 1
-			for j := 0; j < merge[i]-1; j++ {
-				plainVector[i] = multiplyFFTMatrixWithNextFFTLevel(plainVector[i], logSlots, slots, nextfftLevel, a[logSlots-nextfftLevel], b[logSlots-nextfftLevel], c[logSlots-nextfftLevel], ltType, bitreversed)
-				nextfftLevel--
-			}
-		}
-
-		fftLevel -= merge[i]
-	}
-
-	// Repacking after the IDFT (we multiply the last matrix with the vector [1, 1, ..., 1, 1, 0, 0, ..., 0, 0]).
-	if logSlots != logdSlots && ltType == HomomorphicEncode && imagRepack {
-		for j := range plainVector[maxDepth-1] {
-			v := plainVector[maxDepth-1][j]
-			for x := 0; x < slots; x++ {
-				v[x+slots] = bignum.NewComplex().SetPrec(prec)
-			}
-		}
 	}
 
 	scaling := new(big.Float).SetPrec(prec)
@@ -745,31 +887,107 @@ func (d MatrixLiteral) GenMatrices(LogN int, prec uint) (plainVector []ltcommon.
 	} else {
 		scaling.Set(d.Scaling)
 	}
-
-	// If DFT matrix, rescale by 1/N
 	if ltType == HomomorphicEncode {
-		// Real/Imag extraction 1/2 factor
 		if d.Format == RepackImagAsReal || d.Format == SplitRealAndImag {
 			scaling.Quo(scaling, new(big.Float).SetFloat64(float64(2*slots)))
 		} else {
 			scaling.Quo(scaling, new(big.Float).SetFloat64(float64(slots)))
 		}
 	}
+	scaling = bignum.Pow(scaling, new(big.Float).Quo(new(big.Float).SetPrec(prec).SetFloat64(1), new(big.Float).SetPrec(prec).SetFloat64(float64(maxDepth))))
 
-	// Spreads the scale across the matrices
-	scaling = bignum.Pow(scaling, new(big.Float).Quo(new(big.Float).SetPrec(prec).SetFloat64(1), new(big.Float).SetPrec(prec).SetFloat64(float64(d.Depth(false)))))
+	nextLayer := func(fftLevel int) (a, b, c []*bignum.Complex) {
+		notify(observer.layerDelta, 1)
+		index := logSlots - fftLevel
+		if ltType == HomomorphicEncode {
+			return ifftPlainVecLevel(logSlots, 1<<logdSlots, index, roots, pow5)
+		}
+		return fftPlainVecLevel(logSlots, 1<<logdSlots, index, roots, pow5)
+	}
 
-	for j := range plainVector {
-		for x := range plainVector[j] {
-			v := plainVector[j][x]
+	fftLevel = logSlots
+	for i := 0; i < maxDepth; i++ {
+		var factor ltcommon.Diagonals[*bignum.Complex]
+		if logSlots != logdSlots && ltType == HomomorphicDecode && i == 0 && imagRepack {
+			factor = genRepackMatrix(logSlots, prec, bitreversed)
+			notify(observer.factorDelta, 1)
+			a, b, c := nextLayer(fftLevel)
+			factor = multiplyFFTMatrixWithNextFFTLevel(factor, logSlots, 2*slots, fftLevel, a, b, c, ltType, bitreversed)
+			a, b, c = nil, nil, nil
+			notify(observer.layerDelta, -1)
+
+			nextfftLevel := fftLevel - 1
+			for j := 0; j < merge[i]-1; j++ {
+				a, b, c = nextLayer(nextfftLevel)
+				factor = multiplyFFTMatrixWithNextFFTLevel(factor, logSlots, 2*slots, nextfftLevel, a, b, c, ltType, bitreversed)
+				a, b, c = nil, nil, nil
+				notify(observer.layerDelta, -1)
+				nextfftLevel--
+			}
+		} else {
+			a, b, c := nextLayer(fftLevel)
+			factor = genFFTDiagMatrix(logSlots, fftLevel, a, b, c, ltType, bitreversed)
+			a, b, c = nil, nil, nil
+			notify(observer.layerDelta, -1)
+			notify(observer.factorDelta, 1)
+
+			nextfftLevel := fftLevel - 1
+			for j := 0; j < merge[i]-1; j++ {
+				a, b, c = nextLayer(nextfftLevel)
+				factor = multiplyFFTMatrixWithNextFFTLevel(factor, logSlots, slots, nextfftLevel, a, b, c, ltType, bitreversed)
+				a, b, c = nil, nil, nil
+				notify(observer.layerDelta, -1)
+				nextfftLevel--
+			}
+		}
+
+		// Repacking after the IDFT (we multiply the last matrix with the vector
+		// [1, ..., 1, 0, ..., 0]).
+		if i == maxDepth-1 && logSlots != logdSlots && ltType == HomomorphicEncode && imagRepack {
+			for diagonal := range factor {
+				v := factor[diagonal]
+				for x := 0; x < slots; x++ {
+					v[x+slots] = bignum.NewComplex().SetPrec(prec)
+				}
+			}
+		}
+
+		for diagonal := range factor {
+			v := factor[diagonal]
 			for i := range v {
 				v[i][0].Mul(v[i][0], scaling)
 				v[i][1].Mul(v[i][1], scaling)
 			}
 		}
+
+		err := emit(factor)
+		factor = nil
+		notify(observer.factorDelta, -1)
+		if observer.factorDropped != nil {
+			observer.factorDropped(i)
+		}
+		if err != nil {
+			return err
+		}
+		fftLevel -= merge[i]
 	}
 
-	return
+	return nil
+}
+
+// GenMatrices returns the ordered list of factors of the non-zero diagonals of the IDFT (encoding) or DFT (decoding) matrix.
+func (d MatrixLiteral) GenMatrices(logN int, prec uint) (plainVector []ltcommon.Diagonals[*bignum.Complex]) {
+	noteRawNumericConstruction()
+	return d.genMatrices(logN, prec)
+}
+
+func (d MatrixLiteral) genMatrices(logN int, prec uint) (plainVector []ltcommon.Diagonals[*bignum.Complex]) {
+	plainVector = make([]ltcommon.Diagonals[*bignum.Complex], 0, d.Depth(false))
+	_ = d.forEachMatrixFactorWithFreshRoots(logN, prec, func(factor ltcommon.Diagonals[*bignum.Complex]) error {
+		plainVector = append(plainVector, factor)
+		return nil
+	})
+	return plainVector
 }
 
 func genFFTDiagMatrix(logL, fftLevel int, a, b, c []*bignum.Complex, ltType Type, bitreversed bool) (vectors map[int][]*bignum.Complex) {
@@ -852,7 +1070,9 @@ func multiplyFFTMatrixWithNextFFTLevel(vec map[int][]*bignum.Complex, logL, N, n
 		}
 	}
 
-	for i := range vec {
+	keys := utils.GetKeys(vec)
+	slices.Sort(keys)
+	for _, i := range keys {
 		addToDiagMatrix(newVec, i, rotateAndMulNew(vec[i], 0, a))
 		addToDiagMatrix(newVec, (i+rot)&(N-1), rotateAndMulNew(vec[i], rot, b))
 		addToDiagMatrix(newVec, (i-rot)&(N-1), rotateAndMulNew(vec[i], -rot, c))

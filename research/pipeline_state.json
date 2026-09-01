@@ -1,0 +1,1208 @@
+{
+  "topic": "LCPDTE × CKKS Z_{2^n} integer evaluation in Lattigo",
+  "language": "zh-CN",
+  "ars_adapter_version": "0.1.18",
+  "academic_pipeline_version": "3.16.0",
+  "entry_point": "1",
+  "current_stage": "2",
+  "pipeline_state": "stage2_in_progress",
+  "consecutive_continue_count": 0,
+  "goal_thread_id": "01a04d78-9838-77d3-8c59-10ac1013d0a5",
+  "scope": {
+    "paper_baseline": "CCS 2026 CKKS protocol; relevant BFV/BGV/HE baselines will be analyzed separately from primary sources",
+    "local_baseline": "Patched Lattigo v6.1.1 CKKS checkout at f5ff611f7c023f7ec4d06af6cecaa8b5d33da607",
+    "integer_reference": "Gao et al. ePrint 2026/233 and fhe-simd-alu, pinned independently in Stage 1",
+    "target": "Pure-Go Lattigo CKKS Z_{2^n} operators plus binary and radix-aware private decision-tree evaluators"
+  },
+  "stages": {
+    "0": {
+      "name": "INTAKE",
+      "status": "completed",
+      "mode": "full",
+      "outputs": [
+        "task_plan.md",
+        "findings.md",
+        "progress.md",
+        "graphify-out/graph.json",
+        "graphify-out/GRAPH_REPORT.md",
+        "graphify-out/graph.html"
+      ],
+      "checkpoint_confirmed": true,
+      "checkpoint_type": "PIPELINE_START",
+      "schema_validated": true
+    },
+    "1": {
+      "name": "RESEARCH_AND_REFERENCE_REPRODUCTION",
+      "skill": "deep-research + experiment-agent",
+      "status": "completed",
+      "mode": "full",
+      "outputs": [
+        "research/phase1_scoping/rq_brief.md",
+        "research/phase1_scoping/methodology_blueprint.md",
+        "research/phase1_scoping/devils_advocate_checkpoint1.md",
+        "research/phase2_investigation/annotated_bibliography.md",
+        "research/phase2_investigation/candidate_bibliography.md",
+        "research/phase2_investigation/search_strategy.md",
+        "research/phase2_investigation/da2_major1_query_ledger.md",
+        "research/phase2_investigation/source_manifest.md",
+        "research/phase2_investigation/source_verification.md",
+        "research/phase2_investigation/lcpdte_paper_code_map.md",
+        "research/phase2_investigation/gao_paper_code_map.md",
+        "research/phase2_investigation/official_lcpdte_repo_provenance.md",
+        "research/phase2_investigation/upstream_oracle/provenance_build_source_map.md",
+        "research/phase2_investigation/upstream_oracle/build_commands_and_outputs.md",
+        "research/phase3_analysis/synthesis_report.md",
+        "research/phase3_analysis/claim_intent_manifest.yaml",
+        "research/phase3_analysis/devils_advocate_checkpoint2_final.md",
+        "research/phase3_design/da2_major1_counterexample_synthesis.md",
+        "research/phase3_design/da2_major1_claim_intent_manifest.yaml",
+        "research/phase3_design/lattigo_integer_design.md",
+        "research/phase3_design/benchmark_manifest.md",
+        "research/phase3_design/preregistration_amendments.md",
+        "research/phase3_design/security_estimator_pin.md",
+        "research/phase3_design/math_code_audit_2026-08-29.md",
+        "research/stage1_artifact_hashes.sha256",
+        "research/material_passport.yaml"
+      ],
+      "phase1_scoping_checkpoint": "PASS",
+      "devils_advocate_checkpoint2": "PASS; 0 Critical / 0 Major / 0 Minor",
+      "material_passport_content_hash": "sha256:b2b7d5b6bdec140a89292b8ba581ddd45428f04cbe0ff2840c76e4edf3c1f3ea",
+      "checkpoint_confirmed": true,
+      "checkpoint_type": "FULL",
+      "schema_validated": true
+    },
+    "2": {
+      "name": "LATTIGO_DESIGN_AND_IMPLEMENTATION",
+      "skill": "experiment-agent + implement",
+      "status": "in_progress",
+      "mode": "vertical-slice TDD",
+    "outputs": [
+      "research/phase3_design/stage2_lattigo_port_contract.md",
+      "research/phase3_design/public_integer_metadata_contract.md",
+      "research/phase3_design/radix_integer_tree_hypotheses.md",
+      "research/phase3_design/r0_same_feature_fusion_scan.md",
+      "research/scripts/scan_same_feature_fusion.ps1",
+      "research/phase3_design/a2ae_a2b_port_contract.md",
+      "research/phase3_design/a2b_lattigo_port_contract.md",
+      "research/phase3_design/signed8_comparator_contract.md",
+      "research/phase3_design/integer_tree_integration_contract.md",
+      "research/phase3_design/depth2_child_comparator_design.md",
+      "research/phase3_design/security_parameter_bundle_contract.md",
+      "research/phase3_design/a2b_lut_p16_order1.tsv",
+      "research/phase3_design/a2b_exp16_degree46.tsv",
+      "research/phase3_design/gao_sine_kernel_contract.md",
+      "research/scripts/dump_a2b_lut_coefficients.cpp",
+      "research/scripts/extract_a2b_exp46.ps1",
+      "integer/z2n/ring_test.go",
+        "integer/z2n/boolean_oracle.go",
+        "integer/z2n/boolean_oracle_test.go",
+        "integer/treecompile/ordered_float32.go",
+        "integer/treecompile/ordered_float32_test.go",
+      "integer/homchain/a2ai.go",
+      "integer/homchain/a2ai_contract.go",
+      "integer/homchain/a2ai_circuit.go",
+      "integer/homchain/dft.go",
+      "integer/homchain/a2ai_contract_test.go",
+      "integer/homchain/a2ai_integration_test.go",
+      "integer/homchain/b2a.go",
+      "integer/homchain/b2a_integration_test.go",
+      "integer/homchain/sine_kernel.go",
+      "integer/homchain/sine_kernel_test.go",
+      "integer/homchain/sine_kernel_integration_test.go",
+      "integer/homchain/a2b_lut.go",
+      "integer/homchain/a2b_lut_test.go",
+      "integer/homchain/a2b_exp.go",
+      "integer/homchain/a2b_exp_test.go",
+      "integer/homchain/a2b_refresh.go",
+      "integer/homchain/a2b_full.go",
+      "integer/homchain/a2b_full_integration_test.go",
+      "integer/homchain/sign_fusion.go",
+      "integer/homchain/sign_fusion_integration_test.go",
+      "integer/homchain/signed_comparator.go",
+      "integer/homchain/signed_comparator_integration_test.go",
+      "integer/homchain/signed8_root_tree.go",
+      "integer/homchain/signed8_root_tree_test.go",
+      "integer/homchain/signed8_root_tree_integration_test.go",
+      "integer/homchain/selector_reraise_decode.go",
+      "integer/homchain/selector_reraise_decode_test.go",
+      "integer/homchain/selector_reraise_decode_integration_test.go",
+      "integer/treeplan/schedule.go",
+        "integer/treeplan/schedule_certificate.go",
+        "integer/treeplan/schedule_test.go",
+        "integer/treeplan/schedule_audit_test.go",
+      "research/phase3_analysis/multiway_candidate_audit.md",
+      "research/scripts/install_sage_wsl.sh",
+      "research/reproduction/security/toolchain/sage-conda-linux-64-explicit.txt",
+      "research/reproduction/security/toolchain/sage-version.txt",
+      "research/reproduction/security/toolchain/estimator_smoke.sage.py",
+      "research/reproduction/security/toolchain/estimator_smoke_stdout.txt",
+      "research/reproduction/security/toolchain/estimator_smoke_record.md",
+      "integer/securityparams/gao_compatible.go",
+      "integer/securityparams/gao_compatible_test.go",
+      "integer/securityparams/homchain_compatibility_test.go",
+      "cmd/emit-security-params/main.go",
+      "research/reproduction/security/parameters/lattigo-gao-compatible-n16-v1.json",
+      "research/reproduction/security/parameters/lattigo-functional-a2b-n8-v1.json",
+      "research/phase3_design/secure_n16_port_seam.md",
+      "integer/secureprofile/gao_n16.go",
+      "integer/secureprofile/gao_n16_test.go",
+      "integer/secureprofile/gao_n16_route_b_construction.go",
+      "integer/secureprofile/gao_n16_route_b_construction_test.go",
+      "research/scripts/run_ckks_security_estimates.sage.py",
+      "research/phase3_design/security_estimator_conversion_record.md",
+      "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.determinism.json",
+      "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.input.json",
+      "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.run-1.metadata.json",
+      "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.run-1.stderr.txt",
+      "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.run-1.stdout.json",
+      "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.run-2.metadata.json",
+      "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.run-2.stderr.txt",
+      "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.run-2.stdout.json",
+      "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.transcript.json",
+      "research/phase3_design/secure_n16_route_b_phase_capacity_amendment_2026-09-01.md",
+      "integer/secureprofile/gao_n16_packing_l11_phase.go",
+      "integer/secureeval/route_b_phase_capacity_test.go",
+      "integer/secureeval/route_b_preflight.go",
+      "integer/secureeval/route_b_experiment.go",
+      "cmd/route-b-l11-mr0/main.go",
+      "cmd/route-b-l11-mr0/main_test.go",
+      "research/reproduction/route_b/route_b_l11_mr0_2026-09-01.json",
+      "research/reproduction/route_b/route_b_l11_mr0_report_2026-09-01.md",
+      "research/reproduction/route_b/route_b_l11_a2b_first_round_2026-09-01.json",
+      "research/reproduction/route_b/route_b_l11_a2b_first_round_report_2026-09-01.md",
+      "research/reproduction/route_b/route_b_l11_a2b_full_2026-09-01.json",
+      "research/reproduction/route_b/route_b_l11_a2b_full_report_2026-09-01.md",
+      "research/reproduction/route_b/route_b_signed8_root_tree_2026-09-01.json",
+      "research/reproduction/route_b/route_b_signed8_root_tree_report_2026-09-01.md",
+      "research/reproduction/route_b/route_b_signed8_depth2_node_batch_2026-09-01.json",
+      "research/reproduction/route_b/route_b_signed8_depth2_node_batch_report_2026-09-01.md",
+      "research/reproduction/selected_child/signed8_depth2_selected_child_2026-09-01.json",
+      "research/reproduction/selected_child/signed8_depth2_selected_child_report_2026-09-01.md",
+      "research/phase3_design/secure_route_b_signed8_depth2_selected_child_amendment_2026-09-01.md",
+      "integer/homchain/gao_periodic_boolean_n16.go",
+      "integer/secureeval/route_b_signed8_depth2_selected_child.go",
+      "integer/secureeval/route_b_signed8_depth2_selected_child_a2sign.go",
+      "integer/secureeval/route_b_signed8_depth2_selected_child_eval.go",
+      "integer/secureeval/route_b_signed8_depth2_selected_child_experiment.go",
+      "cmd/route-b-signed8-depth2-selected-child/main.go",
+      "cmd/route-b-signed8-depth2-selected-child/main_test.go",
+      "research/reproduction/route_b/route_b_signed8_depth2_selected_child_2026-09-01.json",
+      "research/reproduction/route_b/route_b_signed8_depth2_selected_child_report_2026-09-01.md",
+      "research/reproduction/route_b/route_b_signed8_depth2_selected_child_artifact_hashes_2026-09-01.sha256"
+      ],
+      "checkpoint_confirmed": false,
+      "checkpoint_type": "FULL",
+      "schema_validated": false
+    },
+    "2.5": {
+      "name": "INTEGRITY_AND_REPRODUCIBILITY",
+      "agent": "integrity_verification_agent",
+      "status": "pending",
+      "mode": "pre-review",
+      "outputs": [],
+      "checkpoint_confirmed": false,
+      "checkpoint_type": "MANDATORY",
+      "schema_validated": false
+    },
+    "3": {
+      "name": "INDEPENDENT_REVIEW",
+      "skill": "academic-paper-reviewer + code-review",
+      "status": "pending",
+      "mode": "full",
+      "outputs": [],
+      "checkpoint_confirmed": false,
+      "checkpoint_type": "MANDATORY",
+      "schema_validated": false
+    },
+    "4": {
+      "name": "REVISION_AND_FINAL_EXPERIMENTS",
+      "status": "pending",
+      "mode": "patch/revision",
+      "outputs": [],
+      "checkpoint_confirmed": false,
+      "checkpoint_type": "FULL",
+      "schema_validated": false
+    },
+    "4.5": {
+      "name": "FINAL_INTEGRITY",
+      "agent": "integrity_verification_agent",
+      "status": "pending",
+      "mode": "final-check",
+      "outputs": [],
+      "checkpoint_confirmed": false,
+      "checkpoint_type": "MANDATORY",
+      "schema_validated": false
+    },
+    "5": {
+      "name": "FINALIZE",
+      "status": "pending",
+      "mode": "research report + reproduction package",
+      "outputs": [],
+      "checkpoint_confirmed": false,
+      "checkpoint_type": "MANDATORY",
+      "schema_validated": false
+    }
+  },
+  "intake": {
+    "repository_origin": "https://github.com/nc26676027/LCPDTE",
+    "repository_commit": "f5ff611f7c023f7ec4d06af6cecaa8b5d33da607",
+    "go_version": "1.23.11",
+    "lattigo_declared_version": "v6.1.1",
+    "lattigo_local_patch_files": 4,
+    "baseline_compile": "PASS; no test files",
+    "host_memory_gib": 31.3,
+    "host_logical_processors": 16,
+    "full_d12_memory_risk": true,
+    "cross_model_review": false
+  },
+  "tdd_seams": [
+    "Z2N public operator API against independent plaintext oracles",
+    "Encrypted decision-node API against child-index/selector oracles",
+    "End-to-end encrypted tree API against plaintext model predictions and operation counters"
+  ],
+  "materials": {
+    "primary_papers_verified": true,
+    "reference_repositories_pinned": true,
+    "lattigo_patch_manifest": true,
+    "annotated_bibliography": true,
+    "synthesis_report": true,
+    "integer_operator_tests": false,
+    "binary_tree_port": false,
+    "radix_tree_prototype": false,
+    "benchmark_results": false,
+    "innovation_memo": false,
+    "final_integrity_report": false
+  },
+  "final_delivery": {
+    "make_remote_private": true,
+    "push_final_commit": true,
+    "status": "pending",
+    "must_follow_final_audit": true
+  },
+  "revision_history": [
+    {
+      "stage": "1",
+      "checkpoint": "FULL-stage-transition",
+      "verdict": "CONFIRMED by active-goal continuation",
+      "date": "2026-08-29"
+    },
+    {
+      "stage": "1",
+      "checkpoint": "DA2-final-first-pass",
+      "verdict": "REVISE; 0 Critical / 1 Major / 3 Minor",
+      "date": "2026-08-29"
+    },
+    {
+      "stage": "1",
+      "checkpoint": "DA2-final-targeted-rerun",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor",
+      "date": "2026-08-29"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "R0-schedule-first-audit",
+      "verdict": "REVISE; 0 Critical / 4 Major / 3 Minor; fixes applied, rerun active",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2AI-first-audit",
+      "verdict": "REVISE; 0 Critical / 6 Major; functional adaptation retained, contract fixes active",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "R0-schedule-stable-rerun",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "B2A-first-audit",
+      "verdict": "REVISE; 0 Critical / 2 Major / 0 Minor; encoder and exact input-scale binding repaired in profile v2",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "B2A-stable-rerun",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2AI-opaque-seal-first-rerun",
+      "verdict": "REVISE; 0 Critical / 1 Major / 0 Minor; key preflight and DFT execution referenced separable evaluator graphs",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2AI-stable-rerun",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; private main+DFT execution graph and per-call source/sealed identity checks accepted",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2AI-DFT-generator-precision-reopen",
+      "verdict": "REVISE; root inspection found vendored DFT roots and factors generated at parameter EncodingPrecision=53 rather than the bound 192-bit encoder precision",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2AI-DFT-precision-first-repair-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 0 Minor; 53-vs-192 test hashed precision metadata and did not isolate actual numeric matrix payload",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2AI-DFT-precision-stable-rerun",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; encoder-precision generation mirror and metadata-free numeric payload witness independently accepted",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "sine-operational-encoder-first-audit",
+      "verdict": "REVISE; Major; the validated 256-bit encoder was not the evaluator's live coefficient path",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "sine-operational-dispatch-second-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 0 Minor; scalar Add and MulThenAdd still quantized through parameter EncodingPrecision=53",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "sine-operational-dispatch-stable-rerun",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; full-slot PolynomialVector and recurrence constants use the private 256-bit encoder with a numeric scalar53-vs-packed256 witness",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-exp46-prerequisite-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; exact source artifact/import/oracle accepted, encrypted shared-power composition remains pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-exp46-refresh-composition-normalization",
+      "verdict": "REVISE (superseded diagnosis); the first isolated kernel composition exposed a normalization mismatch but incorrectly proposed an additional s/16 bridge",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-refresh-to-exp46-normalization-correction",
+      "verdict": "OPEN CORRECTION; live refresh shows CTS already outputs y=(I+m/16)/16, so no extra bridge is allowed; acceptance now requires 16*y-m/16 near an integer and downstream invariance across admissible integer lifts",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-stopped-refresh-local-gate",
+      "verdict": "PASS BOUNDED / COMPOSITION REVISE; all 256 words satisfy the integer-lift and periodic-root gates, but LogMessageRatio=0 returns CTS at L17/S50 and cannot enter the exact L17/S35 isolated kernel; serial residual peeling is not implemented",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-encrypted-kernel-local-gate",
+      "verdict": "PASS LOCAL / AUDIT PENDING; packed exp46 plus two squares and one shared-power ID/MSB call passes all code points and five integer lifts at L17/S35 -> L5; root review found non-input ScaleExact states were recorded but not fail-closed and applied a targeted repair",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "B2A-same-chain-first-audit",
+      "verdict": "REVISE; 0 Critical / 3 Major / 1 Minor; exact canonical parameter binding, matrix/compiled-plan digest, post-bind key identity recheck, and duplicated-builder drift require repair",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-refresh-kernel-scale-alignment",
+      "verdict": "OPEN CORRECTION; test LogMessageRatio=15 plus q-level special-b0 matrix scaling as the zero-extra-level S35 schedule; metadata retagging is forbidden and a charged unit-multiply/rescale bridge is fallback only",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2AE-complete-functional-chain-author-gate",
+      "verdict": "PASS LOCAL / AUDIT PENDING; L16 to L3 fused-t/refresh/sine+3DA/fused-tInv/subtraction graph preserves four residues and reduces the fixed noise diagnostic without SetScale; sparse-switch/source-secure promotion remains blocked",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "B2A-same-chain-repair-author-gate",
+      "verdict": "PASS LOCAL / RE-AUDIT PENDING; chain-v1 binds exact canonical parameters, numeric fused-transform source, compiled plan, and post-bind key identities while preserving standalone profile v2 and its exhaustive oracle",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-kernel-first-independent-audit",
+      "verdict": "REVISE MINOR; 0 Critical / 0 Major / 2 Minor; production graph accepted, same-bit parameter and per-operand/mapping tamper regressions added locally, independent repair rerun pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-kernel-to-B2A-direct-composition",
+      "verdict": "RED; real kernel L5 output scale differs from chain B2A exact-default admission, so the prior synthetic B2A author gate is reopened; SetScale is forbidden",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-refresh-kernel-scale-repair-author-gate",
+      "verdict": "PASS LOCAL / AUDIT ACTIVE; q20 special-b0, MR15, and separately sealed initialized execution DFT matrices produce exact L17/S35 and pass five all-256 direct-kernel runs without an added level; normalization remains uncertified and serial A2B remains open",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-kernel-to-B2A-scale-repair",
+      "verdict": "PASS LOCAL / RE-AUDIT ACTIVE; shared EvaluateMultiPoly now targets exact default S35, profile v3 seals Boolean output L5/S35, and real same-keyset kernel-to-B2A composition passes without an extra level, operation, or SetScale",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-refresh-kernel-scale-stable-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; raw/execution initialization factors, exact states, same-keyset composition, all-256 oracles, and bounded claim accepted",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-kernel-v3-and-B2A-stable-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; kernel output L5/S35 and direct same-chain B2A composition independently accepted",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2AE-complete-chain-first-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 2 Minor; ScaleDown exactness is self-referential, digest regression values are unfrozen, and key-preflight failures lack a distinct failure stage",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2AE-complete-chain-repair-author-gate",
+      "verdict": "PASS LOCAL / RE-AUDIT PENDING; q0*errScale exact snapshots, metadata sentinels, frozen digests, and explicit zero-op key-preflight failure stage close the first-audit findings",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-full-serial-second-refresh-first-gate",
+      "verdict": "PASS LOCAL / INCOMPLETE; real A5 ciphertext follows high L4 -> mask L3 -> independent STC L1 -> ScaleDown L0 -> ModUp L20 -> CTS L17 -> second kernel L5 at exact S35 and returns correct LSB-first halves; exhaustive/profile/audit gates remain open",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2AE-complete-chain-stable-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; independent exact-scale evidence, metadata sentinels, frozen digests, failure-stage semantics, full chain, and bounded claims accepted",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-high-sign-rank-one-fusion-stable-audit",
+      "verdict": "PASS FUNCTIONAL FUSION; 0 Critical / 0 Major / 0 Minor; all-256 oracle, four-block isolation, semantic B2A control, real kernel-high composition, exact profile/graph/key gates accepted; encrypted-isolation performance baseline remains deferred and no speed claim is made",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "signed8-no-overflow-comparator-contract",
+      "verdict": "DESIGN READY / IMPLEMENTATION PENDING; exact range proof, CT-PT and CT-CT seams, serial-A2B-to-sign trace, arithmetic-root-slot 1-b7 orientation, nested ledgers, key provenance, exhaustive tests, refresh boundary, and R0/R1 claim limits frozen",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-full-serial-author-gate",
+      "verdict": "PASS LOCAL / STABLE AUDIT ACTIVE; fixed n=8,w=4,d=2 has 24 exact S35 states, independent L3-to-L1 second STC, two serial refreshes/kernels, independent rawHigh-ID0/16 all-256 oracle, zero residual rotations, sealed profile/key graph, count-five/full-repo/vet gates, and bounded functional-not-secure labels",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "signed8-comparator-range-certificate-phase-a",
+      "verdict": "PASS LOCAL / EXECUTION HARD-CLOSED; big.Int interval proof and digest metadata pass exhaustive 65,536 singleton pairs and required negatives; ciphertext construction/binding/evaluation return ErrSigned8ComparatorAwaitingA2BAudit",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-full-serial-first-stable-audit",
+      "verdict": "REVISE; 0 Critical / 0 Major / 3 Minor; execution-derived operation ledger, ordered 24-state assertion, and same-element foreign-secret relin/Galois negatives are required; source graph, numeric gates, digest coverage, and bounded labels otherwise pass",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-full-serial-stable-audit-repair-author-gate",
+      "verdict": "PASS LOCAL / RE-AUDIT PENDING; runtime-derived ledger, ordered 24-state exact physical assertions, same-element foreign-secret key negatives, explicit S35 helper, and completed-circuit comments close all first-audit findings; frozen digests unchanged",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "signed8-comparator-range-phase-a-first-audit",
+      "verdict": "REVISE; 0 Critical / 0 Major / 1 Minor; implementation is unconditionally hard-closed and range/digest gates pass, but constructor and nonnil circuit/evaluator closure paths need explicit regression tests",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "A2B-full-serial-stable-repair-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; execution-derived ledger, exact ordered 24-state trace, same-element foreign-secret key gates, fixed S35 semantics, unchanged digests, and bounded fixed-slice claims independently accepted",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "signed8-comparator-range-phase-a-stable-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; exact range/digest semantics and constructor/nonnil bind/public/opaque hard-closure paths independently accepted with nil outputs, zero traces, and immutable inputs",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "signed8-comparator-complete-stable-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; fixed n=8 signed no-overflow public/opaque comparator, source declarations, exact range admission, serial A2B, direct sign fusion, profiles, key graph, exhaustive ciphertext oracle and bounded claim independently accepted",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "signed8-T0-root-tree-final-hash-author-gate",
+      "verdict": "PASS LOCAL / INDEPENDENT RE-AUDIT ACTIVE; frozen-hash compile, vet, gofmt, focused fail-closed matrix and complete count1 PASS; exact cached-plaintext pointer seals and final runtime capture repaired; count-five and independent acceptance remain open",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "selector-linear-reraiser-falsification",
+      "verdict": "FALSIFIED; fused D-o-U and normal U/D agree but cannot remove the integral lift retained by CTS; the L16 profile and derived ingress family are withdrawn; periodic exp46-plus-two-square Boolean decoding has only a high-precision plaintext oracle so far",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "integer-multiway-matched-candidate-audit",
+      "verdict": "PASS DESIGN / NO SPEED CLAIM; unmatched 12D-versus-16D claim withdrawn; naive radix-4 is 1.5x the matched binary refresh/kernel rounds; only the exact R0 cross-tree common-prefix DAG and conditional R1 fused-nibble/unary circuit survive with explicit stop conditions",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "security-toolchain-first-independent-audit",
+      "verdict": "REVISE; 0 Critical / 2 Major / 2 Minor; Sage 10.9 and the explicit package lock reproduce, but normal installer mode must fail closed against drift and the smoke must authenticate estimator HEAD plus normalized content before parameter estimation",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "signed8-T0-root-tree-frozen-independent-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; frozen files, corrected-delta mathematics, public/opaque range and provenance admission, exact key/cache identities, zero-operation failures, ledgers, immutable evidence, independent oracle and bounded functional-not-secure claim accepted; count-five remains separate",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-gao-compatible-exact-parameter-manifest",
+      "verdict": "PASS PARAMETER EVIDENCE / PENDING IMPLEMENTATION AND ESTIMATOR; deterministic LogN=16 target LogQ=[43x21], LogP=[50x7] candidate yields exact 904/351/1254-bit products and authenticated manifest e2dc7b14...8b3f3d; key/sample/circuit/transcript fields remain explicitly missing",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "security-toolchain-repair-independent-audit",
+      "verdict": "REVISE; 0 Critical / 3 Major / 0 Minor; lock, Sage version record and LF attributes are not yet in the committed tree, and version parsing deletes internal newlines instead of accepting only LF/CRLF line-ending variants",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "security-toolchain-final-independent-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; commit 048ac14 tracks the exact 389-record Sage 10.9 environment, LF policy and authenticated estimator smoke; normal install, live URL+SHA export, existing-prefix refresh rejection and strict LF/CRLF version controls reproduce",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "signed8-T0-root-tree-frozen-count-five",
+      "verdict": "PASS; five consecutive encrypted runs completed in 1833.571s after independent 0C/0M/0m acceptance; post-run production and test SHA-256 values exactly match the frozen triplet; claim remains bounded functional-not-secure T0 only",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "exact-security-parameter-manifests-independent-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; exact candidate and functional-negative prime chains/products/digests, two fresh byte-identical CLI emissions, overwrite refusal and accepted-homchain parameter equality independently verified; secure implementation and application-security evidence remain pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "selector-periodic-replacement-first-independent-audit",
+      "verdict": "REVISE; 0 Critical / 2 Major / 0 Minor; periodic mathematics, production path, all-16 public/opaque behavior, 19 states, zero-op tests and scalar leaf identity pass, but serialized-byte accounting is absent and exact same-map Galois-cache inventory/identity deletion is not fail-closed",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "security-estimator-conversion-early-audit-history",
+      "verdict": "REVISE; successive independent audits rejected incomplete runtime/repeat binding, consistently mutable nested result/toolchain evidence, unlocked returned attack fields, Xe without the explicit ambient dimension, permissive nested metadata schemas, and incomplete-result digest coverage",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "security-estimator-conversion-final-independent-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; exact unlimited-sample Q/QP sensitivity, known-answer result inventory, two-run determinism, 386/386 converter, 3/3 manifest and 23/23 metadata tamper rejection, and 17-object byte/mtime immutability independently verified; candidate application-security decision remains INCONCLUSIVE and functional negative control is FAIL",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-parameter-profile-independent-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; exact-only candidate admission, drift rejection, immutable parameter/profile digests, 8192-word capacity, exact ScaleDown correction, MR0 and static target topology independently verified; maturity remains parameter_candidate_unverified and no circuit or application-security promotion is made",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "selector-periodic-replacement-byte-cache-repair-audit",
+      "verdict": "REVISE; 0 Critical / 0 Major / 1 Minor; exact online-versus-retained byte ledgers, runtime remeasurement, all-16 behavior, 19 states and exact Galois inventory/identity fail-close pass, but the advertised 27-case zero-operation matrix contains only 25 cases because nil evaluator receiver and nil circuit regressions are missing",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "selector-periodic-replacement-final-independent-audit-and-count-five",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; true 27-case zero-operation matrix, all-16 public/opaque periodic decode, 19-state runtime ledger, exact online/retained byte accounting, Galois inventory/identity, scalar-leaf bridge and immutable evidence accepted; frozen full count-five passed in 589.760s; functional-not-secure with no multi-depth or speed promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "integer-tree-integration-contract-periodic-selector-review",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor after narrowing byte evidence to ledger tampering and retained-pointer alias/double-counting; Section 4 matches the accepted periodic mathematics, levels, counts, keys, byte boundaries, fail-close matrix, leaf bridge and bounded claim",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-source-prefix-and-ingress6-design-route",
+      "verdict": "PASS DESIGN / IMPLEMENTATION ACTIVE; exact selector output R differs from S35, no-retag conditioning yields L7/q7, matched width-two delta selection yields L6/S35, and the minimum semantic continuation is a fixed ingress6 A2B plus sibling comparator/selector; bare ScaleDown/ModUp and forged producer digests are rejecting controls",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "a2b-full-ingress6-first-independent-audit",
+      "verdict": "REVISE; 0 Critical / 3 Major / 0 Minor; functional L6 admission, 25-state graph, all-256 oracle and L20 differential pass, but evaluator graph slices lack exact cardinality seals, four byte-ledger states use templates instead of real runtime ciphertexts, exact byte constants are not independently frozen, and the public EvaluateNew zero-operation mutation matrix is incomplete",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-source-prefix-first-independent-audit",
+      "verdict": "REVISE INTERIM; at least 1 Major found before the shared-package test rerun: SelectorReraiseDecodeResult lacks an execution-time output payload/provenance seal, so same-state scalar replacement before BindSelectorResult can be re-bound under freshly computed downstream provenance; repair and a fresh complete audit are required",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-source-prefix-selector-result-seal-author-gate",
+      "verdict": "AUTHOR GREEN / INDEPENDENT AUDIT ACTIVE; selector profile v5 seals the true execution-time L8/R payload and result provenance, conditioner admission revalidates that producer seal, and prefix outputs remain exact L6/S35 without metadata retag; expanded mutation, encrypted and count-five gates pass but no independent acceptance is yet recorded",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "a2b-full-ingress6-encoded-payload-reopened-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 0 Minor; the earlier repair closes the original three Majors, but actual encoded first-STC, shared-CTS and second-STC diagonal plaintexts are sealed only by literal digests and Vec-map identity, so in-place coefficient mutation survives every pre-HE check and changes the evaluated payload",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-artifact-capacity-design-audit",
+      "verdict": "RESOURCE_BLOCKED DESIGN; encoded STC/CTS require 8.6474609375 GiB and the resident artifact estimate is about 9.15 GiB, leaving insufficient margin below the current host's 80% physical-memory gate once non-streaming generation and textual-digest transients are included; deterministic no-artifact dry-run admission is required before any encoder, key, evaluator or ciphertext construction",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-source-prefix-selector-result-seal-final-independent-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; selector profile v5 seals the execution-time L8/R payload and full result provenance, conditioner and prefix re-authenticate public/opaque producer identity and payloads, same-state replacement and coefficient mutation fail before HE, exact R-to-L7/q7-to-L6/S35 algebra and four-query encrypted results pass, and all seven frozen hashes match; functional prefix only with no child-comparator, depth2-closure, speed or security promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "a2b-full-ingress6-payload-profile-v2-final-independent-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor on the replacement snapshot; all 2 first-STC, 3 shared-CTS and 2 second-STC actual encoded factors are sealed by metadata, sorted diagonal indexes and serialized payloads, in-place coefficient mutations fail before HE, exact 2/3/2 graph/cache lengths and the 50-case mutation matrix pass, and all-256/L20-differential/25-state real-byte evidence is preserved; the earlier PASS remains withdrawn and no security, speed, child or depth2 closure is promoted",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-artifact-capacity-first-independent-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 0 Minor; exact formulas, checked arithmetic, strict integer-floor 80% policy, zero OS/HE construction path and RESOURCE_BLOCKED host decision pass, but ValidatePermit accepts an ADMITTED permit re-sealed around a real blocked report because it does not independently re-evaluate the current snapshot or bind the unique admitted report; deterministic repair and fresh review are required",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-artifact-capacity-permit-repair-final-independent-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; ValidatePermit re-evaluates the exact current snapshot and compares the unique admitted report/permit, real blocked-report, overflow-probe and arbitrary-digest re-sealing attacks all fail with constructor count zero, checked estimates and frozen digests remain stable, and no OS or HE artifact construction is reachable; resource-admission contract only, with the present host still RESOURCE_BLOCKED and no circuit/security promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-capacity-unblock-route",
+      "verdict": "PASS DESIGN / IMPLEMENTATION PENDING; the full-packed LogSlots15/8192-word source-faithful target requires factor streaming plus digest-sealed lazy disk-backed evaluation keys, while a separately versioned LogSlots11/512-word sparse-packing R1 adaptation is the first encrypted vertical gate with a 7,842,848,076-byte guarded estimate and 2,585,547,267-byte margin; reduced packing cannot satisfy the Gao full-packed reproduction or application-security claim",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-terminal-float64-leaf-route",
+      "verdict": "PASS DESIGN / IMPLEMENTATION PENDING; a child-specific authenticated periodic decoder yields b1 at L8/R and fuses conditioning into two float64 leaf-delta plaintext products, while the prefix root selector b0 at L7/q7 supplies the sole CT-CT interaction; the exact L6/S terminal graph uses 2 CT-PT, 1 CT-CT, 1 relinearization, 3 rescales and 0 rotations, preserves server-plaintext finite float64 leaf semantics, and forbids int8/mod-256 leaf shortcuts or root-producer provenance laundering",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-logslots11-capacity-author-gate",
+      "verdict": "AUTHOR GREEN / INDEPENDENT AUDIT ACTIVE; the pure no-artifact R1 profile seals LogSlots11/512 words, SplitRealAndImag DFT literals, physical Trace rotations and Galois elements, the exact 38-element DFT/Trace/conjugation union, three fixed keys and a 7,842,848,076-byte guarded requirement with 2,585,547,267-byte host margin; permit forgery, overflow, Repack/BSGS drift and full-packed/source-faithful promotion controls pass, but no independent acceptance or encrypted secure-profile execution is claimed",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-logslots11-capacity-first-independent-audit",
+      "verdict": "REVISE; 0 Critical / 0 Major / 1 Minor; pure production logic, exact 38-key Lattigo and independent integer derivations, all capacity values, permit-forgery controls and R1 claim labels pass, but zero profile/shape/plan/report/permit values, critical nil slices and blank/zero/inconsistent snapshots lack explicit real-path typed fail-closed and zero-constructor regressions; production appears fail-closed statically, but test-only repair and fresh review are required",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-child-comparator-first-independent-audit-interim",
+      "verdict": "REVISE INTERIM; at least 1 Major: the wrapper seals top-level ingress/sign evaluator pointers but not the complete bind-time nested circuit/suffix/source/keyset/evaluator identities, so a self-consistent foreign-secret ingress suffix or coherently replaced sign subgraph can pass nested preflight and be consumed after the first subtraction; a reproducible RED, exact nested identity binding before the first HE operation, expanded zero-operation mutations and a fresh full audit are required",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-logslots11-capacity-repair-final-independent-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; the 25-case zero-value, nil-slice and invalid-snapshot matrix reaches real constructors, Evaluate, report/permit validation and the permit-gated caller with typed fail-closed results and zero constructor calls, while the pure production SHA, exact Split DFT/Trace 38-key derivation, seven digests and 7,842,848,076-byte guarded requirement remain stable; capacity/profile admission only for the 512-word R1 adaptation, with no encrypted MR0, full-packed or security promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-route-b-precision-construction-gate",
+      "verdict": "OPEN DESIGN CORRECTION; the stock S43 bootstrapping constructor generates and encodes DFT factors with the parameter's 53-bit default encoder, so encrypted Route B requires a capacity-admitted prebuilt 256-bit factor seam, generator/encoder-precision and payload authentication, a small-profile coefficient differential, and a 53-bit rounding sentinel; constructing stock factors and replacing them is forbidden because duplicate residency invalidates the capacity plan; no encrypted MR0 or measured-RSS claim",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-runtime-identity-snapshot-support",
+      "verdict": "PASS SUPPORT LAYER; independent focused tests and vet pass for ring, RLWE, CKKS, CKKS linear-transformation, polynomial and DFT value-only snapshots; private fields plus Equal expose no writable references, real Encode/Decode/Add/automorphism/scratch changes remain stable, and whole-object/private-backing/DFT-parameter/CoefficientGetter drift fails closed; this enables but does not itself accept the repaired depth2 child comparator",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-route-b-precision-construction-independent-audit",
+      "verdict": "REVISE; 0 Critical / 2 Major / 1 Minor; stock S43 uses parameter-derived 53-bit DFT generation and default-then-replace exceeds the L11 margin by 55,815,677 bytes, while the design omitted post-initialize effective-literal/scaling identity and a digest edge from capacity-v1 to precision/builder/digest/schedule/manifest/peak semantics, and did not close mutable matrix aliases; the design record is repaired but implementation, tests, measured RSS and encrypted MR0 remain pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-route-b-precision-construction-design-repair-audit",
+      "verdict": "PASS DESIGN; 0 Critical / 0 Major / 0 Minor; repaired documents bind raw and post-initialize effective DFT literal/scaling digests, a separate zero-allocation construction permit, precision/builder/digest/release-schedule/manifest/peak semantics and private bundle ownership, and freeze the 2,641,362,944-byte duplicate delta; builder implementation, encrypted MR0, measured RSS, full-packed Route A and application security remain pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-child-comparator-nested-runtime-repair-author-short-gate",
+      "verdict": "AUTHOR SHORT-GATE GREEN / INDEPENDENT AUDITS ACTIVE; exact declared and embedded keysets, value-only nested runtime snapshots, fresh-derived Mod1 parameters and complete expanded gadget-key public structure are bound before HE; 91 zero-operation mutations pass in 120.864s with canonical/split-keyset/precision/private-backing and four unit gates also green; frozen hashes are 16025b8b...e1ba, 2b10fd31...17d2 and cc2c3a87...9577; no encrypted long gate, independent acceptance, terminal tree or security promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-child-comparator-final-independent-audit-and-count-five",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor from independent graph/runtime and semantic/evidence reviews; the frozen 104e41ff...9ccca production graph passes the complete 91-case pre-HE mutation matrix, exact nested runtime/key/Mod1/DFT/payload checks, post-operation preflight, and public/opaque/endpoint-equality encrypted count-five in 666.280s; scope remains functional_not_secure, same-pointer key coefficient payload mutation is outside the identity/topology contract, and no terminal or complete depth-2 tree is promoted",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "ckks-high-precision-scratch-runtime-identity-repair",
+      "verdict": "PASS SUPPORT REPAIR; high-precision IFFT may legally bit-reverse mutable buffCmplx pointer order, so the value-only Encoder snapshot now seals exact outer backing plus an order-independent element-identity multiset while immutable roots remain order-sensitive with numeric digests; high-precision Encode and polynomial evaluation stay stable and scratch-element/root mutations still fail closed; this repairs the child runtime gate without broadening its total runtime Equal check",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-terminal-contract-numeric-and-api-final-audit",
+      "verdict": "PASS DESIGN; 0 Critical / 0 Major / 0 Minor from independent numeric and API/provenance audits on SHA a014a513...a760c; exact float64-rational and 256-bit cache-rounding semantics, b1/b0/y ideal headrooms 289/254/200, closed childInput+childResult provenance, no producer laundering, exact 19-state decoder and 12-state terminal ledgers, post-operation output-validation semantics and communication classification are implementation-ready; no terminal code, complete depth-2 tree, noise proof or security promotion yet",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-route-b-zero-he-construction-permit-final-independent-audit",
+      "verdict": "PASS; 0 Critical / 0 Major / 0 Minor; every authorization independently rebuilds the current L11 capacity evidence and binds snapshot, plan/probe/report/permit, raw/effective C2S/S2C literal and scaling identities, numeric/encoded payloads, manifest, 256/256 precision, builder/digest/allocation/release/ownership semantics and the exact peak ledger; all invalid cases leave provider/builder/encoder at 0/0/0 and the valid seam calls 1/1/1 with default construction fixed at zero; pure R1 construction contract only, with factors, encrypted MR0, measured RSS, full-packed Route A and application security still pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-dft-explicit-generator-precision-final-independent-audit",
+      "verdict": "PASS SUPPORT SEAM; 0 Critical / 0 Major / 0 Minor; stock construction equals explicit 53-bit construction, explicit 256-bit generation differs at a real numeric and encoded-payload sentinel and equals an independent GenMatrices-plus-Encode reference across metadata, diagonal keys, RingQP polynomials and canonical serialization; small-profile support only, with factor streaming, bootstrap installation, LogN16 artifacts, HE, RSS and security pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-child-selector-decoder-first-independent-audits",
+      "verdict": "REVISE; aggregate 0 Critical / 2 Major / 0 Minor; preflight omits top-level bootstrap execution metadata consumed by ScaleDown/ModUp, and errors after first HE dispatch discard local evidence as a zero trace; complete parameter/execution digest sealing and authenticated attempted-versus-completed partial traces are required before decoder or terminal acceptance",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-route-b-construction-reachability-audit",
+      "verdict": "REVISE; 0 Critical / 2 Major / 2 Minor; the accepted zero-HE object is internally valid only as a post-artifact readiness contract because it requires actual numeric/encoded digests before authorizing their first construction, and its declared factorwise schedule/ownership is not observed; add a payload-free BuildPermit, observed lifecycle BuildReceipt, receipt-bound ReadyPermit, frozen canonical wire format and typed gap16/ctImag-nil evidence before any L11 artifact or MR0 claim",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-dft-factor-streaming-final-independent-audit",
+      "verdict": "PASS SUPPORT SEAM; 0 Critical / 0 Major / 0 Minor; a synchronous factor iterator and streaming encoder match the independent pre-streaming whole-vector reference exactly across four structural configurations and two precisions, sorted source-diagonal accumulation is deterministic, callback failure skips future layers, logical live factor/layer maxima are 1/1, roots and factors do not alias, encoded metadata/RingQP/canonical bytes and literal LevelQ are identical, and frozen 53/256 sentinels are unchanged; count-100 and vet pass, while receipt observation, LogN16 artifacts, HE, RSS and security remain pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-child-selector-decoder-final-independent-audits",
+      "verdict": "PASS; aggregate 0 Critical / 0 Major / 0 Minor from independent graph/runtime and semantic/evidence reviews; nine bootstrap metadata/execution mutations reject before HE with exact-zero evidence, trace v2 separates completed work from an honestly bounded top-level attempted-dispatch lower bound, every post-dispatch error returns a zero result plus authenticated nonzero state-prefix/byte/failure/provenance evidence including best-effort finalizer failures, and success preserves 19 states, 57,404 bytes and attempted-equals-completed; scope remains functional-not-secure and the all-16 statement is inherited base-oracle plus child-seam integration rather than a direct child-fixture encrypted sweep",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-route-b-two-stage-first-full-audit",
+      "verdict": "REVISE; 0 Critical / 3 Major / 3 Minor on SHA d24494ec...6afc1; canonical wire framing was not unique, lifecycle/reference-drop/default-constructor evidence was not authoritatively observable, the isolated build-to-install artifact lifetime was broken, role/preparation ownership was ambiguous, scratch overlap was under-derived, and gap16/ctImag evidence needed typed expected-versus-observed fields",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-route-b-two-stage-design-v2-repair-candidate",
+      "verdict": "RE-AUDIT ACTIVE on SHA b9996997...c628; private secureeval outer lifecycle plus vendor transform traces, real constructor deltas 0/0/2 and 0/0/0, exact typed Q-then-P streaming grammar, one-child build-through-MR0 ownership, exact sparse layout/key fields and two-factor merge scratch maxima are frozen; no implementation or LogN16 allocation authorized",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-route-b-two-stage-design-v2-re-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 0 Minor on SHA b9996997...c628; all six prior findings closed, but public raw-numeric ForEachMatrixFactor and GenMatrices could coexist with an apparently valid 0/0/2 receipt; their conservative STC retained-factor phase reaches 103,842,056 B, 22,577,416 B above the envelope",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-route-b-two-stage-design-v3-repair-candidate",
+      "verdict": "RE-AUDIT ACTIVE on SHA 0da92f89...c031; a fourth RawNumeric counter, exactly-one-counter-per-public-entry rule, private common core, build 0/0/0/2, assembly 0/0/0/0 and direct 0/0/1/0 raw-entry tests close the remaining capacity bypass; no implementation or large allocation authorized",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "secure-n16-route-b-two-stage-design-v3-final-audit",
+      "verdict": "PASS DESIGN; 0 Critical / 0 Major / 0 Minor on SHA 0da92f89...c031; five existing public DFT generation entries are exhaustively routed to exactly one of four counters or the private observed core, build/assembly deltas are 0/0/0/2 and 0/0/0/0, raw calls are 0/0/1/0, and all lifecycle/wire/ownership/one-child/scratch/sparse-runtime findings remain closed; implementation, LogN16 artifact, MR0, RSS, full-packed Route A and application security pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-dft-construction-counters-private-core-final-audit",
+      "verdict": "PASS SUPPORT ENFORCEMENT; 0 Critical / 0 Major / 0 Minor; all five existing public DFT construction/generation entries increment exactly one of DefaultWhole, ExplicitWhole or RawNumeric before validation and dispatch only to private cores, saturating counters cannot wrap and Delta rejects saturation/non-monotonic pairs; observed endpoint remains unwired for the next slice, with no artifact, HE, RSS or security promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-terminal-float64-leaf-final-independent-audit",
+      "verdict": "PASS FUNCTIONAL; 0 Critical / 0 Major / 0 Minor; exact 34-point stage/prefix/operation coupling, honest fused-MulRelin attempted/completed evidence and real decoder-partial propagation pass, fresh public and opaque encrypted gates preserve all four finite float64 leaves with 12 states, 54,312 local and 106,662 deduplicated bytes; complete depth-2 orchestration, multi-depth evaluation, performance and security remain pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-bootstrap-pure-prepare-author-gate",
+      "verdict": "AUTHOR GREEN / INDEPENDENT AUDIT ACTIVE; detached raw/effective parameters and derived Mod1 polynomials are canonically sealed with exact float metadata and CircuitOrder, pure preparation observes DFT delta 0/0/0/0, the stock tiny constructor consumes the prepared state and observes 2/0/0/0, and frozen legacy scale/seal, CI, alias and invalid-input gates pass; no prebuilt assembly, artifact, LogN16 allocation, MR0, RSS or security claim",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-terminal-float64-leaf-additional-independent-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 1 Minor on the previously frozen terminal hashes; success validation accepts a resealed same-state RawA/RawD retained-pointer alias or foreign retained Output because it omits the failure-prefix uniqueness/link checks and output-to-result binding, while the claimed real decoder post-dispatch failure coverage is a synthetic authenticated-partial injection; prior terminal PASS is withdrawn pending repair and fresh review",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-terminal-float64-leaf-repair-final-independent-audit",
+      "verdict": "PASS FUNCTIONAL; 0 Critical / 0 Major / 0 Minor; success and failure share retained-prefix pointer uniqueness and decoder/root/input links, retained Output is pointer-separated and bound to the returned result payload/provenance, and resealed RawD-to-RawA plus same-state foreign-output attacks fail; fresh public, opaque and terminal-only gates pass in 944.120s, 112.014s and 327.793s on hashes bb28a4a8...80ac0, 1bf2f687...20735 and 9b281be3...a8028; complete orchestration, performance and security remain pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rbauth-v1-first-independent-audit",
+      "verdict": "REVISE; 0 Critical / 4 Major / 2 Minor; cross-record identity preimages were unspecified, Prepare preceded capacity admission, a state-only lineage lacked owner/private record anchors, framing and semantic reseal tests conflicted, Ready before-seal insertion was incomplete, and float metadata fixtures were not orthogonal",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rbauth-v1-second-independent-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 0 Minor; all earlier findings closed, but Ready still required impossible recomputation of historical numeric aggregates from the encoded-only resident artifact instead of vendor trace/receipt plus fixed-size private anchors",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rbauth-v1-final-independent-audit",
+      "verdict": "PASS DESIGN; 0 Critical / 0 Major / 0 Minor on SHA 4a305efc...f6e7; four bounded record types keep Build payload-free and Ready payload-bound, freeze exact RBAUTH/RBDFT identity rules, admit capacity before Prepare, require process-local owner plus write-once Build/receipt/payload/Ready anchors, and reconstruct only encoded resident payload while historical numeric evidence remains fixed-size and non-retaining; no builder, artifact, HE, RSS or security promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-bootstrap-pure-prepare-first-independent-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 1 Minor; negative Mod1 degree and non-real scaling-root inputs could panic before fail-closed return, and the float-metadata test did not isolate numeric value from metadata",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-bootstrap-pure-prepare-second-independent-audit",
+      "verdict": "REVISE; 0 Critical / 0 Major / 1 Minor; production invalid guards were repaired, but the exact-0.5 regression still changed precision and rounding mode together and could not independently catch omission of either field",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-bootstrap-pure-prepare-final-independent-audit",
+      "verdict": "PASS SUPPORT PREPARATION; 0 Critical / 0 Major / 0 Minor; invalid Mod1 numeric configurations fail before Depth/construction, precision-only/mode-only/accuracy-only exact-0.5 fixtures close metadata isolation, pure and stock DFT deltas are 0/0/0/0 and 2/0/0/0, legacy/CI preparation matches and ShallowCopy nested evaluators use bootstrapping parameters; no prebuilt matrix, artifact, HE, RSS or security promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-dft-observed-transfer-first-independent-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 0 Minor; an exported ObservedFactorProduct shallow copy retained the old ownership cell and could preserve a second take path after the original product was consumed; shared-cell in-place terminal clearing was required",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-dft-observed-and-matrix-validation-final-audit",
+      "verdict": "PASS SUPPORT ENFORCEMENT; 0 Critical / 0 Major / 0 Minor; the sole observed endpoint has exact counter routing, 256/256 typed shared-cell move semantics, 13/18 lifecycle traces and honest failure cleanup, while pure Matrix.ValidateAgainst closes literal/float/scale/level/BSGS/N1/topology/QP-shape mutations at zero constructor delta; writer count100/package/vet and independent count20/package/vet gates pass, with no HE, L11 artifact, receipt, RSS or security promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "depth2-terminal-production-build-repair-final-audit",
+      "verdict": "PASS FUNCTIONAL; 0 Critical / 0 Major / 0 Minor; a standalone go build exposed five production references to a test-only comparator that go test had masked, the repair adds an exactly equivalent production-private slice comparator, and independent inverse-diff reconstruction proves no other semantic change; build, focused ledger, compile-only package and vet gates pass on final hashes e33d7d32...30c9, 1bf2f687...20735 and 9b281be3...a8028, with no orchestration or security promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rbauth-v1-codec-first-independent-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 1 Minor on production/test hashes 2d528eb4...517f and c033488a...849a; pure codec grammar, identities, bounds, nullable BigFloat metadata and inert report surface pass, but Ready goldens bind header-plus-ASCII pseudo-RBDFT receipt/pair records instead of complete canonical type-07/type-05 records, while unresealed fuzz seeds cannot reach deep body parsing or standalone BigFloat/allocation ceilings; real independently validated RBDFT fixtures and bounded resealed deep mutation coverage are required",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-prebuilt-assembly-authority-split-amendment",
+      "verdict": "DESIGN CANDIDATE / INDEPENDENT AUDIT PENDING on SHA cb1865fa...ddc4; vendor assembly now proves structural role/literal/shape, key inventory, zero constructor delta and shared-cell move consistency only, while owner-bound secureeval must authenticate 256/256 observed provenance and re-stream resident encoded payload against receipt/lineage anchors before carrier creation; no caller digest or bare Matrix validation can self-authorize",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-prebuilt-assembly-authority-split-first-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 1 Minor on SHA cb1865fa...ddc4; rehash-before-owner-CAS permits concurrent shallow artifact handles to overlap hash with winner move/zero, and all structural/key/error/panic paths did not freeze nil-result plus terminal matrix/key donor postconditions; install must linearize at the original ready-to-installing CAS and fail terminally",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-prebuilt-assembly-owner-linearization-repair",
+      "verdict": "DESIGN CANDIDATE / RE-AUDIT PENDING; two-stage/auth-wire hashes cb8a6d82...f9213 and cb20541c...d65d2 make owner-bound ready-to-installing CAS the first install action, hold exclusivity through rehash/direct move/key donor/assembly, terminally fail every error or panic with nil result and no retry, and require installed-resident rehash again before first HE",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rbauth-v1-codec-final-independent-audit",
+      "verdict": "PASS PURE WIRE; 0 Critical / 0 Major / 0 Minor on production/test hashes 2d528eb4...517f and 4f52a936...74ff; independently encoded and fully parsed canonical RBDFT pair/receipt fixtures replace placeholders, exact wire_fixture_only scope excludes lifecycle authority, bounded resealed fuzz reaches deep RBAUTH bodies and standalone nullable-float/length/count ceilings, and focused/package/build/vet/format/diff plus 77,327 fuzz executions pass; no live authority, artifact or HE promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-prebuilt-evaluator-assembler-author-gate",
+      "verdict": "AUTHOR GREEN / TWO INDEPENDENT AUDITS ACTIVE on evaluator/carrier/test hashes 0365d844...92dc1, e436f609...967aa and f9075a1b...efa2d; stock/prebuilt share one source seam, matrix carrier and key donor are consumed before validation, all error/panic/counter paths normalize to nil evaluator, stock/prebuilt deltas are 2/0/0/0 and 0/0/0/0, and default-precision success is explicitly structural-only rather than 256-bit authority; no secureeval wrapper, L11 or HE promotion",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-prebuilt-assembly-owner-linearization-final-audit",
+      "verdict": "PASS DESIGN; 0 Critical / 0 Major / 0 Minor on two-stage/auth-wire hashes cb8a6d82...f9213 and cb20541c...d65d2; original owner-cell ready-to-installing CAS is the first install action and holds exclusivity through current admission, rehash, keygen, same-cell move and assembly, all matrix/key donor and error/panic postconditions are terminal and nil-result, and a distinct installed-resident preflight rehash precedes first HE; project implementation remains pending",
+      "date": "2026-08-30"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "lattigo-prebuilt-evaluator-assembler-final-independent-audits",
+      "verdict": "PASS SUPPORT ASSEMBLY; two independent audits each report 0 Critical / 0 Major / 0 Minor on evaluator/carrier/test hashes 0365d844...92dc1, e436f609...967aa and f9075a1b...efa2d; shared-cell matrix ownership and the key donor consume before validation, every error/panic/counter-hostile outcome is terminal with nil evaluator, C2S/S2C roles and stock behavior are exact, stock/prebuilt deltas are 2/0/0/0 and 0/0/0/0, and deliberate default-precision structural acceptance leaves 256/256 provenance and resident payload authority exclusively to secureeval; count-20/package/vet gates pass, with no artifact, keygen, install, L11 or HE promotion",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-live-authority-implementation-map",
+      "verdict": "PRECONDITION OPEN; existing public L11 profile/shape/plan/Evaluate/ValidateReport/ValidatePermit APIs can reconstruct the opaque capacity chain and pure PrepareParameters can follow admission, but no production constructor currently binds the unique Gao-N16/LogSlots11 raw bootstrapping.Parameters; caller-valid raw is insufficient project identity and Parameters.Equal omits CircuitOrder, so canonical raw plus frozen raw/prepared identities must be derived, implemented and audited before any live Authority or lineage is minted",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rbdft-v1-types03-07-final-independent-audit",
+      "verdict": "PASS PURE WIRE; 0 Critical / 0 Major / 0 Minor on production/test hashes cc60d292...e0601 and f5441010...64e3; fixed-arity aggregate, frozen pair, exact 35-event success/legal failure-prefix lifecycle, strict receipt and complete cross-record link validation pass independent parsing, deep resealed mutations, count-20/package/build/vet/format and 609,667 fuzz executions; lifecycle/pair/receipt are 1848 B/4db54a...39fb8, 210 B/f33c...282fe and 585 B/aae3...8913a; reports remain inert and no type01/02 payload serializer, live anchor, authority, artifact or HE is promoted",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-canonical-transport-parameters-design-candidate",
+      "verdict": "DESIGN CANDIDATE / INDEPENDENT REVIEW ACTIVE on SHA 3ee3abeb...d44c9fa; freezes the same exact Gao-compatible N16 CKKS value in residual/bootstrap fields, present 256-bit exact STC/CTS scalings 1 and 1/16, L11 split literals, Custom order, h-tilde 32, nil iterations and a Q17/S43/MR0/K1/degree3 transport-only metadata literal; stock Bootstrap/Evaluate/EvalMod-family calls are forbidden and Gao degree32/R3 remains the sole executable kernel; no canonical constructor, prepared golden, authority, artifact or HE is accepted yet",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-canonical-transport-parameters-first-audit",
+      "verdict": "REVISE; 0 Critical / 4 Major / 0 Minor on transport SHA 3ee3abeb...d44c9fa; require DecodeThenModUp instead of Custom, describe the degree3 polynomial as physically resident but capability-ineligible rather than metadata-only, separate Route-B A2B degree46/R2 from A2A-e degree32/R3, and add a vendor-owned observed ModUp/Trace seam because stock ModUp hides its actual Automorphism dispatches",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-canonical-transport-parameters-design-repair-v2",
+      "verdict": "DESIGN REPAIR / RE-AUDIT PENDING on transport/two-stage hashes a137efdc...443f50 and c796d5c6...4c7897; DecodeThenModUp retains 20-3=17 validation, the installed degree3 compatibility polynomial must have zero dispatches, A2B degree46/R2 and A2A-e degree32/R3 are typed and cross-wiring-fatal, qDiff remains charged, and actual Trace evidence is a new pre-execution vendor prerequisite; no constructor, observed Trace seam, authority, artifact or HE is accepted",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-canonical-transport-parameters-design-final-audit",
+      "verdict": "PASS DESIGN; 0 Critical / 0 Major / 0 Minor on transport/two-stage hashes a137efdc...443f50 and c796d5c6...4c7897; DecodeThenModUp, resident degree3 zero-dispatch, A2B degree46/R2 versus A2A-e degree32/R3 separation, exact present 256-bit scalings and qDiff, nil iterations, h32, same N16 value construction and actual-dispatch observed ModUp/Trace prerequisite are exact; no implementation or HE promotion",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-canonical-transport-parameters-author-gate",
+      "verdict": "AUTHOR GREEN / INDEPENDENT CODE AUDITS ACTIVE on production/test hashes f40b9243...55aa20 and 28a4d62d...19c6c; exact CKKS/raw/prepared/eight typed transform identities are frozen, 43 structural and exact-float metadata mutations fail closed, focused count-20 plus package/build/vet/format/diff gates pass; no Authority, artifact, keygen, L11 allocation, observed Trace or HE promotion",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-canonical-transport-parameters-first-code-audits",
+      "verdict": "REVISE; two independent audits converge on 0 Critical / 2 Major / 4 Minor for hashes f40b9243...55aa20 and 28a4d62d...19c6c; same-input preparation detachment and caller/accessor/iteration/polynomial alias resistance are not directly proved, while expected CTS scaling shares prepared QDiff with production; prepare-twice, resident polynomial fingerprint, sign/nil-empty/invalid-order mutations and complete checked narrowing are also required",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-canonical-transport-parameters-repair-v2-author-gate",
+      "verdict": "AUTHOR GREEN / FRESH AUDITS ACTIVE on production/test hashes 9f8d0e06...f5bea7 and 4ba17878...975dff; same caller raw and every raw/effective/iteration/polynomial accessor are mutation-tested as detached, raw Q0 independently derives qDiff/qDiv/effective scales with exact BigFloat metadata, two prepares and eight identities match, 53 mutations plus seven narrowing cases fail closed, and count-20/package/build/vet/format/diff pass; no Authority or HE promotion",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-canonical-transport-parameters-final-code-audits",
+      "verdict": "PASS CONFIGURATION IDENTITY; two fresh independent audits each report 0 Critical / 0 Major / 0 Minor on production/test hashes 9f8d0e06...f5bea7 and 4ba17878...975dff; same-input and accessor detachment, independent raw-Q0 qDiff derivation, exact effective BigFloat metadata, prepare-twice, eight typed identities, resident compatibility fingerprint, complete mutation/narrowing gates and package/build/vet checks pass; runtime zero-dispatch, artifact, Authority, keys and HE remain pending",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-observed-modup-trace-design-candidate",
+      "verdict": "DESIGN CANDIDATE / INDEPENDENT AUDIT ACTIVE on SHA be062ea9...dd2c54; two observed entries share stock private cores, record invocation-local begin/complete around each real Automorphism, preserve stock semantics, freeze L11 runtime order separately from the sorted capacity set and make every observed error/panic terminal to Route-B lineage; no vendor implementation or HE evidence yet",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-observed-modup-trace-design-first-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 0 Minor on SHA be062ea9...dd2c54; untagged uint64 exponent cannot represent the standard-ring logN0 order-two NthRoot-1 dispatch and missing ring type cannot distinguish Standard versus conjugate-invariant success shapes; tagged exponent plus ring type and nested-panic nil normalization are required",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-observed-modup-trace-design-final-audit",
+      "verdict": "PASS DESIGN; 0 Critical / 0 Major / 0 Minor on SHA 8fed1461...650363; tagged ordinary exponent, explicit ring type, exact NthRoot-1 order-two event, invocation-local begin/complete prefix, L11 source order, stock error/panic/alias/NTT behavior, nested Trace panic nil normalization, defensive reports and terminal Route-B discard are exact; vendor implementation remains pending",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-live-authority-capacity-consistency-audit-open",
+      "verdict": "AUDIT OPEN; RBAUTHPeakContract freezes the l11-audit-fixture remaining/excess values 2,585,547,267/55,815,677 bytes while AuthorizeBuild/BeginBuild require an explicit current capacity reconstruction; a different honest available-memory snapshot changes the unique report but cannot satisfy frozen wire semantics. No fixture is treated as live evidence and no Authority is accepted pending independent review and, if needed, repair plus re-audit",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rlwe-trace-observed-author-gate",
+      "verdict": "AUTHOR GREEN / FRESH INDEPENDENT AUDIT ACTIVE on inner/core/test hashes 44d329d7...79979, 018622a0...b543e and 5e880b1e...d47a4; RED undefined API was captured before implementation, focused count-20, full core/rlwe, vet, gofmt and diff checks pass, stock and observed paths share one private core with invocation-local begin/complete evidence; race build is environment-blocked by CGO_ENABLED=0/no compiler and is not claimed, while ordinary concurrent isolation passes; no bootstrapping ModUp, Route-B authority, L11 HE or runtime promotion",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-bootstrap-modup-observed-author-gate",
+      "verdict": "AUTHOR GREEN / FRESH INDEPENDENT AUDIT ACTIVE on shared evaluator/report/test hashes 048e95ef...1e13a, ae1b0cda...56e9c and 38ed3054...1c38; undefined-API RED preceded implementation, focused count-20, full bootstrapping and core/rlwe packages, both vet targets, gofmt and diff checks pass; one observed Trace path preserves ctIn on ordinary Trace error and returns nil on nested/outer panic while stock behavior stays unchanged; race remains honestly environment-blocked and no L11, authority, terminal discard or HE claim follows",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rlwe-trace-observed-first-code-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 2 Minor on hashes 44d329d7...79979, 018622a0...b543e and 5e880b1e...d47a4; actual small-ring dispatch evidence is honest and stock parity/core linearization pass, but L11 is only a manually constructed validator fixture, dispatch-stage Validate accepts an impossible k/k all-complete failure ledger, and stock versus observed key lookup sequences are not both counted. A minimal actual N16/L11 four-key test, strict k/(k-1) validation, and independent dual counters are required; pre-defer recorder construction is reachable-safe because evaluator parameters are value-owned",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-bootstrap-modup-observed-first-code-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 0 Minor on hashes 048e95ef...1e13a, ae1b0cda...56e9c and 38ed3054...1c38; production stock/observed core sharing, one-Trace execution, stage ordering, pre-Trace nil, ordinary Trace-error ctIn, nested/outer panic nil, stock panic, report validation and bounded parity all pass, but no actual N16/LogSlots11 ModUpObserved success carries the frozen four-event nested runtime sequence. Add one minimal count-one integration test after the Trace N16 resource window; no HE/runtime promotion",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rlwe-trace-observed-repair-v2-author-gate",
+      "verdict": "AUTHOR GREEN / FINAL RE-AUDIT ACTIVE on inner/core/test hashes 44d329d7...79979, a5ac3224...4a713 and c5138544...02229e; real minimal N16/logN11 TraceObserved count1 emits exact events/lookups [122881,114689,98305,65537] with measured 23.5 MiB live-heap delta, dispatch failure now requires k attempted/k-1 completed/incomplete final event with coherent RED/GREEN negatives, and independent stock/observed counters match a literal source-order table; focused count20, full core, vet/format/diff pass, no race/L11 bootstrap/HE promotion",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rlwe-trace-observed-final-code-audit",
+      "verdict": "PASS OBSERVED TRACE; 0 Critical / 0 Major / 0 Minor on inner/core/test hashes 44d329d7...79979, a5ac3224...4a713 and c5138544...02229e; fresh reviewer executed the real N16/logN11 four-key count-one gate with exact source-order events/lookups, strict k/(k-1) failure validation and independent stock/observed counters, then passed focused small count20, core package, vet, format and diff checks; race is unclaimed and bootstrapping ModUp, Route-B terminal discard, authority, MR0 and HE remain pending",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-bootstrap-modup-observed-repair-v2-author-gate",
+      "verdict": "AUTHOR GREEN / FINAL RE-AUDIT ACTIVE on evaluator/report/test hashes 048e95ef...1e13a, ae1b0cda...56e9c and abfd4a76...75d4; new real Standard N16 Q2/P1/H32 count-one ModUpObserved uses no switching keys, exactly four Trace keys and deterministic nonzero input, matches stock bytes/metadata and emits nested 16/11 exponents [2048,4096,8192,16384] with runtime order [122881,114689,98305,65537]; small count20/full boot+core/vet/format/diff pass, no race/bootstrap/MR0 promotion",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rbdft-v1-types01-02-author-gate",
+      "verdict": "AUTHOR GREEN / FRESH INDEPENDENT AUDIT ACTIVE on production/test hashes f6f074f4...52c4f and 0b2c2dc1...b4e1; exact scalar/numeric/encoded streaming goldens, sorted signed diagonals/Vec, ringqp.Poly.WriteTo counting, five-way byte ledger, independent local validation, writer faults, tentative move/abort, small 13/18 observed traces and 0/0/0/2 counters pass focused count20 plus full secureeval/build/vet/format. No public authority, type03/04 mint, raw constructor, whole-factor serialization or L11 allocation is claimed",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-bootstrap-modup-observed-final-code-audit",
+      "verdict": "PASS OBSERVED MODUP; 0 Critical / 0 Major / 0 Minor on evaluator/report/test hashes 048e95ef...1e13a, ae1b0cda...56e9c and abfd4a76...75d4 with accepted Trace dependencies matched; fresh reviewer reran the real Standard N16/Q2/P1/logSlots11 four-key count-one gate, complete stock/observed payload and metadata parity, exact nested source-order dispatch, focused failure/panic/identity cases, full bootstrapping+core packages, vet/format/diff/forbidden scans. Combined vendor observation is accepted, but key authenticity, ciphertext correctness, DFT provenance, Route-B authority, terminal discard and MR0 are unproved",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rbdft-v1-types01-02-first-code-audit",
+      "verdict": "REVISE; 0 Critical / 1 Major / 1 Minor on production/test hashes f6f074f4...52c4f and 0b2c2dc1...b4e1; production exact grammar, independent type01/scalar goldens, L11 poly formulas, sorted streaming, local validation, tentative move/abort/promote and no-authority/non-retention surfaces pass, but the five STC2+CTS3 factor byte counts lack independent factor-specific expected ledgers and intended payload flush/physical-overrun faults stop at the prefix. Add an independent ordered five-factor ledger and post-prefix payload fault injection; no full L11 allocation or API expansion",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-live-authority-capacity-consistency-first-audit",
+      "verdict": "REVISE; 0 Critical / 2 Major / 0 Minor. Snapshot-dependent remaining margin and duplicate excess are frozen as fixture invariants, making alternate honest admitted snapshots unreachable; separately, caller-supplied snapshot ID/totals have no host-origin, freshness or process-local authority and can fabricate high availability. Split static builder bounds from report-derived dynamic fields while retaining v1 wire/golden, prohibit default construction independently, and require an Authority-owned OS sampler with owner/generation capability plus fresh resampling at Authorize/BeginBuild/Ready/install before any side effect",
+      "date": "2026-08-31"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-rbdft-v1-types01-02-repair-final-audit",
+      "verdict": "PASS STREAMING PAYLOAD; 0 Critical / 0 Major / 0 Minor on production/test hashes f6f074f4...52c4f and 99d26d8c...e8199. A test-only independent grammar oracle freezes all five ordered STC2+CTS3 numeric/encoded byte ledgers and agrees with vendor trace plus promoted evidence; post-prefix source error, payload flush failure and physical overrun all enter WriteTo; focused count20, complete secureeval, vet and format pass. Live Authority, artifact, L11 allocation, receipt mint and HE remain pending",
+      "date": "2026-09-01"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-live-authority-capacity-design-v4-final-audit",
+      "verdict": "PASS DESIGN; 0 Critical / 0 Major / 0 Minor on auth/two-stage hashes bd7332cf...b1c4e and 16447073...a898 with audit eac61047...3d0a. Static builder bounds are separated from per-sample saturating remaining/excess; all five gates use an Authority-owned Windows/Linux sampler; one-shot global generations permit non-adjacent lineage interleaving; readying closes anchor-publication races; and CAS-loser pure preparation versus forbidden side effects is exact. Implementation, live capability, artifact, L11, RSS and HE remain pending",
+      "date": "2026-09-01"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-live-authority-authorizebuild-implementation-audit",
+      "verdict": "PASS IMPLEMENTATION; 0 Critical / 0 Major / 0 Minor on dynamic RBAUTH hashes 8acd7109...14b24/956978ff...22d2e, platform sampler hashes 971c229f...823827, 46962190...92678, 8b5c567b...fc14 and 0e73c645...c2aa, and Authority hashes fc90e111...c23175/efd38f07...f34837a with audit cf893015...419367. Zero-input production construction, internal Windows/Linux sampling, dynamic peak evidence, globally newer one-shot generations, inert reports, owner-bound live lineages, failure consumption, copied-handle concurrency, replay/foreign-owner rejection, generation exhaustion, source gate order, real Windows admission, focused count20, complete secureeval, vet, format and Linux compile pass. Scope ends at payload-free AuthorizeBuild; BeginBuild, receipt, factors, artifact, install, MR0, RSS and HE remain pending",
+      "date": "2026-09-01"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-canonical-l11-mr0-author-gate",
+      "verdict": "PASS MEASURED R1 VERTICAL GATE / INDEPENDENT AUDIT PENDING; accepted JSON SHA 4f963b88...21b28 replays the complete Authority->Build->Ready->Install->preflight lifecycle, exact phase-relative capacity plans, resident payload and 38+3 key inventory, source-order Trace [122881,114689,98305,65537], sparse ctImag=nil, levels 20->17 and DFT counters 0/0/0/2. One-process wall is 34.996 s and cumulative peak RSS is 7,184,281,600 B. Scope ends after ModUp/C2S; decoded max-abs 0.375 is diagnostic because EvalMod/Gao integer kernels, application security, private-tree E2E and source-faithful 8,192-word throughput remain pending",
+      "date": "2026-09-01"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-complete-a2b-author-gate",
+      "verdict": "PASS AUTHOR-SIDE FUNCTIONAL EVIDENCE / INDEPENDENT AUDIT PENDING; C70 freezes the first low-nibble round and C71 freezes the complete two-round 8-bit A2B result e97f8148...785d. The registered independent L3->L1 STC closes the serial second round, and every low/high Boolean slot for 0..255 repeated twice passes at 5e-4 with zero mismatches. This does not establish B-A2B, full ALU coverage, application security, repeated performance or Route-A source packing.",
+      "date": "2026-09-01"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-depth2-controls-author-gate",
+      "verdict": "PASS AUTHOR-SIDE BOUNDED FUNCTIONAL EVIDENCE / INDEPENDENT AUDIT PENDING; C72 freezes a public root, C73 freezes a 170-query all-node depth-2 batch, and C74 freezes the N32 source-ordered selected-child control. Each artifact passes its registered oracle within its declared public-model or functional-not-secure scope. Private-model security, exact float32 parity, arbitrary depth and matched performance remain open.",
+      "date": "2026-09-01"
+    },
+    {
+      "stage": "2",
+      "checkpoint": "route-b-c75-selected-child-author-gate",
+      "verdict": "PASS AUTHOR-SIDE FUNCTIONAL EVIDENCE / SECURITY UNVERIFIED / INDEPENDENT AUDIT PENDING; frozen 296,089-byte JSON SHA 4a7fbd44...abbb2 executes complete root A2B, periodic sign recovery, exact 1-sign GE conditioning, encrypted child selection, tree-aware A2Sign and the L1/q7 bilinear terminal. All 512 queries and 2,048 slots pass at 5e-4 with path counts [127,129,130,126], equality 2/2/2 and zero mismatches. Setup/online/post/lifecycle is 26.403/73.776/0.622/101.746 s, cumulative post-evaluation peak RSS 13,889,568,768 B and DFT delta 0/0/0/4. Independent lifecycle audit, split-suite verification, repetition, radix execution, private-model and application-security gates remain open.",
+      "date": "2026-09-01"
+    }
+  ],
+  "integrity_history": [],
+  "schema_validation_log": [
+    {
+      "stage": "1",
+      "artifact": "claim-intent manifests",
+      "result": "PASS; 2/2 against claim_intent_manifest.schema.json"
+    },
+    {
+      "stage": "1",
+      "artifact": "Material Passport repro_lock",
+      "result": "PASS with WARN; explicit null opt-out"
+    },
+    {
+      "stage": "1",
+      "artifact": "research JSON/YAML and Stage-1 hash manifest",
+      "result": "PASS; 26/26 artifact hashes matched"
+    }
+  ]
+}

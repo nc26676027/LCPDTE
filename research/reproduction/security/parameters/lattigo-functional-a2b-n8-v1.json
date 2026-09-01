@@ -1,0 +1,163 @@
+{
+  "schema_version": "ckks-security-parameter-manifest-v1",
+  "tuple_id": "lattigo-functional-a2b-n8-v1",
+  "status": "FUNCTIONAL-NOT-SECURE",
+  "provenance": "accepted-fixed-n8-functional-circuit-parameter-profile",
+  "ring_type": "Standard",
+  "log_n": 5,
+  "n": 32,
+  "max_slots": 16,
+  "log_default_scale": 35,
+  "q": [
+    {
+      "decimal": "1125899906842817",
+      "hex": "0x40000000000c1",
+      "bit_length": 51
+    },
+    {
+      "decimal": "34359738689",
+      "hex": "0x800000141",
+      "bit_length": 36
+    },
+    {
+      "decimal": "34359738817",
+      "hex": "0x8000001c1",
+      "bit_length": 36
+    },
+    {
+      "decimal": "34359739201",
+      "hex": "0x800000341",
+      "bit_length": 36
+    },
+    {
+      "decimal": "34359737281",
+      "hex": "0x7fffffbc1",
+      "bit_length": 35
+    },
+    {
+      "decimal": "34359736897",
+      "hex": "0x7fffffa41",
+      "bit_length": 35
+    },
+    {
+      "decimal": "34359736577",
+      "hex": "0x7fffff901",
+      "bit_length": 35
+    },
+    {
+      "decimal": "34359736513",
+      "hex": "0x7fffff8c1",
+      "bit_length": 35
+    },
+    {
+      "decimal": "34359736193",
+      "hex": "0x7fffff781",
+      "bit_length": 35
+    },
+    {
+      "decimal": "34359740801",
+      "hex": "0x800000981",
+      "bit_length": 36
+    },
+    {
+      "decimal": "34359735937",
+      "hex": "0x7fffff681",
+      "bit_length": 35
+    },
+    {
+      "decimal": "34359741313",
+      "hex": "0x800000b81",
+      "bit_length": 36
+    },
+    {
+      "decimal": "34359741761",
+      "hex": "0x800000d41",
+      "bit_length": 36
+    },
+    {
+      "decimal": "34359735169",
+      "hex": "0x7fffff381",
+      "bit_length": 35
+    },
+    {
+      "decimal": "34359742337",
+      "hex": "0x800000f81",
+      "bit_length": 36
+    },
+    {
+      "decimal": "34359734593",
+      "hex": "0x7fffff141",
+      "bit_length": 35
+    },
+    {
+      "decimal": "34359734401",
+      "hex": "0x7fffff081",
+      "bit_length": 35
+    },
+    {
+      "decimal": "34359733697",
+      "hex": "0x7ffffedc1",
+      "bit_length": 35
+    },
+    {
+      "decimal": "34359744833",
+      "hex": "0x800001941",
+      "bit_length": 36
+    },
+    {
+      "decimal": "34359732097",
+      "hex": "0x7ffffe781",
+      "bit_length": 35
+    },
+    {
+      "decimal": "34359745729",
+      "hex": "0x800001cc1",
+      "bit_length": 36
+    }
+  ],
+  "p": [
+    {
+      "decimal": "1125899906843009",
+      "hex": "0x4000000000181",
+      "bit_length": 51
+    }
+  ],
+  "q_product": {
+    "decimal": "5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097",
+    "hex": "0x3fffff72a004e61f76b883abf574432256cdd9343eba8ff8575cc5cb7bb58292699a5e35e0c9b0c71eae7ff66b3d1199f0c86d04f89bbef44c02c5d101f83659ce4e01ed486cf47098d2d274e3b3b162d3d27dbf1cf6ac0e6a8d412a0f01",
+    "bit_length": 750,
+    "sha256_decimal_ascii": "8e62bf2b924218c1ec1f58364b4761614f196b7d866dee798d963f1cc2bf95e7"
+  },
+  "p_product": {
+    "decimal": "1125899906843009",
+    "hex": "0x4000000000181",
+    "bit_length": 51,
+    "sha256_decimal_ascii": "1c99e6f3a9e9c9465a766ebce3a1bb48f2250f46f4218074db96df3958f8cf7f"
+  },
+  "qp_product": {
+    "decimal": "6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873",
+    "hex": "0xfffffdca8073d87d0644b60deb22980760d388a9f18ecb7505056dc073516ccf1d6e84d0e157944429c10f2c88696ad634b8faeb5af2193d2484f97e35472992b88bfdfedec31513492535af2c249a99d114683a397b3fc8c69f93a0fdb23e6f00409081",
+    "bit_length": 800,
+    "sha256_decimal_ascii": "942814269b7f088d6196d0ebd30e449dc91554c1f2be53d4ecd916447cd20bc2"
+  },
+  "main_secret": {
+    "type": "iid-ternary",
+    "nonzero_probability": 0.6666666666666666
+  },
+  "ephemeral_secret": {
+    "type": "not-instantiated-in-dense-functional-profile"
+  },
+  "error": {
+    "type": "bounded-discrete-gaussian",
+    "sigma": 3.2,
+    "bound": 19.2
+  },
+  "estimator_eligible": false,
+  "missing_evidence": [
+    "secure-ring-dimension",
+    "secure-circuit-profile",
+    "evaluation-key-inventory",
+    "finite-rlwe-sample-exposures"
+  ],
+  "canonical_json_sha256": "d01835f4e15c2426d8f5c77667b93d30e7563ac37d4533f8b61685e412e463d5"
+}

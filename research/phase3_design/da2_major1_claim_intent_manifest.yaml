@@ -1,0 +1,55 @@
+manifest_version: "1.0"
+manifest_id: "M-2026-08-29T15:21:21Z-da22"
+emitted_by: synthesis_agent
+emitted_at: "2026-08-29T15:21:21Z"
+session_id: "goal-01a04d78-9838-77d3-8c59-10ac1013d0a5-da2-major1"
+claims:
+  - claim_id: C-101
+    claim_text: "Multiway or categorical CKKS decision-tree evaluation is prior art, so novelty cannot rest on changing a binary tree into a multiway tree alone."
+    intended_evidence_kind: theoretical
+    planned_refs: [lee2025heaanid3]
+  - claim_id: C-102
+    claim_text: "PEGASUS already applies CKKS-to-FHEW scheme switching and LUTs to single-round private decision-tree evaluation, limiting broad mixed arithmetic/Boolean PDTE novelty."
+    intended_evidence_kind: theoretical
+    planned_refs: [lu2021pegasus]
+  - claim_id: C-103
+    claim_text: "Encrypted-query selection and tree-to-LUT evaluation have direct CKKS and TFHE or multi-key TFHE antecedents with different table-privacy and fanout costs."
+    intended_evidence_kind: theoretical
+    planned_refs: [cheon2025treelut, petrean2024mkrf, cheon2026embedding]
+  - claim_id: C-104
+    claim_text: "Peer-reviewed radix or discrete-CKKS integer computers already provide carry-based comparison routes, so a triangle comparator must be novel through its exact contract or measured integration rather than comparison as a category."
+    intended_evidence_kind: theoretical
+    planned_refs: [kim2025integer, cha2026radix]
+  - claim_id: C-105
+    claim_text: "Within the dated 96-query corpus, no inspected primary work implements Gao--Zheng triangle A2B inside LCPDTE OBO/BSGS; this is only a corpus-bounded candidate-composition observation, not a first, closest, unique, or absence claim."
+    intended_evidence_kind: empirical
+    planned_refs: [gao2026alu, park2026lcpdte, lee2025heaanid3, lu2021pegasus, cheon2025treelut, kim2025integer, cha2026radix, dumezy2026hegide, dumezy2026characterblock]
+  - claim_id: C-106
+    claim_text: "Radix grouping reduces logical tree depth only when the full HE schedule, comparator count, selector width, refresh work, packing occupancy, and model semantics jointly improve."
+    intended_evidence_kind: theoretical
+    planned_refs: [lee2025heaanid3, cheon2025treelut, petrean2024mkrf, kim2025integer, cha2026radix, dumezy2026characterblock]
+  - claim_id: C-107
+    claim_text: "HEGIDE already provides discrete-CKKS private-program/private-data execution and directly benchmarks a private binary decision tree, so broad private-program or private-CKKS-tree priority claims are unavailable."
+    intended_evidence_kind: theoretical
+    planned_refs: [dumezy2026hegide]
+  - claim_id: C-108
+    claim_text: "Character Block Encodings supplies a distinct Lattigo representation with single-level LUTs and low-depth radix comparison, so it is a mandatory operator and fused-LUT baseline rather than evidence for the triangle composition."
+    intended_evidence_kind: theoretical
+    planned_refs: [dumezy2026characterblock, gao2026alu]
+  - claim_id: C-109
+    claim_text: "Sparse-THI changes the available noise-cleaning/functional-bootstrap tradeoff and must be treated as a correctness and refresh sensitivity baseline when bootstrap margin is material."
+    intended_evidence_kind: theoretical
+    planned_refs: [alexandru2026sparsehermite, alexandru2025functional, gao2026alu]
+manifest_negative_constraints:
+  - constraint_id: MNC-101
+    rule: "Do not claim the first multiway FHE decision tree, first CKKS PDTE, first CKKS integer comparator, or first encrypted-index FHE tree traversal."
+  - constraint_id: MNC-102
+    rule: "Do not turn a bounded no-exact-match search result into a claim that no prior work exists."
+  - constraint_id: MNC-103
+    rule: "Do not label cheon2026embedding as peer reviewed or transfer its plaintext-table result to an encrypted-model setting."
+  - constraint_id: MNC-104
+    rule: "Do not infer latency or asymptotic superiority from logical radix depth without charging the complete HE operator graph and matched security parameters."
+  - constraint_id: MNC-105
+    rule: "Do not claim first or closest private-program, private-tree, discrete-CKKS LUT, Lattigo integer, or radix-comparison work; HEGIDE and Character Block Encodings must be dispositioned and compared."
+  - constraint_id: MNC-106
+    rule: "Do not compare HEGIDE's fully occupied MIMD amortized time with a one-query latency, or omit its full-batch latency and memory."

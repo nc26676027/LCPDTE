@@ -1,6 +1,7 @@
 package z2n_test
 
 import (
+	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -54,6 +55,54 @@ func TestBinaryAndArithmeticEncodingRoundTripEveryEightBitWord(t *testing.T) {
 		}
 		if decoded != word {
 			t.Fatalf("round-trip %d: got %d", word, decoded)
+		}
+	}
+}
+
+// This is the independent plaintext oracle for the first encrypted A2A-I
+// slice. Adding an integral coefficient polynomial changes the arithmetic
+// representative but not its residue because tau=X-2 vanishes at X=2.
+// Coefficient-wise canonicalization must remove that overflow exactly.
+func TestArithmeticIntegralOverflowPreservesResidueAndCanonicalizes(t *testing.T) {
+	ring, err := z2n.New(z2n.Word8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	overflow, err := ring.NewPolynomial(intCoefficients(3, -2, 1, 0, 0, 0, 0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, word := range []uint64{0x00, 0x01, 0x0f, 0x10, 0x7f, 0x80, 0xff, 0xa5} {
+		encoded := ring.ArithmeticEncode(word)
+		withOverflow, err := ring.Add(encoded, overflow)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, err := ring.DecodeArithmetic(withOverflow); err != nil || got != word {
+			t.Fatalf("word %#02x overflow decode: got %#02x, err=%v", word, got, err)
+		}
+
+		canonical, err := ring.CanonicalizeArithmetic(withOverflow)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantCanonical, err := ring.CanonicalizeArithmetic(encoded)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotCoefficients := canonical.Coefficients()
+		wantCoefficients := wantCanonical.Coefficients()
+		for i := range wantCoefficients {
+			if gotCoefficients[i].Cmp(wantCoefficients[i]) != 0 {
+				t.Fatalf(
+					"word %#02x coefficient %d: canonical got %s, want %s",
+					word,
+					i,
+					gotCoefficients[i].Text('g', -1),
+					wantCoefficients[i].Text('g', -1),
+				)
+			}
 		}
 	}
 }
@@ -170,6 +219,73 @@ func TestDecodeRoundsEveryCoefficientBeforeEvaluationAtTwo(t *testing.T) {
 	}
 }
 
+func TestCanonicalizeArithmeticMatchesUpstreamEpsilonBoundary(t *testing.T) {
+	for _, bits := range []z2n.WordBits{z2n.Word8, z2n.Word16, z2n.Word32, z2n.Word64} {
+		t.Run(fmt.Sprintf("n=%d", bits), func(t *testing.T) {
+			ring, err := z2n.New(bits)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			epsilonExponent := -int(bits) - 1
+			epsilon := new(big.Float).SetPrec(z2n.DefaultPrecision).SetMantExp(
+				new(big.Float).SetPrec(z2n.DefaultPrecision).SetInt64(1),
+				epsilonExponent,
+			)
+			below := new(big.Float).SetPrec(z2n.DefaultPrecision).SetMantExp(
+				new(big.Float).SetPrec(z2n.DefaultPrecision).SetInt64(1),
+				epsilonExponent-1,
+			)
+			above := new(big.Float).SetPrec(z2n.DefaultPrecision).Add(
+				epsilon,
+				new(big.Float).SetPrec(z2n.DefaultPrecision).SetMantExp(
+					new(big.Float).SetPrec(z2n.DefaultPrecision).SetInt64(1),
+					epsilonExponent-3,
+				),
+			)
+
+			tests := []struct {
+				name  string
+				input *big.Float
+				want  *big.Float
+			}{
+				{name: "below epsilon stays positive", input: below, want: below},
+				{name: "epsilon stays positive", input: epsilon, want: epsilon},
+				{
+					name:  "above epsilon wraps below zero",
+					input: above,
+					want: new(big.Float).SetPrec(z2n.DefaultPrecision).Sub(
+						above,
+						new(big.Float).SetPrec(z2n.DefaultPrecision).SetInt64(1),
+					),
+				},
+			}
+
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					coefficients := make([]*big.Float, int(bits))
+					for i := range coefficients {
+						coefficients[i] = new(big.Float).SetPrec(z2n.DefaultPrecision)
+					}
+					coefficients[0].Set(test.input)
+					input, err := ring.NewPolynomial(coefficients)
+					if err != nil {
+						t.Fatal(err)
+					}
+					got, err := ring.CanonicalizeArithmetic(input)
+					if err != nil {
+						t.Fatal(err)
+					}
+					gotCoefficient := got.Coefficients()[0]
+					if gotCoefficient.Cmp(test.want) != 0 {
+						t.Fatalf("got %s, want %s", gotCoefficient.Text('g', -1), test.want.Text('g', -1))
+					}
+				})
+			}
+		})
+	}
+}
+
 func wordMask(bits z2n.WordBits) uint64 {
 	if bits == z2n.Word64 {
 		return ^uint64(0)
@@ -251,5 +367,42 @@ func TestNewRingRejectsUnsupportedWordSizeAndPrecision(t *testing.T) {
 	}
 	if _, err := z2n.NewWithPrecision(z2n.Word8, 127); err == nil {
 		t.Fatal("NewWithPrecision(..., 127) succeeded, want a precision error")
+	}
+}
+
+func TestNewPolynomialEnforcesCanonicalEpsilonSignificancePerCoefficient(t *testing.T) {
+	for _, bits := range []z2n.WordBits{z2n.Word8, z2n.Word16, z2n.Word32, z2n.Word64} {
+		t.Run(fmt.Sprintf("n=%d", bits), func(t *testing.T) {
+			ring, err := z2n.New(bits)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Mixed caller precision is admissible when the imported values stay
+			// inside the ring precision's canonicalization domain.
+			mixed := make([]*big.Float, int(bits))
+			for i := range mixed {
+				mixed[i] = new(big.Float).SetPrec(53).SetInt64(int64(i & 1))
+			}
+			mixed[1] = new(big.Float).SetPrec(512).SetMantExp(
+				new(big.Float).SetPrec(512).SetInt64(1),
+				-int(bits)-2,
+			)
+			if _, err := ring.NewPolynomial(mixed); err != nil {
+				t.Fatalf("safe mixed-precision polynomial rejected: %v", err)
+			}
+
+			// At 2^300 with a 256-bit significand, subtracting Gao's
+			// epsilon=2^(-n-1) is unobservable. Import must fail instead of
+			// silently changing the canonical interval.
+			tooLarge := make([]*big.Float, int(bits))
+			for i := range tooLarge {
+				tooLarge[i] = new(big.Float).SetPrec(512)
+			}
+			tooLarge[0].SetMantExp(new(big.Float).SetPrec(512).SetInt64(1), 300)
+			if _, err := ring.NewPolynomial(tooLarge); err == nil {
+				t.Fatal("NewPolynomial accepted a coefficient that cannot resolve the canonical epsilon")
+			}
+		})
 	}
 }

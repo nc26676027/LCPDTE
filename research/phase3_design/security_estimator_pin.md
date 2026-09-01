@@ -91,11 +91,42 @@ stderr, and exited zero.
 Current status is:
 
 - `ENVIRONMENT-READY`: the pinned runtime and estimator import gate pass;
-- `PARAMETER-CONVERSION-PENDING`: no deterministic benchmark-JSON-to-estimator
-  conversion script or eligible parameter transcript exists;
-- every CKKS parameter tuple remains `pending-estimator`.
+- `ESTIMATOR-SENSITIVITY-COMPLETE`: the deterministic manifest-to-estimator
+  converter, two byte-identical runs, canonical transcript, and repeat verifier
+  passed a fresh independent review with 0 Critical, 0 Major, and 0 Minor
+  findings;
+- `APPLICATION-SECURITY-INCONCLUSIVE`: the exact-Q and exact-QP rows use
+  `m=+Infinity`; finite sample counts, the complete evaluation-key exposure,
+  the ephemeral-secret exposure, and an accepted secure circuit profile remain
+  open;
+- the fixed `LogN=5` functional negative control is `FAIL` below the declared
+  128-bit classical threshold.
 
-The smoke is not a CKKS parameter estimate and is not a security pass.
+The environment smoke remains only an import gate. The completed estimator
+bundle is an exact unlimited-sample sensitivity analysis, not an application-
+security pass.
+
+## Accepted sensitivity bundle
+
+The authenticated converter is
+`research/scripts/run_ckks_security_estimates.sage.py`, with SHA-256
+`d62de51c6d74f3c49ab4db391bb68cb51e4c728102334da5c51524206f325fa3`.
+It consumes the exact candidate and functional-negative manifests and emits the
+nine-file bundle under `research/reproduction/security/estimates/`. The two
+54,188-byte worker transcripts are byte-identical with SHA-256
+`690a66c23ddcdc778da4e2f5ce7b02b028db5e8bb26efa8e3d197c039956db02`;
+the complete estimator-result payload has SHA-256
+`87e176bc0a9d1877080910f89038e44729f4713b51d8bc322f45472f063b4daf`.
+
+For the `LogN=16` candidate, the minimum modeled costs are 150.672 classical
+bits and 136.740 quantum bits, both from the exact-QP `dual_hybrid` row. These
+values describe exact unlimited-sample sensitivity. The candidate decision is
+`INCONCLUSIVE` because the exposure inventory required below is incomplete.
+The independent `LogN=5` negative control returns minima of 11.680 classical
+bits and 10.600 quantum bits and therefore returns `FAIL` at the 128-bit gate.
+The authoritative conversion, results, decision boundary, reproduction
+commands, hashes, and tamper evidence are recorded in
+`research/phase3_design/security_estimator_conversion_record.md`.
 
 ## Required input record for each parameter family
 
@@ -131,11 +162,13 @@ For each frozen tuple, commit:
 - an explicit `PASS`, `FAIL`, or `INCONCLUSIVE` decision against the declared
   target.
 
-Until all fields exist, tables may report the tuple and functional results but
-must label security as `pending-estimator`. A lattice-estimator pass establishes
-only the modeled RLWE hardness. It does not by itself establish
-application-aware CKKS correctness, sparse-key bootstrapping safety,
-side-channel resistance, or protocol security.
+The current candidate has an eligible unlimited-sample sensitivity transcript,
+but the missing finite exposure fields keep its application-security decision
+`INCONCLUSIVE`. Tables may report the exact tuple and sensitivity values only
+with that label. A future lattice-estimator `PASS` would establish only the
+modeled RLWE hardness; it would not by itself establish application-aware CKKS
+correctness, sparse-key bootstrapping safety, side-channel resistance, or
+protocol security.
 
 ## Decision threshold and conversion freeze
 
@@ -144,10 +177,11 @@ bits over every effective secret/parameter exposure. Quantum estimates are
 mandatory reporting and sensitivity analysis; this study does not choose a
 quantum pass threshold after observing results.
 
-Before the first estimate, commit a deterministic parameter-to-estimator
-conversion script that consumes the benchmark binary's emitted JSON and maps
-every declared secret/error distribution and sample count into explicit
-`LWEParameters`/noise-distribution constructors. The script, input JSON,
-pinned estimator commit/tree, Sage version, and environment-lock digest form
-one immutable transcript bundle. Until that script exists, status remains
-`pending-estimator` even though the Sage environment is ready.
+The deterministic parameter-to-estimator converter now maps each declared
+secret/error distribution and exact modulus exposure into explicit estimator
+parameters. The script, input JSON, pinned estimator commit/tree, Sage version,
+environment-lock digest, complete returned-field inventory, and two-run repeat
+record form one authenticated transcript bundle. It intentionally sets
+`m=+Infinity` because the finite evaluator-key/sample inventory is unavailable;
+application-security promotion therefore remains closed until those exposures
+and the secure circuit profile are attached and re-estimated.

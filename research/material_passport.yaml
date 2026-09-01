@@ -1,0 +1,21 @@
+origin_skill: deep-research
+origin_mode: full
+origin_date: "2026-08-29T15:41:14Z"
+verification_status: UNVERIFIED
+version_label: "stage1-v1.2-revised"
+content_hash: "sha256:b2b7d5b6bdec140a89292b8ba581ddd45428f04cbe0ff2840c76e4edf3c1f3ea"
+upstream_dependencies:
+  - "lcpdte-paper-eprint-2026-1263:sha256:AFA3F85BDE2E39EFB3D00665813381423D0AE2AD980650701B3315F32B0A947D"
+  - "lcpdte-local-baseline:f5ff611f7c023f7ec4d06af6cecaa8b5d33da607"
+  - "lcpdte-official-observed:d8308d55aba5a5647082b5b8efb3226ffc1c0ebe"
+  - "gao-zheng-paper-eprint-2026-233:sha256:DB361D68D8B4DF66EAAD287588AA38EDDCEA01D1812B13487F75742D98B807AD"
+  - "fhe-simd-alu:08f1eb87434e7be072cba889270a8400bbffc08e"
+  - "lattigo:v6.1.1-plus-four-local-vendor-patches"
+  - "lattice-estimator:53da5982597709ba0fdf94ea37a84d822310fd84"
+  - "stage1-artifact-manifest:research/stage1_artifact_hashes.sha256"
+repro_lock: null
+slr_lineage: false
+experiment_intake_declaration:
+  status: no_experiments_declared
+  declared_at: "2026-08-29T15:41:14Z"
+  declared_by: scholar

@@ -34,10 +34,38 @@ import (
 //
 // The method will return an error if the input and output ciphertexts degree is not one.
 func (eval Evaluator) Trace(ctIn *Ciphertext, logN int, opOut *Ciphertext) (err error) {
+	return eval.traceCore(ctIn, logN, opOut, nil)
+}
+
+// TraceObserved executes the stock Trace algorithm once and returns
+// invocation-local evidence for its actual Automorphism dispatches. Only this
+// observed entry recovers panics; callers must discard a partially modified
+// output after any returned error.
+func (eval Evaluator) TraceObserved(ctIn *Ciphertext, logN int, opOut *Ciphertext) (report TraceDispatchReport, err error) {
+	recorder := newTraceDispatchRecorder(eval.GetRLWEParameters(), logN, ctIn == opOut)
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			recorder.fail(TraceDispatchFailurePanic)
+			report = recorder.seal()
+			err = fmt.Errorf("rlwe: TraceObserved recovered panic at stage %d: %v", recorder.stage, recovered)
+		}
+	}()
+
+	if err = eval.traceCore(ctIn, logN, opOut, recorder); err != nil {
+		recorder.fail(TraceDispatchFailureError)
+	} else {
+		recorder.succeed()
+	}
+	report = recorder.seal()
+	return
+}
+
+func (eval Evaluator) traceCore(ctIn *Ciphertext, logN int, opOut *Ciphertext, recorder *traceDispatchRecorder) (err error) {
 
 	if ctIn.Degree() != 1 || opOut.Degree() != 1 {
 		return fmt.Errorf("ctIn.Degree() != 1 or opOut.Degree() != 1")
 	}
+	recorder.setStage(TraceDispatchStagePreparation)
 
 	params := eval.GetRLWEParameters()
 
@@ -85,25 +113,35 @@ func (eval Evaluator) Trace(ctIn *Ciphertext, logN int, opOut *Ciphertext) (err 
 		buff.IsNTT = true
 
 		for i := logN; i < params.LogN()-1; i++ {
+			ordinaryExponent := uint64(1) << i
+			galEl := params.GaloisElement(1 << i)
 
-			if err = eval.Automorphism(opOut, params.GaloisElement(1<<i), buff); err != nil {
+			recorder.begin(TraceDispatchAutomorphism, true, ordinaryExponent, galEl)
+			if err = eval.Automorphism(opOut, galEl, buff); err != nil {
 				return err
 			}
+			recorder.complete()
 
+			recorder.setStage(TraceDispatchStageAdd)
 			ringQ.Add(opOut.Value[0], buff.Value[0], opOut.Value[0])
 			ringQ.Add(opOut.Value[1], buff.Value[1], opOut.Value[1])
 		}
 
 		if logN == 0 && ringQ.Type() == ring.Standard {
+			galEl := ringQ.NthRoot() - 1
 
-			if err = eval.Automorphism(opOut, ringQ.NthRoot()-1, buff); err != nil {
+			recorder.begin(TraceDispatchOrderTwoAutomorphism, false, 0, galEl)
+			if err = eval.Automorphism(opOut, galEl, buff); err != nil {
 				return err
 			}
+			recorder.complete()
 
+			recorder.setStage(TraceDispatchStageAdd)
 			ringQ.Add(opOut.Value[0], buff.Value[0], opOut.Value[0])
 			ringQ.Add(opOut.Value[1], buff.Value[1], opOut.Value[1])
 		}
 
+		recorder.setStage(TraceDispatchStageFinalize)
 		if !ctIn.IsNTT {
 			ringQ.INTT(opOut.Value[0], opOut.Value[0])
 			ringQ.INTT(opOut.Value[1], opOut.Value[1])
@@ -111,6 +149,7 @@ func (eval Evaluator) Trace(ctIn *Ciphertext, logN int, opOut *Ciphertext) (err 
 		}
 
 	} else {
+		recorder.setStage(TraceDispatchStageFinalize)
 		if ctIn != opOut {
 			opOut.Copy(ctIn)
 		}

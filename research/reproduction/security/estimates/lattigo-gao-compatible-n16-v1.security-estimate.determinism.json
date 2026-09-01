@@ -1,0 +1,20 @@
+{
+  "schema_version": "lcpdte-estimator-determinism-record-v1",
+  "first_run": "run-1",
+  "second_run": "run-2",
+  "byte_identical": true,
+  "bytes": 54188,
+  "sha256": "690a66c23ddcdc778da4e2f5ce7b02b028db5e8bb26efa8e3d197c039956db02",
+  "decision": "INCONCLUSIVE",
+  "negative_control_decision": "FAIL",
+  "deterministic_input_sha256": "44b867cee31262fb87be00dade95ab5e742a09030ad2db96c64c2f9f14eb0e6b",
+  "conversion_script_sha256": "d62de51c6d74f3c49ab4db391bb68cb51e4c728102334da5c51524206f325fa3",
+  "first_metadata_sha256": "43a44c1e0e8d17226b6977d5303f536e197ec3b82cc79e2b5279eb39d052fab2",
+  "second_metadata_sha256": "c8fb61bc5a3d1db7500e3e18c9cc8fe80616a614a5c5886cc910d6df9e56b2e4",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "validated_exit_codes": [
+    0,
+    0
+  ],
+  "volatile_wall_times_are_separate": true
+}

@@ -1,0 +1,195 @@
+{
+  "schema_version": "ckks-security-parameter-manifest-v1",
+  "tuple_id": "lattigo-gao-compatible-n16-v1",
+  "status": "PENDING-IMPLEMENTATION/PENDING-ESTIMATOR",
+  "provenance": "independent-lattigo-candidate;aggregate-compatible-not-openfhe-prime-identical",
+  "ring_type": "Standard",
+  "log_n": 16,
+  "n": 65536,
+  "max_slots": 32768,
+  "log_default_scale": 43,
+  "q": [
+    {
+      "decimal": "8796090007553",
+      "hex": "0x7ffffd20001",
+      "bit_length": 43
+    },
+    {
+      "decimal": "8796087386113",
+      "hex": "0x7ffffaa0001",
+      "bit_length": 43
+    },
+    {
+      "decimal": "8796087255041",
+      "hex": "0x7ffffa80001",
+      "bit_length": 43
+    },
+    {
+      "decimal": "8796085420033",
+      "hex": "0x7ffff8c0001",
+      "bit_length": 43
+    },
+    {
+      "decimal": "8796103114753",
+      "hex": "0x800009a0001",
+      "bit_length": 44
+    },
+    {
+      "decimal": "8796082667521",
+      "hex": "0x7ffff620001",
+      "bit_length": 43
+    },
+    {
+      "decimal": "8796105342977",
+      "hex": "0x80000bc0001",
+      "bit_length": 44
+    },
+    {
+      "decimal": "8796079915009",
+      "hex": "0x7ffff380001",
+      "bit_length": 43
+    },
+    {
+      "decimal": "8796079783937",
+      "hex": "0x7ffff360001",
+      "bit_length": 43
+    },
+    {
+      "decimal": "8796078735361",
+      "hex": "0x7ffff260001",
+      "bit_length": 43
+    },
+    {
+      "decimal": "8796108619777",
+      "hex": "0x80000ee0001",
+      "bit_length": 44
+    },
+    {
+      "decimal": "8796110192641",
+      "hex": "0x80001060001",
+      "bit_length": 44
+    },
+    {
+      "decimal": "8796111241217",
+      "hex": "0x80001160001",
+      "bit_length": 44
+    },
+    {
+      "decimal": "8796112814081",
+      "hex": "0x800012e0001",
+      "bit_length": 44
+    },
+    {
+      "decimal": "8796114124801",
+      "hex": "0x80001420001",
+      "bit_length": 44
+    },
+    {
+      "decimal": "8796114780161",
+      "hex": "0x800014c0001",
+      "bit_length": 44
+    },
+    {
+      "decimal": "8796115566593",
+      "hex": "0x80001580001",
+      "bit_length": 44
+    },
+    {
+      "decimal": "8796119236609",
+      "hex": "0x80001900001",
+      "bit_length": 44
+    },
+    {
+      "decimal": "8796067594241",
+      "hex": "0x7fffe7c0001",
+      "bit_length": 43
+    },
+    {
+      "decimal": "8796120416257",
+      "hex": "0x80001a20001",
+      "bit_length": 44
+    },
+    {
+      "decimal": "8796066152449",
+      "hex": "0x7fffe660001",
+      "bit_length": 43
+    }
+  ],
+  "p": [
+    {
+      "decimal": "1125899908022273",
+      "hex": "0x4000000120001",
+      "bit_length": 51
+    },
+    {
+      "decimal": "1125899903827969",
+      "hex": "0x3ffffffd20001",
+      "bit_length": 50
+    },
+    {
+      "decimal": "1125899911168001",
+      "hex": "0x4000000420001",
+      "bit_length": 51
+    },
+    {
+      "decimal": "1125899902124033",
+      "hex": "0x3ffffffb80001",
+      "bit_length": 50
+    },
+    {
+      "decimal": "1125899913527297",
+      "hex": "0x4000000660001",
+      "bit_length": 51
+    },
+    {
+      "decimal": "1125899915100161",
+      "hex": "0x40000007e0001",
+      "bit_length": 51
+    },
+    {
+      "decimal": "1125899915231233",
+      "hex": "0x4000000800001",
+      "bit_length": 51
+    }
+  ],
+  "q_product": {
+    "decimal": "67622368052516858596625224165764404374562703584291779946897816337514415859613027144163528327581992510689910446845561542966719031772176832238362742665006721035044337307116073034654414562328346151382115089031969630325090519051882929177149937352687794392484034574111814320129",
+    "hex": "0x800052e004e92870e5d44f56206bd0035b53a20b504a3f554fbeb7615f7e8a18fc9f3125444e7d84c4e90ad91e7cdd4b23f45520bd51b8bf7952e6c22dc67348c00f6d665e3811822c9cbe185cb223733639701da5f39fd572bd2955284071a4af225e47db010445339d727498052e0001",
+    "bit_length": 904,
+    "sha256_decimal_ascii": "b4771178be1cc3ad987efcfa1884c837297560b5598ab4c65e13684d72070e04"
+  },
+  "p_product": {
+    "decimal": "2293498658976825059308163962401959294754222162194480824862321631076499691868078976636360024099765992161281",
+    "hex": "0x400000142000717f201e180085db795249f9fe5d9463646922169e55f53aa9fe79051c28004c5fc801420001",
+    "bit_length": 351,
+    "sha256_decimal_ascii": "549f4d7e5734f7dd2b7ae926bc3fafb871859c46de3232d4cf3149db773f9480"
+  },
+  "qp_product": {
+    "decimal": "155091810445284712397193987336340181362769839048644716265656503283862310048894567353643905251202956737065689756265781246449204918262497787880351520416044193220083833998291870055899900011571754086802010497722973118891068236618876248759012274247015893722340777336610436900777539821070135759144163650497222763914020685330468864263487872238699845894389668207614377810802778332725249",
+    "hex": "0x200014c2114106b851167768f58136f028dbebd5a6867412a052f8090bda179747cacf7031d10f69909d3ee4465d582d1a2c2cc813404a55ff580f6f38cfb5dbe34e9d15da28a6fbbccaf386eb9b1e4bc20e379d4ad6994c16c052534ec5e49b30a903eba842666d03efadf0cd9ee63e5bba92ad7c4f7e3f623924352d29f2da72633a07c9904be47ddc0611a72718df2b73f675aa62e5583c06700001",
+    "bit_length": 1254,
+    "sha256_decimal_ascii": "06322507398dd88ee2268c0634eb1d65496369164e6f75d302503be86bc39797"
+  },
+  "main_secret": {
+    "type": "balanced-sparse-ternary",
+    "weight": 192
+  },
+  "ephemeral_secret": {
+    "type": "balanced-sparse-ternary",
+    "weight": 32
+  },
+  "error": {
+    "type": "bounded-discrete-gaussian",
+    "sigma": 3.2,
+    "bound": 19.2
+  },
+  "estimator_eligible": false,
+  "missing_evidence": [
+    "accepted-secure-circuit-profile",
+    "evaluation-key-inventory",
+    "finite-rlwe-sample-exposures",
+    "bootstrapping-secret-switch-profile",
+    "classical-and-quantum-estimator-transcripts"
+  ],
+  "canonical_json_sha256": "e2dc7b14f041589be98f27f0634dab1bc77b910babcc9a8c7775f81d498b3f3d"
+}

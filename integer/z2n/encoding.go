@@ -54,17 +54,21 @@ func (r *Ring) DecodeArithmetic(encoded Polynomial) (uint64, error) {
 	return value.Uint64(), nil
 }
 
-// CanonicalizeArithmetic reduces every coefficient modulo one to (-1, 0].
-// This is the plaintext counterpart of Gao--Zheng's [.]_I operation.
+// CanonicalizeArithmetic reduces every coefficient modulo one using the
+// epsilon-shifted boundary from Gao--Zheng's [.]_I operation. For word size n,
+// epsilon is 2^(-n-1), so the represented interval is (-1+epsilon, epsilon].
 func (r *Ring) CanonicalizeArithmetic(value Polynomial) (Polynomial, error) {
 	if err := r.validate(value); err != nil {
 		return Polynomial{}, err
 	}
+	epsilon := r.canonicalEpsilon()
 	result := r.zeroPolynomial()
 	for i, coefficient := range value.coefficients {
-		ceiling := r.ceilToInt(coefficient)
+		shifted := r.newFloat().Sub(coefficient, epsilon)
+		ceiling := r.ceilToInt(shifted)
 		ceilingFloat := r.newFloat().SetInt(ceiling)
-		result.coefficients[i].Sub(coefficient, ceilingFloat)
+		result.coefficients[i].Sub(shifted, ceilingFloat)
+		result.coefficients[i].Add(result.coefficients[i], epsilon)
 	}
 	return result, nil
 }

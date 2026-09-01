@@ -1,0 +1,324 @@
+{
+  "schema": "lcpdte-signed8-depth2-selected-child-result-v1",
+  "completed_at": "2026-09-01T05:46:16.6308314Z",
+  "result": {
+    "schema_version": "lcpdte-signed8-depth2-selected-child-experiment-v1",
+    "fidelity": "functional_not_secure",
+    "go_version": "go1.23.11",
+    "goos": "windows",
+    "goarch": "amd64",
+    "log_n": 5,
+    "log_max_slots": 4,
+    "max_level": 20,
+    "log_default_scale": 35,
+    "parameter_digest": "085e0a9b826d469ac5514d3db988672f41ab0a4f1bb2fe82705842226a8eacc2",
+    "range_digest": "a8819b509766568b8f68c744363cf90ef9aa6c1a1f2936b7328787228138d9e4",
+    "tree_digest": "159524f29e92ab489c001764785bc42a783d6668b67f69452a81c4dc96090a84",
+    "schedule_digest": "550c50a6d877016ab99000326dec150a6a425ff4501703720899d8dc220f3c41",
+    "profile_digest": "25141ea2f596c5b51fe22342a98c48733d0fccb321436eefbae1bd248ac751c7",
+    "key_profile_digest": "db329a1a25007dcd644ef6e12502e35cc7759213a7a1a39be5a361049eb52188",
+    "required_galois_elements": [
+      5,
+      17,
+      25,
+      33,
+      41,
+      49,
+      63
+    ],
+    "tree": {
+      "depth": 2,
+      "splits": [
+        {
+          "feature": 0,
+          "threshold": 0
+        },
+        {
+          "feature": 1,
+          "threshold": -4
+        },
+        {
+          "feature": 2,
+          "threshold": 3
+        }
+      ],
+      "leaves": [
+        -1.25,
+        2.5,
+        -3.75,
+        5
+      ]
+    },
+    "feature_ids": [
+      0,
+      1,
+      2
+    ],
+    "input_words": [
+      [
+        -1,
+        -1,
+        1,
+        1
+      ],
+      [
+        -5,
+        -4,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        3
+      ]
+    ],
+    "input_pattern_digest": "a7cebb62e56eaaeff9e2145321228d67d06acc118ca558ce3f075080ec96bde6",
+    "expected_paths": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expected_leaves": [
+      -1.25,
+      2.5,
+      -3.75,
+      5
+    ],
+    "decoded_output": [
+      {
+        "real": -1.2499996772727595,
+        "imag": 0.0000040464350575515865
+      },
+      {
+        "real": -1.2499981305919912,
+        "imag": 0.000001358686064612286
+      },
+      {
+        "real": -1.249998320664385,
+        "imag": 0.0000015930774375027963
+      },
+      {
+        "real": -1.249997735146964,
+        "imag": -7.08707164158556e-7
+      },
+      {
+        "real": 2.4999993893356884,
+        "imag": 6.833602885603353e-7
+      },
+      {
+        "real": 2.499999758147174,
+        "imag": 5.974800242679864e-9
+      },
+      {
+        "real": 2.499998876574511,
+        "imag": 0.0000011687065898744419
+      },
+      {
+        "real": 2.499999409732573,
+        "imag": 5.038918817195982e-7
+      },
+      {
+        "real": -3.749999907611137,
+        "imag": 0.000004618971947066847
+      },
+      {
+        "real": -3.7499983820440677,
+        "imag": 0.000002108558694940811
+      },
+      {
+        "real": -3.749997813964952,
+        "imag": 9.875278774226475e-7
+      },
+      {
+        "real": -3.749992992104543,
+        "imag": 0.0000013148008263868418
+      },
+      {
+        "real": 5.000000095022094,
+        "imag": -0.0000011470943619657573
+      },
+      {
+        "real": 5.000002023840764,
+        "imag": -0.00000172989228675214
+      },
+      {
+        "real": 5.000000079075356,
+        "imag": -1.0867642293097881e-8
+      },
+      {
+        "real": 4.9999969724796784,
+        "imag": 0.0000014460417228587787
+      }
+    ],
+    "root_operand_mode": "ct_pt_public_threshold",
+    "child_operand_kind": "selected-feature-minus-selected-threshold-ct-ct",
+    "result_provenance_digest": "f727af0ae92ca0de3777f5babffaa2d715c0e762a9038a0b38377aad96bca10a",
+    "trace_digest": "866d8c849ddcc99417da0e99583503c226e849fdaa828011e786a0e4b414285c",
+    "linkage_digest": "70e9657e86346eed2c28c4dbddbc8d1cf92ddb5880439dbb4aac570f842f3836",
+    "output_payload_digest": "ead81a39fcea71c4dba9a1c18769b23465a81eae064975c143d5bb94c7c29ffa",
+    "operations": {
+      "root_wrapper": {
+        "CiphertextPlaintextSubtractions": 1,
+        "CiphertextCiphertextSubtractions": 0,
+        "Negations": 1,
+        "CiphertextPlaintextVectorAdditions": 1
+      },
+      "root_selector": {
+        "LinearTransformations": 7,
+        "DiagonalPlaintextProducts": 35,
+        "NonConjugationRotations": 19,
+        "Conjugations": 3,
+        "KeySwitches": 22,
+        "CiphertextAdditionsSubtractions": 34,
+        "ScalarMultiplicationsPlusMinusI": 2,
+        "ExplicitRescales": 10,
+        "ScaleDown": 1,
+        "ModUp": 1,
+        "ExponentialPolynomialEvaluations": 1,
+        "CiphertextCiphertextProducts": 2,
+        "Relinearizations": 2,
+        "CiphertextPlaintextProducts": 1,
+        "PlaintextVectorAdditions": 1,
+        "IDMSBLUTEvaluations": 0
+      },
+      "source_prefix": {
+        "Conditioner": {
+          "CiphertextPlaintextMultiplications": 1,
+          "Rescales": 1,
+          "Rotations": 0
+        },
+        "Feature": {
+          "CiphertextCiphertextMultiplications": 1,
+          "Relinearizations": 1,
+          "Rescales": 1,
+          "CiphertextSubtractions": 1,
+          "CiphertextAdditions": 1,
+          "LevelAlignments": 1
+        },
+        "Threshold": {
+          "CiphertextPlaintextMultiplications": 1,
+          "Rescales": 1,
+          "PlaintextVectorAdditions": 1
+        },
+        "Rotations": 0
+      },
+      "child_comparator": {
+        "CiphertextCiphertextSubtractions": 1,
+        "IngressInvocations": 1,
+        "SignFusionInvocations": 1,
+        "Negations": 1,
+        "CiphertextPlaintextVectorAdds": 1,
+        "Rescales": 0,
+        "Rotations": 0
+      },
+      "child_decoder": {
+        "LinearTransformations": 7,
+        "DiagonalPlaintextProducts": 35,
+        "NonConjugationRotations": 19,
+        "Conjugations": 3,
+        "KeySwitches": 22,
+        "CiphertextAdditionsSubtractions": 34,
+        "ScalarMultiplicationsPlusMinusI": 2,
+        "ExplicitRescales": 10,
+        "ScaleDown": 1,
+        "ModUp": 1,
+        "ExponentialPolynomialEvaluations": 1,
+        "CiphertextCiphertextProducts": 2,
+        "Relinearizations": 2,
+        "CiphertextPlaintextProducts": 1,
+        "PlaintextVectorAdditions": 1,
+        "IDMSBLUTEvaluations": 0
+      },
+      "terminal_mux": {
+        "CiphertextPlaintextMultiplications": 2,
+        "CiphertextCiphertextMultiplications": 1,
+        "Relinearizations": 1,
+        "Rescales": 3,
+        "PlaintextVectorAdditions": 2,
+        "CiphertextAdditions": 1,
+        "LevelDrops": 1,
+        "Rotations": 0
+      }
+    },
+    "bytes": {
+      "RootComparator": {
+        "Feature": 11390,
+        "ThresholdOperand": 5838,
+        "Difference": 11390,
+        "HighMSB": 3470,
+        "ArithmeticSign": 2942,
+        "GreaterEqualOutput": 2942
+      },
+      "RootSelector": {
+        "OnlineInput": 2942,
+        "OnlineOutput": 5054,
+        "RetainedNormalVLow": 2414,
+        "RetainedNormalVHigh": 2414,
+        "RetainedSlotsToCoeffs": 1358,
+        "RetainedRaisedCoefficients": 11390,
+        "RetainedCoeffsToSlotsLow": 9806,
+        "RetainedCoeffsToSlotsHigh": 9806,
+        "RetainedExponentialBase": 6638,
+        "RetainedPeriodicRootOfUnity": 5582
+      },
+      "SourcePrefix": {
+        "ExternalFeatureLeft": 11390,
+        "ExternalFeatureRight": 11390,
+        "InternalSelectorInput": 5054,
+        "InternalConditionedSelector": 4526,
+        "OutputFeature": 3998,
+        "OutputThreshold": 3998,
+        "RetainedConditionerRaw": 5054,
+        "RetainedFeatureDelta": 11390,
+        "RetainedFeatureRaw": 4526,
+        "RetainedFeatureLeftAligned": 3998,
+        "RetainedThresholdRaw": 4526
+      },
+      "ChildComparator": {
+        "Feature": 3998,
+        "Threshold": 3998,
+        "Difference": 3998,
+        "IngressHigh": 3470,
+        "ArithmeticSign": 2942,
+        "NegatedSign": 2942,
+        "GreaterEqualOutput": 2942
+      },
+      "TerminalLocal": {
+        "DecodedChild": 5054,
+        "RootSelector": 4526,
+        "RawA": 5054,
+        "RescaledA": 4526,
+        "AffineA": 4526,
+        "RawD": 5054,
+        "RescaledD": 4526,
+        "AffineD": 4526,
+        "RawY": 4526,
+        "RescaledY": 3998,
+        "AlignedA": 3998,
+        "Output": 3998
+      },
+      "TerminalComposedUnique": 106662
+    },
+    "module_reported_byte_sum": 296178,
+    "timing": {
+      "setup_nanoseconds": 43025374700,
+      "root_comparator_nanoseconds": 637806500,
+      "root_selector_nanoseconds": 1086005100,
+      "source_prefix_nanoseconds": 2731703000,
+      "child_comparator_nanoseconds": 2941713200,
+      "terminal_nanoseconds": 35517831300,
+      "online_nanoseconds": 70444052900,
+      "post_online_verification_nanoseconds": 46049806700,
+      "lifecycle_nanoseconds": 159519234300
+    },
+    "certificate_tolerance": 0.0689849853515625,
+    "acceptance_tolerance": 0.001,
+    "max_real_abs_error": 0.000007007895456823121,
+    "max_imaginary_abs": 0.000004618971947066847,
+    "mismatch_count": 0,
+    "digest": "575f1d2167f16ed5a2b599e5b6a29e71213627e8da59f3f5b64b27e23bf33850"
+  }
+}

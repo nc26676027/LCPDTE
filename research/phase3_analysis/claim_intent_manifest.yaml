@@ -1,0 +1,67 @@
+manifest_version: "1.0"
+manifest_id: "M-2026-08-29T15:12:15Z-a7c3"
+emitted_by: synthesis_agent
+emitted_at: "2026-08-29T15:12:15Z"
+session_id: "goal-01a04d78-9838-77d3-8c59-10ac1013d0a5-stage1"
+claims:
+  - claim_id: C-001
+    claim_text: "The LCPDTE paper supports a square-root-in-leaf-count bound for key switching and relinearization; this claim does not describe all ring operations in the checkout."
+    intended_evidence_kind: theoretical
+    planned_refs: [park2026lcpdte]
+  - claim_id: C-002
+    claim_text: "Gao--Zheng exact modular semantics depend on triangle/Boolean representation-specific decoding margins and cannot be inferred from ordinary approximate CKKS precision alone."
+    intended_evidence_kind: theoretical
+    planned_refs: [gao2026alu, drucker2024bleach, alexandru2026application]
+  - claim_id: C-003
+    claim_text: "The advertised amortized constant bootstrap cost is conditional on batching enough ciphertexts and does not imply constant work for an isolated integer or matched PDTE query batch."
+    intended_evidence_kind: theoretical
+    planned_refs: [gao2026alu, bae2024bits, bae2024small, dumezy2026hegide]
+  - claim_id: C-004
+    claim_text: "[Engineering inference] In a faithful model-private OBO evaluator, encrypted path weights produce a ciphertext selected threshold and attribute, so comparison is CT--CT; retaining CT--server-plaintext comparison requires an all-node schedule. This must be checked against an executable operand/provenance trace."
+    intended_evidence_kind: empirical
+    planned_refs: [park2026lcpdte, gao2026alu]
+  - claim_id: C-005
+    claim_text: "[Adaptation claim] Composing the two systems is not a drop-in operator substitution: the Lattigo implementation must demonstrate a range-correct CT--CT comparator, packing reconciliation, Boolean/arithmetic conversion, and a concrete bootstrap path."
+    intended_evidence_kind: empirical
+    planned_refs: [park2026lcpdte, gao2026alu, alexandru2025functional, kim2025integer, dumezy2026characterblock]
+  - claim_id: C-006
+    claim_text: "[Implementation hypothesis] A sign-only conversion may discard unused Boolean outputs but cannot skip lower-chunk residue peeling without a new proof; any bootstrap benefit requires a correctness proof and matched measurement."
+    intended_evidence_kind: empirical
+    planned_refs: [gao2026alu]
+  - claim_id: C-007
+    claim_text: "R0 groups levels of an unchanged binary tree, whereas R1 changes the model to a multiway interval tree; radix greater than two is not automatically cheaper because comparison and encrypted selection costs also grow."
+    intended_evidence_kind: theoretical
+    planned_refs: [park2026lcpdte, azogagh2022probonite, cong2022sortinghat, mahdavi2023levelup, cong2024faster, liang2024bpdte, dumezy2026hegide, dumezy2026characterblock]
+  - claim_id: C-008
+    claim_text: "A local 128-bit claim requires the complete effective QP chain, both dense and sparse secret distributions, evaluation-key exposure, and application-aware correctness assumptions rather than paper-level ring degree or logQP alone."
+    intended_evidence_kind: normative
+    planned_refs: [bossuat2022sparse, alexandru2026application, park2026lcpdte, gao2026alu]
+  - claim_id: C-009
+    claim_text: "Gao--Zheng's construction requires high-precision roots, its stated closed-form transforms, modular wrap semantics, and representation-specific metadata."
+    intended_evidence_kind: definitional
+    planned_refs: [gao2026alu, boneh2025nested]
+  - claim_id: C-010
+    claim_text: "[Pinned-source audit] At checkout f5ff611f7c023f7ec4d06af6cecaa8b5d33da607, tree/main_tree.go:84-210 and 229-415 perform level-wise tensor products and additions whose term count follows the number of nodes; this operation count is derived from source and is not supported by the paper citation alone."
+    intended_evidence_kind: empirical
+    planned_refs: []
+  - claim_id: C-011
+    claim_text: "[Adaptation claim] The Lattigo port preserves the Gao--Zheng representation invariants only if differential oracle tests verify root precision, transforms, wrap semantics, packing metadata, and bootstrap/Truncate behavior."
+    intended_evidence_kind: empirical
+    planned_refs: [gao2026alu]
+manifest_negative_constraints:
+  - constraint_id: MNC-1
+    rule: "Do not label any local tuple 128-bit secure without an archived independent estimator transcript over the effective parameters."
+  - constraint_id: MNC-2
+    rule: "Do not claim latency, memory, or asymptotic superiority before matched end-to-end benchmarks and operation counters exist."
+  - constraint_id: MNC-3
+    rule: "Do not describe R1 multiway models as semantically equivalent to the source binary model without matched predictions or accuracy evidence."
+  - constraint_id: MNC-4
+    rule: "Do not convert per-ciphertext amortization into per-word or per-query constant cost without charging physical ciphertext count and utilization."
+  - constraint_id: MNC-5
+    rule: "Do not combine OBO's D-comparison count with ciphertext--plaintext comparison cost."
+  - constraint_id: MNC-6
+    rule: "A paper citation may not by itself support an operation count derived from a checkout; every such count must carry the pinned commit and file/function derivation."
+  - constraint_id: MNC-7
+    rule: "Do not emit first, closest, absence, or broad private-program/private-tree/Lattigo-integer novelty language; HEGIDE, Character Block Encodings, and the generic PFE/oblivious-processor search family must remain in the disposition and baseline set."
+  - constraint_id: MNC-8
+    rule: "Engineering inferences, adaptation claims, and implementation hypotheses must retain those labels until an executable trace, proof, or matched experiment supplies the stated falsification test."

@@ -1,0 +1,1057 @@
+{
+  "schema_version": "lcpdte-route-b-ephemeral-security-estimate-v1",
+  "purpose": "Route-B dense-to-sparse encapsulation-key output-secret sensitivity",
+  "bound_parameter_manifest_sha256": "e2dc7b14f041589be98f27f0634dab1bc77b910babcc9a8c7775f81d498b3f3d",
+  "exposure": {
+    "secret_role": "ephemeral-output-secret",
+    "secret_distribution": "balanced-sparse-ternary",
+    "positive_weight": 16,
+    "negative_weight": 16,
+    "total_weight": 32,
+    "ring_dimension": 65536,
+    "modulus": "Q[0]P[0]",
+    "q0_decimal": "8796090007553",
+    "p0_decimal": "1125899908022273",
+    "product_decimal": "9903516930459557317862227969",
+    "product_bit_length": 93,
+    "fresh_ring_rlwe_samples": 1,
+    "estimator_samples": "+Infinity",
+    "conversion": "coefficient-embedding LWE sensitivity proxy with n=N; structured RLWE limitation retained"
+  },
+  "cost_models": {
+    "classical": "ADPS16 2^(0.2920*beta); selected uSVP and dual-hybrid",
+    "quantum": "ADPS16 2^(0.2650*beta); selected uSVP and dual-hybrid"
+  },
+  "toolchain": {
+    "sage_version": "10.9",
+    "sage_prefix": "/var/tmp/lcpdte-research-toolchains/sage",
+    "sage_lock_sha256": "9f5fb0b9e49d71352b40e64adca1955fe4b874999a5c817112b2eaabcc2f0d5d",
+    "estimator_commit": "53da5982597709ba0fdf94ea37a84d822310fd84",
+    "estimator_tree": "7cb765baf3bb401580c08f678dcee8c6f35e66d1",
+    "estimator_archive_sha256": "d838a23842bbe6d399e3f742847e0df28cc15108369390a159d864225b62c1c3",
+    "estimator_source_sha256": {
+      "estimator/lwe.py": "9ff2ac14f6480863d741eac1c2a9c935adf87a8954d2344024a22b581133e230",
+      "estimator/lwe_primal.py": "f46e682a3eb0b7e3b175c326f96244caee5df6f07df78974cdb834e1d6f006d1",
+      "estimator/lwe_dual.py": "8f6a077589393f907fbcc87b9ef812beafc73bf5cc78abc4f857924b80a21a8b",
+      "estimator/lwe_parameters.py": "72bde0ae3bdd89a4de02b249a1da144256b8d84d009b28b59bde6364b0bc8ecc",
+      "estimator/nd.py": "d87fca7bb191a0fb29b24507897e00c8beba784da552b6b90a982c718fc1c459",
+      "estimator/reduction.py": "b1354702c88a8309f78d373ae7f4b0b4347799abfd1a13c07e0fa75bf87bd59a"
+    },
+    "main_driver_sha256": "d62de51c6d74f3c49ab4db391bb68cb51e4c728102334da5c51524206f325fa3",
+    "this_script_sha256": "a321152c14bb1147b023b1b132efcc42f820e550275ef934e5df4797dbfcca45"
+  },
+  "results_sha256": "04ed7b994aa17a94d313ce721f697fbcaa04b650cee05bbe42afd4ea3486cf2a",
+  "results": {
+    "ephemeral_estimates": [
+      {
+        "exposure_id": "ephemeral-secret-q0p0-unlimited",
+        "cost_model_id": "ADPS16-classical-rough",
+        "cost_model": {
+          "class": "estimator.reduction.ADPS16",
+          "mode": "classical",
+          "formula": "2^(0.2920*beta)"
+        },
+        "invocation": "rough-equivalent:LWE.primal_usvp(red_cost_model=RC.ADPS16,red_shape_model='gsa');LWE.dual_hybrid(red_cost_model=RC.ADPS16)",
+        "parameters": {
+          "type": "estimator.lwe_parameters.LWEParameters",
+          "repr": "LWEParameters(n=65536, q=9903516930459557317862227969, Xs=T(p=16, m=16, n=65536), Xe=D(σ=3.20), m=+Infinity, tag='ephemeral-secret-q0p0-unlimited')",
+          "n": 65536,
+          "q_decimal": "9903516930459557317862227969",
+          "q_bit_length": 93,
+          "Xs": {
+            "type": "estimator.nd.SparseTernary",
+            "n": 65536,
+            "repr": "T(p=16, m=16, n=65536)",
+            "p": 16,
+            "m": 16,
+            "bounds_repr": "(-1, 1)",
+            "stddev_repr": "0.0220970869120796"
+          },
+          "Xe": {
+            "type": "estimator.nd.DiscreteGaussian",
+            "n": 65536,
+            "bounds_repr": "(-52, 52)",
+            "stddev_repr": "3.20000000000000",
+            "mean_repr": "0.000000000000000",
+            "repr": "D(σ=3.20)"
+          },
+          "samples": "+Infinity",
+          "tag": "ephemeral-secret-q0p0-unlimited"
+        },
+        "attacks": {
+          "usvp": {
+            "rop_bits": "+Infinity",
+            "cost_repr": "rop: ≈2^inf, tag: usvp",
+            "returned_fields": {
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=65536, q=9903516930459557317862227969, Xs=T(p=16, m=16, n=65536), Xe=D(σ=3.20), m=+Infinity, tag='ephemeral-secret-q0p0-unlimited')",
+                "n": 65536,
+                "q_decimal": "9903516930459557317862227969",
+                "q_bit_length": 93,
+                "Xs": {
+                  "type": "estimator.nd.SparseTernary",
+                  "n": 65536,
+                  "repr": "T(p=16, m=16, n=65536)",
+                  "p": 16,
+                  "m": 16,
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.0220970869120796"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 65536,
+                  "bounds_repr": "(-52, 52)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "ephemeral-secret-q0p0-unlimited"
+              },
+              "rop": {
+                "type": "sage.rings.infinity.PlusInfinity",
+                "repr": "+Infinity"
+              },
+              "tag": {
+                "type": "builtins.str",
+                "value": "usvp",
+                "repr": "'usvp'"
+              }
+            }
+          },
+          "dual_hybrid": {
+            "rop_bits": "+Infinity",
+            "cost_repr": "rop: ≈2^inf, red: ≈2^inf, guess: ≈2^inf, β: 1753, p: 2, ζ: 0, t: 0, β': 1753, N: ≈2^inf, m: ≈2^16.0",
+            "returned_fields": {
+              "N": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "+infinity"
+              },
+              "beta": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "1753"
+              },
+              "beta_": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "1753"
+              },
+              "guess": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "+infinity"
+              },
+              "m": {
+                "type": "builtins.int",
+                "repr": "65536"
+              },
+              "p": {
+                "type": "builtins.int",
+                "repr": "2"
+              },
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=65536, q=9903516930459557317862227969, Xs=T(p=16, m=16, n=65536), Xe=D(σ=3.20), m=+Infinity, tag='ephemeral-secret-q0p0-unlimited')",
+                "n": 65536,
+                "q_decimal": "9903516930459557317862227969",
+                "q_bit_length": 93,
+                "Xs": {
+                  "type": "estimator.nd.SparseTernary",
+                  "n": 65536,
+                  "repr": "T(p=16, m=16, n=65536)",
+                  "p": 16,
+                  "m": 16,
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.0220970869120796"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 65536,
+                  "bounds_repr": "(-52, 52)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "ephemeral-secret-q0p0-unlimited"
+              },
+              "red": {
+                "type": "sage.rings.infinity.PlusInfinity",
+                "repr": "+Infinity"
+              },
+              "rop": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "+Infinity"
+              },
+              "t": {
+                "type": "builtins.int",
+                "repr": "0"
+              },
+              "zeta": {
+                "type": "builtins.int",
+                "repr": "0"
+              }
+            }
+          }
+        },
+        "minimum": {
+          "attack": "dual_hybrid",
+          "rop_bits": "inf"
+        },
+        "estimator_stdout": "",
+        "estimator_stderr": ""
+      },
+      {
+        "exposure_id": "ephemeral-secret-q0p0-unlimited",
+        "cost_model_id": "ADPS16-quantum-rough-sensitivity",
+        "cost_model": {
+          "class": "estimator.reduction.ADPS16",
+          "mode": "quantum",
+          "formula": "2^(0.2650*beta)"
+        },
+        "invocation": "LWE.primal_usvp(red_shape_model='gsa');LWE.dual_hybrid;ADPS16(mode='quantum')",
+        "parameters": {
+          "type": "estimator.lwe_parameters.LWEParameters",
+          "repr": "LWEParameters(n=65536, q=9903516930459557317862227969, Xs=T(p=16, m=16, n=65536), Xe=D(σ=3.20), m=+Infinity, tag='ephemeral-secret-q0p0-unlimited')",
+          "n": 65536,
+          "q_decimal": "9903516930459557317862227969",
+          "q_bit_length": 93,
+          "Xs": {
+            "type": "estimator.nd.SparseTernary",
+            "n": 65536,
+            "repr": "T(p=16, m=16, n=65536)",
+            "p": 16,
+            "m": 16,
+            "bounds_repr": "(-1, 1)",
+            "stddev_repr": "0.0220970869120796"
+          },
+          "Xe": {
+            "type": "estimator.nd.DiscreteGaussian",
+            "n": 65536,
+            "bounds_repr": "(-52, 52)",
+            "stddev_repr": "3.20000000000000",
+            "mean_repr": "0.000000000000000",
+            "repr": "D(σ=3.20)"
+          },
+          "samples": "+Infinity",
+          "tag": "ephemeral-secret-q0p0-unlimited"
+        },
+        "attacks": {
+          "usvp": {
+            "rop_bits": "+Infinity",
+            "cost_repr": "rop: ≈2^inf, tag: usvp",
+            "returned_fields": {
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=65536, q=9903516930459557317862227969, Xs=T(p=16, m=16, n=65536), Xe=D(σ=3.20), m=+Infinity, tag='ephemeral-secret-q0p0-unlimited')",
+                "n": 65536,
+                "q_decimal": "9903516930459557317862227969",
+                "q_bit_length": 93,
+                "Xs": {
+                  "type": "estimator.nd.SparseTernary",
+                  "n": 65536,
+                  "repr": "T(p=16, m=16, n=65536)",
+                  "p": 16,
+                  "m": 16,
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.0220970869120796"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 65536,
+                  "bounds_repr": "(-52, 52)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "ephemeral-secret-q0p0-unlimited"
+              },
+              "rop": {
+                "type": "sage.rings.infinity.PlusInfinity",
+                "repr": "+Infinity"
+              },
+              "tag": {
+                "type": "builtins.str",
+                "value": "usvp",
+                "repr": "'usvp'"
+              }
+            }
+          },
+          "dual_hybrid": {
+            "rop_bits": "+Infinity",
+            "cost_repr": "rop: ≈2^inf, red: ≈2^inf, guess: ≈2^inf, β: 1753, p: 2, ζ: 0, t: 0, β': 1753, N: ≈2^inf, m: ≈2^16.0",
+            "returned_fields": {
+              "N": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "+infinity"
+              },
+              "beta": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "1753"
+              },
+              "beta_": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "1753"
+              },
+              "guess": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "+infinity"
+              },
+              "m": {
+                "type": "builtins.int",
+                "repr": "65536"
+              },
+              "p": {
+                "type": "builtins.int",
+                "repr": "2"
+              },
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=65536, q=9903516930459557317862227969, Xs=T(p=16, m=16, n=65536), Xe=D(σ=3.20), m=+Infinity, tag='ephemeral-secret-q0p0-unlimited')",
+                "n": 65536,
+                "q_decimal": "9903516930459557317862227969",
+                "q_bit_length": 93,
+                "Xs": {
+                  "type": "estimator.nd.SparseTernary",
+                  "n": 65536,
+                  "repr": "T(p=16, m=16, n=65536)",
+                  "p": 16,
+                  "m": 16,
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.0220970869120796"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 65536,
+                  "bounds_repr": "(-52, 52)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "ephemeral-secret-q0p0-unlimited"
+              },
+              "red": {
+                "type": "sage.rings.infinity.PlusInfinity",
+                "repr": "+Infinity"
+              },
+              "rop": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "+Infinity"
+              },
+              "t": {
+                "type": "builtins.int",
+                "repr": "0"
+              },
+              "zeta": {
+                "type": "builtins.int",
+                "repr": "0"
+              }
+            }
+          }
+        },
+        "minimum": {
+          "attack": "dual_hybrid",
+          "rop_bits": "inf"
+        },
+        "estimator_stdout": "",
+        "estimator_stderr": ""
+      }
+    ],
+    "ephemeral_global_minima": {
+      "classical": {
+        "exposure_id": "ephemeral-secret-q0p0-unlimited",
+        "attack": "dual_hybrid",
+        "rop_bits": "+Infinity"
+      },
+      "quantum": {
+        "exposure_id": "ephemeral-secret-q0p0-unlimited",
+        "attack": "dual_hybrid",
+        "rop_bits": "+Infinity"
+      }
+    },
+    "negative_estimates": [
+      {
+        "exposure_id": "negative-control-exact-q-unlimited",
+        "cost_model_id": "ADPS16-classical-rough",
+        "cost_model": {
+          "class": "estimator.reduction.ADPS16",
+          "mode": "classical",
+          "formula": "2^(0.2920*beta)"
+        },
+        "invocation": "rough-equivalent:LWE.primal_usvp(red_cost_model=RC.ADPS16,red_shape_model='gsa');LWE.dual_hybrid(red_cost_model=RC.ADPS16)",
+        "parameters": {
+          "type": "estimator.lwe_parameters.LWEParameters",
+          "repr": "LWEParameters(n=32, q=5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-q-unlimited')",
+          "n": 32,
+          "q_decimal": "5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097",
+          "q_bit_length": 750,
+          "Xs": {
+            "type": "estimator.nd.Uniform",
+            "n": 32,
+            "repr": "D(σ=0.82)",
+            "bounds_repr": "(-1, 1)",
+            "stddev_repr": "0.816496580927726"
+          },
+          "Xe": {
+            "type": "estimator.nd.DiscreteGaussian",
+            "n": 32,
+            "bounds_repr": "(-16, 16)",
+            "stddev_repr": "3.20000000000000",
+            "mean_repr": "0.000000000000000",
+            "repr": "D(σ=3.20)"
+          },
+          "samples": "+Infinity",
+          "tag": "negative-control-exact-q-unlimited"
+        },
+        "attacks": {
+          "usvp": {
+            "rop_bits": "11.680000000000",
+            "cost_repr": "rop: ≈2^11.7, red: ≈2^11.7, δ: 1.012950, β: 40, d: 41, tag: usvp",
+            "returned_fields": {
+              "beta": {
+                "type": "builtins.int",
+                "repr": "40"
+              },
+              "d": {
+                "type": "builtins.int",
+                "repr": "41"
+              },
+              "delta": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "1.01295000000000"
+              },
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=32, q=5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-q-unlimited')",
+                "n": 32,
+                "q_decimal": "5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097",
+                "q_bit_length": 750,
+                "Xs": {
+                  "type": "estimator.nd.Uniform",
+                  "n": 32,
+                  "repr": "D(σ=0.82)",
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.816496580927726"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 32,
+                  "bounds_repr": "(-16, 16)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "negative-control-exact-q-unlimited"
+              },
+              "red": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "3281.18221860709"
+              },
+              "rop": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "3281.18221860709"
+              },
+              "tag": {
+                "type": "builtins.str",
+                "value": "usvp",
+                "repr": "'usvp'"
+              }
+            }
+          },
+          "dual_hybrid": {
+            "rop_bits": "12.009109294626",
+            "cost_repr": "rop: ≈2^12.0, red: ≈2^11.7, guess: 840.762081825756, β: 40, p: 3, ζ: 0, t: 0, β': 40, N: 0.693, m: 32",
+            "returned_fields": {
+              "N": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "0.693147180559945"
+              },
+              "beta": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "40"
+              },
+              "beta_": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "40"
+              },
+              "guess": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "840.762081825756"
+              },
+              "m": {
+                "type": "builtins.int",
+                "repr": "32"
+              },
+              "p": {
+                "type": "builtins.int",
+                "repr": "3"
+              },
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=32, q=5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-q-unlimited')",
+                "n": 32,
+                "q_decimal": "5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097",
+                "q_bit_length": 750,
+                "Xs": {
+                  "type": "estimator.nd.Uniform",
+                  "n": 32,
+                  "repr": "D(σ=0.82)",
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.816496580927726"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 32,
+                  "bounds_repr": "(-16, 16)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "negative-control-exact-q-unlimited"
+              },
+              "red": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "3281.18221860709"
+              },
+              "rop": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "4121.94430043285"
+              },
+              "t": {
+                "type": "builtins.int",
+                "repr": "0"
+              },
+              "zeta": {
+                "type": "builtins.int",
+                "repr": "0"
+              }
+            }
+          }
+        },
+        "minimum": {
+          "attack": "usvp",
+          "rop_bits": "11.680000000000"
+        },
+        "estimator_stdout": "",
+        "estimator_stderr": ""
+      },
+      {
+        "exposure_id": "negative-control-exact-q-unlimited",
+        "cost_model_id": "ADPS16-quantum-rough-sensitivity",
+        "cost_model": {
+          "class": "estimator.reduction.ADPS16",
+          "mode": "quantum",
+          "formula": "2^(0.2650*beta)"
+        },
+        "invocation": "LWE.primal_usvp(red_shape_model='gsa');LWE.dual_hybrid;ADPS16(mode='quantum')",
+        "parameters": {
+          "type": "estimator.lwe_parameters.LWEParameters",
+          "repr": "LWEParameters(n=32, q=5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-q-unlimited')",
+          "n": 32,
+          "q_decimal": "5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097",
+          "q_bit_length": 750,
+          "Xs": {
+            "type": "estimator.nd.Uniform",
+            "n": 32,
+            "repr": "D(σ=0.82)",
+            "bounds_repr": "(-1, 1)",
+            "stddev_repr": "0.816496580927726"
+          },
+          "Xe": {
+            "type": "estimator.nd.DiscreteGaussian",
+            "n": 32,
+            "bounds_repr": "(-16, 16)",
+            "stddev_repr": "3.20000000000000",
+            "mean_repr": "0.000000000000000",
+            "repr": "D(σ=3.20)"
+          },
+          "samples": "+Infinity",
+          "tag": "negative-control-exact-q-unlimited"
+        },
+        "attacks": {
+          "usvp": {
+            "rop_bits": "10.600000000000",
+            "cost_repr": "rop: 1552.094, red: 1552.094, δ: 1.012950, β: 40, d: 41, tag: usvp",
+            "returned_fields": {
+              "beta": {
+                "type": "builtins.int",
+                "repr": "40"
+              },
+              "d": {
+                "type": "builtins.int",
+                "repr": "41"
+              },
+              "delta": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "1.01295000000000"
+              },
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=32, q=5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-q-unlimited')",
+                "n": 32,
+                "q_decimal": "5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097",
+                "q_bit_length": 750,
+                "Xs": {
+                  "type": "estimator.nd.Uniform",
+                  "n": 32,
+                  "repr": "D(σ=0.82)",
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.816496580927726"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 32,
+                  "bounds_repr": "(-16, 16)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "negative-control-exact-q-unlimited"
+              },
+              "red": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "1552.09376410665"
+              },
+              "rop": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "1552.09376410665"
+              },
+              "tag": {
+                "type": "builtins.str",
+                "value": "usvp",
+                "repr": "'usvp'"
+              }
+            }
+          },
+          "dual_hybrid": {
+            "rop_bits": "11.224517771124",
+            "cost_repr": "rop: ≈2^11.2, red: 1552.094, guess: 840.762081825756, β: 40, p: 3, ζ: 0, t: 0, β': 40, N: 0.693, m: 32",
+            "returned_fields": {
+              "N": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "0.693147180559945"
+              },
+              "beta": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "40"
+              },
+              "beta_": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "40"
+              },
+              "guess": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "840.762081825756"
+              },
+              "m": {
+                "type": "builtins.int",
+                "repr": "32"
+              },
+              "p": {
+                "type": "builtins.int",
+                "repr": "3"
+              },
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=32, q=5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-q-unlimited')",
+                "n": 32,
+                "q_decimal": "5922385741757929347675803392032666613806542518544008493984336222032218198209647969807248361279860800393807425527894225922926075108504497062476309423003310444685771361411932778824807224539315731100455019050314491352411219300097",
+                "q_bit_length": 750,
+                "Xs": {
+                  "type": "estimator.nd.Uniform",
+                  "n": 32,
+                  "repr": "D(σ=0.82)",
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.816496580927726"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 32,
+                  "bounds_repr": "(-16, 16)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "negative-control-exact-q-unlimited"
+              },
+              "red": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "1552.09376410665"
+              },
+              "rop": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "2392.85584593241"
+              },
+              "t": {
+                "type": "builtins.int",
+                "repr": "0"
+              },
+              "zeta": {
+                "type": "builtins.int",
+                "repr": "0"
+              }
+            }
+          }
+        },
+        "minimum": {
+          "attack": "usvp",
+          "rop_bits": "10.600000000000"
+        },
+        "estimator_stdout": "",
+        "estimator_stderr": ""
+      },
+      {
+        "exposure_id": "negative-control-exact-qp-unlimited",
+        "cost_model_id": "ADPS16-classical-rough",
+        "cost_model": {
+          "class": "estimator.reduction.ADPS16",
+          "mode": "classical",
+          "formula": "2^(0.2920*beta)"
+        },
+        "invocation": "rough-equivalent:LWE.primal_usvp(red_cost_model=RC.ADPS16,red_shape_model='gsa');LWE.dual_hybrid(red_cost_model=RC.ADPS16)",
+        "parameters": {
+          "type": "estimator.lwe_parameters.LWEParameters",
+          "repr": "LWEParameters(n=32, q=6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-qp-unlimited')",
+          "n": 32,
+          "q_decimal": "6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873",
+          "q_bit_length": 800,
+          "Xs": {
+            "type": "estimator.nd.Uniform",
+            "n": 32,
+            "repr": "D(σ=0.82)",
+            "bounds_repr": "(-1, 1)",
+            "stddev_repr": "0.816496580927726"
+          },
+          "Xe": {
+            "type": "estimator.nd.DiscreteGaussian",
+            "n": 32,
+            "bounds_repr": "(-16, 16)",
+            "stddev_repr": "3.20000000000000",
+            "mean_repr": "0.000000000000000",
+            "repr": "D(σ=3.20)"
+          },
+          "samples": "+Infinity",
+          "tag": "negative-control-exact-qp-unlimited"
+        },
+        "attacks": {
+          "usvp": {
+            "rop_bits": "11.680000000000",
+            "cost_repr": "rop: ≈2^11.7, red: ≈2^11.7, δ: 1.012950, β: 40, d: 41, tag: usvp",
+            "returned_fields": {
+              "beta": {
+                "type": "builtins.int",
+                "repr": "40"
+              },
+              "d": {
+                "type": "builtins.int",
+                "repr": "41"
+              },
+              "delta": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "1.01295000000000"
+              },
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=32, q=6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-qp-unlimited')",
+                "n": 32,
+                "q_decimal": "6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873",
+                "q_bit_length": 800,
+                "Xs": {
+                  "type": "estimator.nd.Uniform",
+                  "n": 32,
+                  "repr": "D(σ=0.82)",
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.816496580927726"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 32,
+                  "bounds_repr": "(-16, 16)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "negative-control-exact-qp-unlimited"
+              },
+              "red": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "3281.18221860709"
+              },
+              "rop": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "3281.18221860709"
+              },
+              "tag": {
+                "type": "builtins.str",
+                "value": "usvp",
+                "repr": "'usvp'"
+              }
+            }
+          },
+          "dual_hybrid": {
+            "rop_bits": "12.009109294626",
+            "cost_repr": "rop: ≈2^12.0, red: ≈2^11.7, guess: 840.762081825756, β: 40, p: 3, ζ: 0, t: 0, β': 40, N: 0.693, m: 32",
+            "returned_fields": {
+              "N": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "0.693147180559945"
+              },
+              "beta": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "40"
+              },
+              "beta_": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "40"
+              },
+              "guess": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "840.762081825756"
+              },
+              "m": {
+                "type": "builtins.int",
+                "repr": "32"
+              },
+              "p": {
+                "type": "builtins.int",
+                "repr": "3"
+              },
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=32, q=6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-qp-unlimited')",
+                "n": 32,
+                "q_decimal": "6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873",
+                "q_bit_length": 800,
+                "Xs": {
+                  "type": "estimator.nd.Uniform",
+                  "n": 32,
+                  "repr": "D(σ=0.82)",
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.816496580927726"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 32,
+                  "bounds_repr": "(-16, 16)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "negative-control-exact-qp-unlimited"
+              },
+              "red": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "3281.18221860709"
+              },
+              "rop": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "4121.94430043285"
+              },
+              "t": {
+                "type": "builtins.int",
+                "repr": "0"
+              },
+              "zeta": {
+                "type": "builtins.int",
+                "repr": "0"
+              }
+            }
+          }
+        },
+        "minimum": {
+          "attack": "usvp",
+          "rop_bits": "11.680000000000"
+        },
+        "estimator_stdout": "",
+        "estimator_stderr": ""
+      },
+      {
+        "exposure_id": "negative-control-exact-qp-unlimited",
+        "cost_model_id": "ADPS16-quantum-rough-sensitivity",
+        "cost_model": {
+          "class": "estimator.reduction.ADPS16",
+          "mode": "quantum",
+          "formula": "2^(0.2650*beta)"
+        },
+        "invocation": "LWE.primal_usvp(red_shape_model='gsa');LWE.dual_hybrid;ADPS16(mode='quantum')",
+        "parameters": {
+          "type": "estimator.lwe_parameters.LWEParameters",
+          "repr": "LWEParameters(n=32, q=6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-qp-unlimited')",
+          "n": 32,
+          "q_decimal": "6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873",
+          "q_bit_length": 800,
+          "Xs": {
+            "type": "estimator.nd.Uniform",
+            "n": 32,
+            "repr": "D(σ=0.82)",
+            "bounds_repr": "(-1, 1)",
+            "stddev_repr": "0.816496580927726"
+          },
+          "Xe": {
+            "type": "estimator.nd.DiscreteGaussian",
+            "n": 32,
+            "bounds_repr": "(-16, 16)",
+            "stddev_repr": "3.20000000000000",
+            "mean_repr": "0.000000000000000",
+            "repr": "D(σ=3.20)"
+          },
+          "samples": "+Infinity",
+          "tag": "negative-control-exact-qp-unlimited"
+        },
+        "attacks": {
+          "usvp": {
+            "rop_bits": "10.600000000000",
+            "cost_repr": "rop: 1552.094, red: 1552.094, δ: 1.012950, β: 40, d: 41, tag: usvp",
+            "returned_fields": {
+              "beta": {
+                "type": "builtins.int",
+                "repr": "40"
+              },
+              "d": {
+                "type": "builtins.int",
+                "repr": "41"
+              },
+              "delta": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "1.01295000000000"
+              },
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=32, q=6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-qp-unlimited')",
+                "n": 32,
+                "q_decimal": "6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873",
+                "q_bit_length": 800,
+                "Xs": {
+                  "type": "estimator.nd.Uniform",
+                  "n": 32,
+                  "repr": "D(σ=0.82)",
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.816496580927726"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 32,
+                  "bounds_repr": "(-16, 16)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "negative-control-exact-qp-unlimited"
+              },
+              "red": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "1552.09376410665"
+              },
+              "rop": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "1552.09376410665"
+              },
+              "tag": {
+                "type": "builtins.str",
+                "value": "usvp",
+                "repr": "'usvp'"
+              }
+            }
+          },
+          "dual_hybrid": {
+            "rop_bits": "11.224517771124",
+            "cost_repr": "rop: ≈2^11.2, red: 1552.094, guess: 840.762081825756, β: 40, p: 3, ζ: 0, t: 0, β': 40, N: 0.693, m: 32",
+            "returned_fields": {
+              "N": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "0.693147180559945"
+              },
+              "beta": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "40"
+              },
+              "beta_": {
+                "type": "sage.rings.integer.Integer",
+                "repr": "40"
+              },
+              "guess": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "840.762081825756"
+              },
+              "m": {
+                "type": "builtins.int",
+                "repr": "32"
+              },
+              "p": {
+                "type": "builtins.int",
+                "repr": "3"
+              },
+              "problem": {
+                "type": "estimator.lwe_parameters.LWEParameters",
+                "repr": "LWEParameters(n=32, q=6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873, Xs=D(σ=0.82), Xe=D(σ=3.20), m=+Infinity, tag='negative-control-exact-qp-unlimited')",
+                "n": 32,
+                "q_decimal": "6668013554933617409076438619018891831128190773252142022255431774363710892534890248553588893462887948650646716863141313331409814710674140694364620470727432597737125910015294572569681284521258388501987597665240780238704173723829427661837471873",
+                "q_bit_length": 800,
+                "Xs": {
+                  "type": "estimator.nd.Uniform",
+                  "n": 32,
+                  "repr": "D(σ=0.82)",
+                  "bounds_repr": "(-1, 1)",
+                  "stddev_repr": "0.816496580927726"
+                },
+                "Xe": {
+                  "type": "estimator.nd.DiscreteGaussian",
+                  "n": 32,
+                  "bounds_repr": "(-16, 16)",
+                  "stddev_repr": "3.20000000000000",
+                  "mean_repr": "0.000000000000000",
+                  "repr": "D(σ=3.20)"
+                },
+                "samples": "+Infinity",
+                "tag": "negative-control-exact-qp-unlimited"
+              },
+              "red": {
+                "type": "sage.rings.real_mpfr.RealNumber",
+                "repr": "1552.09376410665"
+              },
+              "rop": {
+                "type": "sage.symbolic.expression.Expression",
+                "repr": "2392.85584593241"
+              },
+              "t": {
+                "type": "builtins.int",
+                "repr": "0"
+              },
+              "zeta": {
+                "type": "builtins.int",
+                "repr": "0"
+              }
+            }
+          }
+        },
+        "minimum": {
+          "attack": "usvp",
+          "rop_bits": "10.600000000000"
+        },
+        "estimator_stdout": "",
+        "estimator_stderr": ""
+      }
+    ],
+    "negative_global_minima": {
+      "classical": {
+        "exposure_id": "negative-control-exact-q-unlimited",
+        "attack": "usvp",
+        "rop_bits": "11.680000000000"
+      },
+      "quantum": {
+        "exposure_id": "negative-control-exact-q-unlimited",
+        "attack": "usvp",
+        "rop_bits": "10.600000000000"
+      }
+    }
+  },
+  "interpretation": "Unlimited-sample Core-SVP sensitivity; not a KDM/circular-security proof."
+}

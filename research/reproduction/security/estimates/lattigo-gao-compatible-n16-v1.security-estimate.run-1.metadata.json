@@ -1,0 +1,40 @@
+{
+  "schema_version": "lcpdte-estimator-run-metadata-v1",
+  "run_id": "run-1",
+  "worker_command": [
+    "/var/tmp/lcpdte-research-toolchains/sage/bin/python",
+    "/mnt/d/WorkSpace/LCPDTE/research/scripts/run_ckks_security_estimates.sage.py",
+    "--worker",
+    "--repository",
+    "/mnt/d/WorkSpace/LCPDTE"
+  ],
+  "worker_environment": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONHASHSEED": "0",
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "exit_code": 0,
+  "wall_time_seconds": "19.958259",
+  "stdout": {
+    "path": "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.run-1.stdout.json",
+    "bytes": 54188,
+    "sha256": "690a66c23ddcdc778da4e2f5ce7b02b028db5e8bb26efa8e3d197c039956db02"
+  },
+  "stderr": {
+    "path": "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.run-1.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "conversion_script_sha256": "d62de51c6d74f3c49ab4db391bb68cb51e4c728102334da5c51524206f325fa3",
+  "canonical_transcript": {
+    "path": "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.transcript.json",
+    "sha256": "690a66c23ddcdc778da4e2f5ce7b02b028db5e8bb26efa8e3d197c039956db02"
+  },
+  "deterministic_input": {
+    "path": "research/reproduction/security/estimates/lattigo-gao-compatible-n16-v1.security-estimate.input.json",
+    "sha256": "44b867cee31262fb87be00dade95ab5e742a09030ad2db96c64c2f9f14eb0e6b"
+  },
+  "decision": "INCONCLUSIVE"
+}
