@@ -246,9 +246,15 @@ func (c *Context) MulShort(lhs *Value, rhs *ShortValue) (*Value, error) {
 	return c.operation("multiply short", value, err)
 }
 
-// ImportCiphertext admits a detached Lattigo arithmetic ciphertext under this
-// Context's parameters and word layout. The input is copied before validation.
-func (c *Context) ImportCiphertext(ciphertext *rlwe.Ciphertext, wordCount int) (*Value, error) {
+// ImportTrustedCiphertext admits a detached Lattigo arithmetic ciphertext
+// under this Context's parameters, key domain, and word layout. The input is
+// copied before structural validation.
+//
+// RLWE ciphertexts do not carry a verifiable key-domain identifier. Calling
+// this method is therefore an explicit assertion that ciphertext was produced
+// under this Context's keys and exact packing convention. Never import an
+// untrusted ciphertext.
+func (c *Context) ImportTrustedCiphertext(ciphertext *rlwe.Ciphertext, wordCount int) (*Value, error) {
 	if err := c.ready(); err != nil {
 		return nil, err
 	}

@@ -53,6 +53,9 @@ func TestDemoFunctional8A2BB2AAndComparisonThroughPublicAPI(t *testing.T) {
 	} else if got != inputWords {
 		t.Fatalf("A2B/B2A = %v, want %v", got, inputWords)
 	}
+	if _, _, err := engine.A2B(roundTrip); err == nil {
+		t.Fatal("B2A output was accepted as fresh A2B ingress")
+	}
 
 	selector, compareInfo, err := engine.CompareGEPublic(input, [4]int8{-8, 0, 3, 6})
 	if err != nil {
@@ -65,6 +68,32 @@ func TestDemoFunctional8A2BB2AAndComparisonThroughPublicAPI(t *testing.T) {
 		t.Fatal(err)
 	} else if want := [4]bool{true, false, false, true}; got != want {
 		t.Fatalf("selectors = %v, want %v", got, want)
+	}
+
+	outOfRange, err := engine.Encrypt([4]int8{8, 0, 0, 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := engine.CompareGEPublic(outOfRange, [4]int8{}); err == nil {
+		t.Fatal("comparison accepted a feature outside the certified range")
+	}
+	if _, _, err := engine.CompareGEPublic(input, [4]int8{8, 0, 0, 0}); err == nil {
+		t.Fatal("comparison accepted a threshold outside the certified range")
+	}
+
+	other, err := ckksint.NewDemoFunctional8(ckksint.Signed8Range{
+		FeatureMin: -8, FeatureMax: 7,
+		ThresholdMin: -8, ThresholdMax: 7,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreign, err := other.Encrypt(inputWords)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := engine.A2B(foreign); err == nil {
+		t.Fatal("A2B accepted a value from another functional engine")
 	}
 }
 

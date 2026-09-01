@@ -13,11 +13,14 @@ research graphs under `integer/homchain` or `integer/secureeval` directly.
 - `Functional8` hides the complete four-lane functional circuit: signed-int8
   encryption, full A2B, B2A, public-threshold `>=`, and source-faithful
   selected-child depth-2 tree evaluation.
-- `LattigoCiphertext`, `LattigoHalves`, `ImportCiphertext`, and
+- `LattigoCiphertext`, `LattigoHalves`, `ImportTrustedCiphertext`, and
   `LattigoParameters` are explicit copy boundaries for Lattigo interoperation.
 
 The public facade owns all ciphertexts. Interoperation accessors return
-detached copies, and operations reject values created by another key context.
+detached copies, and ordinary operations reject values created by another key
+context. `ImportTrustedCiphertext` is the deliberate escape hatch: because an
+RLWE ciphertext has no verifiable key-domain identifier, calling it asserts
+that the input already belongs to the destination context's keys and packing.
 
 ## Security and parameter boundary
 
@@ -29,6 +32,10 @@ For an application parameter set, construct `Parameters` and `KeyMaterial`
 explicitly and call `New`. Set `SecurityBoundary` to `ExternallyValidated` only
 after validating the complete tuple outside this library. The current
 `Functional8` graph has no production-security constructor.
+
+The Route-B authority/artifact/install lifecycle is not part of this stable
+facade. Its current C75 security-profile result remains an assumption-explicit
+`CONDITIONAL-PASS`, not an unconditional 128-bit protocol-security proof.
 
 Signed comparison requires a `Signed8Range` whose complete difference interval
 fits in int8. The four-lane circuit uses the branch convention `0 = <` and

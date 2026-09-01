@@ -165,14 +165,15 @@ and private remote delivery remain later gates.
 ### Phase 8: Integer CKKS library productization and acceptance handoff
 
 - [x] Fetch/prune and inventory all local, remote and worktree branches before any merge or deletion.
-- [x] Reconcile the dirty `main` worktree into a scoped, reviewable source tree; remove only proven generated/transient artifacts.
+- [x] Reconcile the dirty `main` worktree into a scoped, reviewable source tree and isolate proven transient artifacts from Git and Go package traversal.
+- [ ] Physically remove the four ignored historical `tmp` directories; exact-path deletion and recoverable quarantine are blocked by the host command policy, so this remains an explicit user/manual cleanup item.
 - [x] Define the deep public module seam for integer CKKS values, operations, conversion, comparison and evaluator construction while keeping Route-B construction internals private.
 - [x] Build vertical TDD slices through the public interface using independent plaintext oracles.
 - [x] Add runnable Lattigo-style examples for basic integer operators, 8-bit A2B/B2A/comparison, and the bounded signed-int8 tree flow.
 - [x] Document supported semantics, parameter/security limits and exact acceptance commands.
 - [x] Run affected tests continuously, then the complete package suite and explicit `go vet` once at the end.
-- [ ] Run independent Standards/Spec code review, resolve actionable findings, and commit the acceptance candidate on `main` without pushing it.
-- **Status:** in progress; branch consolidation is complete as a verified no-op because only `main` exists
+- [x] Run independent Standards/Spec code review, resolve actionable findings, and commit the acceptance candidate on `main` without pushing it.
+- **Status:** acceptance candidate complete; branch consolidation was a verified no-op because only `main` exists, while physical removal of the ignored historical `tmp` tree remains policy-blocked
 
 ## Candidate Research Questions
 

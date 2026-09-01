@@ -10,34 +10,36 @@ import (
 )
 
 // WordBits is the width of each modular integer word.
-type WordBits = z2n.WordBits
+//
+// It is owned by ckksint so callers do not depend on research-package types.
+type WordBits uint
 
 const (
-	Word8  = z2n.Word8
-	Word16 = z2n.Word16
-	Word32 = z2n.Word32
-	Word64 = z2n.Word64
+	Word8  WordBits = 8
+	Word16 WordBits = 16
+	Word32 WordBits = 32
+	Word64 WordBits = 64
 )
 
 // Signedness controls input bounds and signed decoding. Arithmetic always
 // wraps modulo 2^WordBits.
-type Signedness = inteval.Signedness
+type Signedness uint8
 
 const (
-	Unsigned       = inteval.Unsigned
-	TwosComplement = inteval.TwosComplement
+	Unsigned Signedness = iota + 1
+	TwosComplement
 )
 
 // SecurityBoundary states who is responsible for validating the complete
 // cryptographic parameter tuple.
-type SecurityBoundary = inteval.SecurityBoundary
+type SecurityBoundary uint8
 
 const (
 	// DemoOnly marks fast functional parameters that carry no security claim.
-	DemoOnly = inteval.DemoOnly
+	DemoOnly SecurityBoundary = iota + 1
 	// ExternallyValidated means the caller validated the complete tuple outside
 	// this package. It is a declaration, not an attestation by ckksint.
-	ExternallyValidated = inteval.ExternallyValidated
+	ExternallyValidated
 )
 
 // Bounds is the inclusive application domain for one word. Decimal strings
@@ -55,7 +57,7 @@ func NewBounds(minimum, maximum *big.Int) (Bounds, error) {
 
 // FullBounds returns the entire domain for a word width and signedness.
 func FullBounds(bits WordBits, signedness Signedness) (Bounds, error) {
-	bounds, err := inteval.FullBounds(bits, signedness)
+	bounds, err := inteval.FullBounds(z2n.WordBits(bits), inteval.Signedness(signedness))
 	return boundsFromEvaluator(bounds), err
 }
 
@@ -101,25 +103,13 @@ type DemoParameters struct {
 func (p Parameters) evaluator() inteval.Parameters {
 	return inteval.Parameters{
 		CKKS:             p.CKKS,
-		WordBits:         p.WordBits,
+		WordBits:         z2n.WordBits(p.WordBits),
 		Mode:             inteval.Arithmetic,
-		Signedness:       p.Signedness,
+		Signedness:       inteval.Signedness(p.Signedness),
 		Bounds:           inteval.Bounds(p.Bounds),
 		InitialLevel:     p.InitialLevel,
 		EncoderPrecision: p.EncoderPrecision,
-		SecurityBoundary: p.SecurityBoundary,
-	}
-}
-
-func parametersFromEvaluator(p inteval.Parameters) Parameters {
-	return Parameters{
-		CKKS:             p.CKKS,
-		WordBits:         p.WordBits,
-		Signedness:       p.Signedness,
-		Bounds:           boundsFromEvaluator(p.Bounds),
-		InitialLevel:     p.InitialLevel,
-		EncoderPrecision: p.EncoderPrecision,
-		SecurityBoundary: p.SecurityBoundary,
+		SecurityBoundary: inteval.SecurityBoundary(p.SecurityBoundary),
 	}
 }
 

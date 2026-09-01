@@ -82,6 +82,33 @@ func TestContextRejectsValuesFromAnotherContext(t *testing.T) {
 	}
 }
 
+func TestTrustedImportIsAnExplicitDestinationOwnerAssertion(t *testing.T) {
+	parameters := ckksint.DemoParameters{WordBits: ckksint.Word8, Signedness: ckksint.Unsigned}
+	sourceContext, err := ckksint.NewDemo(parameters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	destinationContext, err := ckksint.NewDemo(parameters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := sourceContext.Encrypt([]uint64{1})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Structural validation cannot identify an RLWE key domain. Import is the
+	// caller's trust assertion and binds the resulting opaque value to the
+	// destination context, never to the context that produced the raw bytes.
+	imported, err := destinationContext.ImportTrustedCiphertext(source.LattigoCiphertext(), source.WordCount())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sourceContext.Add(source, imported); err == nil {
+		t.Fatal("trusted import retained or spoofed the source context owner")
+	}
+}
+
 func TestSignedShortAndLattigoInteropThroughPublicAPI(t *testing.T) {
 	ctx, err := ckksint.NewDemo(ckksint.DemoParameters{
 		WordBits:   ckksint.Word8,
@@ -101,7 +128,7 @@ func TestSignedShortAndLattigoInteropThroughPublicAPI(t *testing.T) {
 	}
 
 	detached := signed.LattigoCiphertext()
-	imported, err := ctx.ImportCiphertext(detached, signed.WordCount())
+	imported, err := ctx.ImportTrustedCiphertext(detached, signed.WordCount())
 	if err != nil {
 		t.Fatal(err)
 	}
