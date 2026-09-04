@@ -17,14 +17,78 @@ const (
 	gaoA2BKernelN16L11OutputLevel = 5
 	gaoA2BKernelN16L11LogSlots    = 11
 	gaoA2BKernelN16L11Slots       = 1 << gaoA2BKernelN16L11LogSlots
+	gaoA2BKernelN16FullLogSlots   = 15
+	gaoA2BKernelN16FullSlots      = 1 << gaoA2BKernelN16FullLogSlots
 )
+
+// GaoA2BKernelN16FullPackedSlots is the Gao/OpenFHE-compatible number of
+// complex slots at LogN=16.
+const GaoA2BKernelN16FullPackedSlots = gaoA2BKernelN16FullSlots
 
 const (
 	// GaoA2BKernelN16L11KernelOnlyUnverified labels the exact-parameter,
 	// sparse-packing vertical gate. It is not a complete A2B, refresh,
 	// security, tree, or performance claim.
 	GaoA2BKernelN16L11KernelOnlyUnverified GaoA2BKernelClaim = "lattigo_n16_l11_sparse_kernel_only_security_unverified_not_full_a2b"
+
+	// GaoA2BKernelN16FullPackedKernelOnlyUnverified labels the polynomial
+	// kernel at the Gao/OpenFHE-compatible 32,768-slot packing. The surrounding
+	// refresh and two-round A2B composition remain outside this claim.
+	GaoA2BKernelN16FullPackedKernelOnlyUnverified GaoA2BKernelClaim = "lattigo_n16_l15_full_packed_kernel_only_security_unverified_not_full_a2b"
 )
+
+type gaoA2BKernelN16Packing struct {
+	claim               GaoA2BKernelClaim
+	logSlots            int
+	slots               int
+	keyDigestSchema     string
+	profileDigestSchema string
+	runtimePath         string
+}
+
+func gaoA2BKernelN16L11Packing() gaoA2BKernelN16Packing {
+	return gaoA2BKernelN16Packing{
+		claim:               GaoA2BKernelN16L11KernelOnlyUnverified,
+		logSlots:            gaoA2BKernelN16L11LogSlots,
+		slots:               gaoA2BKernelN16L11Slots,
+		keyDigestSchema:     "n16-l11-kernel-keys-v1",
+		profileDigestSchema: "gao-a2b-kernel-n16-l11-v1",
+		runtimePath:         "n16-l11-sparse-normalized-y;exp46-chebyshev-packed-vector256/evaluate;mulrelin-rescale^2;id-msb-degree15-packed-vectors/evaluate-multi-poly/shared-power-basis/target-S43;conjugate-add^2",
+	}
+}
+
+func gaoA2BKernelN16FullPacking() gaoA2BKernelN16Packing {
+	return gaoA2BKernelN16Packing{
+		claim:               GaoA2BKernelN16FullPackedKernelOnlyUnverified,
+		logSlots:            gaoA2BKernelN16FullLogSlots,
+		slots:               gaoA2BKernelN16FullSlots,
+		keyDigestSchema:     "n16-l15-full-packed-kernel-keys-v1",
+		profileDigestSchema: "gao-a2b-kernel-n16-l15-full-packed-v1",
+		runtimePath:         "n16-l15-full-packed-normalized-y;exp46-chebyshev-scalar/evaluate;mulrelin-rescale^2;id-msb-degree15-scalars/evaluate-multi-poly/shared-power-basis/target-S43;conjugate-add^2",
+	}
+}
+
+func gaoA2BKernelN16PackingForProfile(profile GaoA2BKernelN16L11Profile) (gaoA2BKernelN16Packing, error) {
+	switch profile.claim {
+	case GaoA2BKernelN16L11KernelOnlyUnverified:
+		return gaoA2BKernelN16L11Packing(), nil
+	case GaoA2BKernelN16FullPackedKernelOnlyUnverified:
+		return gaoA2BKernelN16FullPacking(), nil
+	default:
+		return gaoA2BKernelN16Packing{}, fmt.Errorf("homchain: unsupported N16 Gao kernel claim %q", profile.claim)
+	}
+}
+
+func gaoA2BKernelN16ParametersForPacking(packing gaoA2BKernelN16Packing) (ckks.Parameters, error) {
+	switch packing.claim {
+	case GaoA2BKernelN16L11KernelOnlyUnverified:
+		return securityparams.GaoCompatibleN16Parameters()
+	case GaoA2BKernelN16FullPackedKernelOnlyUnverified:
+		return securityparams.GaoOpenFHEFullN16Parameters()
+	default:
+		return ckks.Parameters{}, fmt.Errorf("homchain: unsupported N16 Gao kernel claim %q", packing.claim)
+	}
+}
 
 // GaoA2BKernelN16L11Profile binds the Gao degree-46/R2 and shared ID/MSB
 // graph to the exact local N16 parameter candidate and 2,048 active slots.
@@ -90,9 +154,18 @@ func (p GaoA2BKernelN16L11Profile) InputNormalization() string {
 	return "refreshed-normalized-y=(J+p/16)/16;kernel-grid-J=0-gives-y=p/256"
 }
 func (p GaoA2BKernelN16L11Profile) RuntimePath() string {
-	return "n16-l11-sparse-normalized-y;exp46-chebyshev-packed-vector256/evaluate;mulrelin-rescale^2;id-msb-degree15-packed-vectors/evaluate-multi-poly/shared-power-basis/target-S43;conjugate-add^2"
+	packing, err := gaoA2BKernelN16PackingForProfile(p)
+	if err != nil {
+		return ""
+	}
+	return packing.runtimePath
 }
 func (p GaoA2BKernelN16L11Profile) Digest() string { return p.digest }
+
+// GaoA2BKernelN16FullPackedProfile is the N16 profile returned by the
+// full-packed constructor. Its claim, shape, digests, and runtime path are
+// distinct from the frozen L11 adaptation.
+type GaoA2BKernelN16FullPackedProfile = GaoA2BKernelN16L11Profile
 
 // GaoA2BKernelN16L11Circuit is a second adapter. The accepted LogN=5
 // functional circuit remains unchanged.
@@ -105,17 +178,36 @@ type GaoA2BKernelN16L11Circuit struct {
 	msbOperand         ckkspolynomial.PolynomialVector
 }
 
+// GaoA2BKernelN16FullPackedCircuit uses the same sealed Gao polynomial graph
+// as the L11 circuit with the full 32,768-slot operand mapping.
+type GaoA2BKernelN16FullPackedCircuit = GaoA2BKernelN16L11Circuit
+
 // NewGaoA2BKernelN16L11Circuit seals the exact Gao polynomials for the local
 // N16/L11 kernel-only gate.
 func NewGaoA2BKernelN16L11Circuit(params ckks.Parameters, encoder *ckks.Encoder) (*GaoA2BKernelN16L11Circuit, error) {
-	expected, err := securityparams.GaoCompatibleN16Parameters()
+	return newGaoA2BKernelN16Circuit(params, encoder, gaoA2BKernelN16L11Packing())
+}
+
+// NewGaoA2BKernelN16FullPackedCircuit seals the Gao degree-46/R2 and shared
+// ID/MSB polynomial graph over all 32,768 complex slots of the canonical N16
+// parameter set.
+func NewGaoA2BKernelN16FullPackedCircuit(params ckks.Parameters, encoder *ckks.Encoder) (*GaoA2BKernelN16FullPackedCircuit, error) {
+	return newGaoA2BKernelN16Circuit(params, encoder, gaoA2BKernelN16FullPacking())
+}
+
+func newGaoA2BKernelN16Circuit(
+	params ckks.Parameters,
+	encoder *ckks.Encoder,
+	packing gaoA2BKernelN16Packing,
+) (*GaoA2BKernelN16L11Circuit, error) {
+	expected, err := gaoA2BKernelN16ParametersForPacking(packing)
 	if err != nil {
 		return nil, fmt.Errorf("homchain: construct canonical N16 Gao parameters: %w", err)
 	}
 	if !params.Equal(&expected) || params.LogN() != 16 || params.MaxLevel() != 20 ||
 		params.MaxLevelP() != 6 || params.LogDefaultScale() != 43 ||
 		params.RingType() != ring.Standard || params.LevelsConsumedPerRescaling() != 1 {
-		return nil, fmt.Errorf("homchain: N16/L11 Gao kernel requires the exact lattigo-gao-compatible-n16-v1 parameters")
+		return nil, fmt.Errorf("homchain: N16 Gao kernel requires the exact parameters for packing claim %q", packing.claim)
 	}
 	if encoder == nil {
 		return nil, fmt.Errorf("homchain: N16/L11 Gao kernel encoder is nil")
@@ -133,7 +225,7 @@ func NewGaoA2BKernelN16L11Circuit(params ckks.Parameters, encoder *ckks.Encoder)
 	if err != nil {
 		return nil, err
 	}
-	exponentialOperand, err := newA2BKernelPackedPolynomial(exponentialProfile.LattigoPolynomial(), gaoA2BKernelN16L11Slots)
+	exponentialOperand, err := newA2BKernelPackedPolynomial(exponentialProfile.LattigoPolynomial(), packing.slots)
 	if err != nil {
 		return nil, fmt.Errorf("homchain: construct N16/L11 Gao exponential operand: %w", err)
 	}
@@ -141,7 +233,7 @@ func NewGaoA2BKernelN16L11Circuit(params ckks.Parameters, encoder *ckks.Encoder)
 	if err != nil {
 		return nil, err
 	}
-	identityOperand, err := newA2BKernelPackedPolynomial(identityPolynomial, gaoA2BKernelN16L11Slots)
+	identityOperand, err := newA2BKernelPackedPolynomial(identityPolynomial, packing.slots)
 	if err != nil {
 		return nil, fmt.Errorf("homchain: construct N16/L11 Gao identity operand: %w", err)
 	}
@@ -149,11 +241,11 @@ func NewGaoA2BKernelN16L11Circuit(params ckks.Parameters, encoder *ckks.Encoder)
 	if err != nil {
 		return nil, err
 	}
-	msbOperand, err := newA2BKernelPackedPolynomial(msbPolynomial, gaoA2BKernelN16L11Slots)
+	msbOperand, err := newA2BKernelPackedPolynomial(msbPolynomial, packing.slots)
 	if err != nil {
 		return nil, fmt.Errorf("homchain: construct N16/L11 Gao MSB operand: %w", err)
 	}
-	operandPlan, err := inspectA2BKernelOperands(exponentialOperand, identityOperand, msbOperand, gaoA2BKernelN16L11Slots)
+	operandPlan, err := inspectA2BKernelOperands(exponentialOperand, identityOperand, msbOperand, packing.slots)
 	if err != nil {
 		return nil, err
 	}
@@ -172,13 +264,14 @@ func NewGaoA2BKernelN16L11Circuit(params ckks.Parameters, encoder *ckks.Encoder)
 		rotationIndexes:         []int{},
 	}
 	keyProfile.digest = a2bKernelDigestText(fmt.Sprintf(
-		"n16-l11-kernel-keys-v1;relinearization=true;conjugation=true;conjugation-element=%d;rotations=[];min-level-q=%d;level-p=%d",
+		"%s;relinearization=true;conjugation=true;conjugation-element=%d;rotations=[];min-level-q=%d;level-p=%d",
+		packing.keyDigestSchema,
 		keyProfile.conjugationElement, gaoA2BKernelN16L11InputLevel, params.MaxLevelP(),
 	))
 	profile := GaoA2BKernelN16L11Profile{
-		claim:      GaoA2BKernelN16L11KernelOnlyUnverified,
-		inputLevel: gaoA2BKernelN16L11InputLevel, slots: gaoA2BKernelN16L11Slots,
-		logDimensions:               ring.Dimensions{Rows: 0, Cols: gaoA2BKernelN16L11LogSlots},
+		claim:      packing.claim,
+		inputLevel: gaoA2BKernelN16L11InputLevel, slots: packing.slots,
+		logDimensions:               ring.Dimensions{Rows: 0, Cols: packing.logSlots},
 		operationalEncoderPrecision: encoder.Prec(), inputScale: inputScale,
 		booleanOutputLevel: gaoA2BKernelN16L11OutputLevel, booleanOutputScale: inputScale,
 		exponentialDegree: exponentialProfile.Degree(), squaringRounds: exponentialProfile.SquaringRounds(),
@@ -189,7 +282,7 @@ func NewGaoA2BKernelN16L11Circuit(params ckks.Parameters, encoder *ckks.Encoder)
 		operandGraphDigest: digestA2BKernelOperands(exponentialOperand, identityOperand, msbOperand, operandPlan),
 		operandPlan:        operandPlan, keyProfile: keyProfile,
 	}
-	profile.digest = digestGaoA2BKernelN16L11Profile(profile)
+	profile.digest = digestGaoA2BKernelN16Profile(profile, packing.profileDigestSchema)
 	circuit := &GaoA2BKernelN16L11Circuit{
 		params: params, encoder: encoder.ShallowCopy(), profile: profile,
 		exponentialOperand: exponentialOperand, identityOperand: identityOperand, msbOperand: msbOperand,
@@ -207,6 +300,24 @@ func (c *GaoA2BKernelN16L11Circuit) Profile() GaoA2BKernelN16L11Profile {
 	result := c.profile
 	result.keyProfile = c.profile.KeyProfile()
 	return result
+}
+
+// polynomialEvaluationOperands selects the coefficient representation used by
+// the online evaluator. The full-packed Gao circuit evaluates one polynomial on
+// every slot, so scalar coefficients preserve the exact function while avoiding
+// a 32,768-entry arbitrary-precision vector encoding for every coefficient. The
+// frozen sparse profile retains its explicit slot mapping and vector operands.
+func (c *GaoA2BKernelN16L11Circuit) polynomialEvaluationOperands() (exponential interface{}, luts []interface{}) {
+	if c == nil {
+		return nil, nil
+	}
+	if c.profile.claim == GaoA2BKernelN16FullPackedKernelOnlyUnverified {
+		return ckkspolynomial.Polynomial(c.exponentialOperand.Value[0]), []interface{}{
+			ckkspolynomial.Polynomial(c.identityOperand.Value[0]),
+			ckkspolynomial.Polynomial(c.msbOperand.Value[0]),
+		}
+	}
+	return c.exponentialOperand, []interface{}{c.identityOperand, c.msbOperand}
 }
 
 type gaoA2BKernelN16L11SparseCoefficientGetter struct {
@@ -248,6 +359,10 @@ type GaoA2BKernelN16L11Evaluator struct {
 	conjugationKey     *rlwe.GaloisKey
 	operationalEncoder *ckks.Encoder
 }
+
+// GaoA2BKernelN16FullPackedEvaluator is a key-bound evaluator whose
+// coefficient vectors cover every canonical N16 complex slot.
+type GaoA2BKernelN16FullPackedEvaluator = GaoA2BKernelN16L11Evaluator
 
 func (c *GaoA2BKernelN16L11Circuit) BindEvaluator(evaluator *ckks.Evaluator) (*GaoA2BKernelN16L11Evaluator, error) {
 	if c == nil {
@@ -295,6 +410,12 @@ func (e *GaoA2BKernelN16L11Evaluator) OperationalEncoderPrecision() uint {
 }
 
 func (e *GaoA2BKernelN16L11Evaluator) SparseCoefficientSlots() int {
+	return e.CoefficientSlots()
+}
+
+// CoefficientSlots reports the number of slots covered by each packed
+// polynomial coefficient vector for either supported N16 packing.
+func (e *GaoA2BKernelN16L11Evaluator) CoefficientSlots() int {
 	if e == nil || e.coefficientGetter == nil {
 		return 0
 	}
@@ -302,39 +423,108 @@ func (e *GaoA2BKernelN16L11Evaluator) SparseCoefficientSlots() int {
 }
 
 func (e *GaoA2BKernelN16L11Evaluator) EvaluateNew(input *rlwe.Ciphertext) (GaoA2BKernelResult, error) {
+	return e.evaluateNew(input, true)
+}
+
+// EvaluatePreparedNew executes the sealed kernel after BindEvaluator has
+// authenticated the circuit and key graph. It is intended for a reusable,
+// privately owned server session: unlike EvaluateNew it does not re-hash the
+// immutable polynomial graph or clone its read-only operands on every call.
+func (e *GaoA2BKernelN16L11Evaluator) EvaluatePreparedNew(input *rlwe.Ciphertext) (GaoA2BKernelResult, error) {
+	return e.evaluateNew(input, false)
+}
+
+// EvaluatePreparedMSBNew evaluates the full-packed kernel when only the MSB
+// LUT output is live. It shares the same exp46 and two-square prefix while
+// avoiding construction and real recovery of the unused identity output.
+func (e *GaoA2BKernelN16L11Evaluator) EvaluatePreparedMSBNew(input *rlwe.Ciphertext) (*rlwe.Ciphertext, error) {
+	if e == nil || e.circuit == nil || e.ckks == nil || e.polynomial == nil {
+		return nil, fmt.Errorf("homchain: nil N16/L11 Gao MSB kernel evaluator")
+	}
+	if e.circuit.profile.claim != GaoA2BKernelN16FullPackedKernelOnlyUnverified {
+		return nil, fmt.Errorf("homchain: prepared MSB-only entry requires the N16 full-packed Gao kernel")
+	}
+	if err := e.validateInput(input); err != nil {
+		return nil, err
+	}
+	evaluationExponential, evaluationLUTs := e.circuit.polynomialEvaluationOperands()
+	if len(evaluationLUTs) != 2 {
+		return nil, fmt.Errorf("homchain: N16 full-packed Gao MSB operand is unavailable")
+	}
+	exponential, err := e.polynomial.Evaluate(input, evaluationExponential, e.circuit.params.DefaultScale())
+	if err != nil {
+		return nil, fmt.Errorf("homchain: evaluate N16 full-packed Gao MSB exponential polynomial: %w", err)
+	}
+	if exponential.Level() != input.Level()-e.circuit.exponentialOperand.Depth() || exponential.Degree() != 1 {
+		return nil, fmt.Errorf("homchain: N16 full-packed Gao MSB exponential state changed")
+	}
+	root := exponential
+	for round := 0; round < 2; round++ {
+		root, err = e.ckks.MulRelinNew(root, root)
+		if err != nil {
+			return nil, fmt.Errorf("homchain: N16 full-packed Gao MSB square %d: %w", round, err)
+		}
+		if err = e.ckks.Rescale(root, root); err != nil {
+			return nil, fmt.Errorf("homchain: N16 full-packed Gao MSB square %d rescale: %w", round, err)
+		}
+	}
+	msb, err := e.polynomial.Evaluate(root, evaluationLUTs[1], e.circuit.params.DefaultScale())
+	if err != nil {
+		return nil, fmt.Errorf("homchain: evaluate N16 full-packed Gao MSB LUT: %w", err)
+	}
+	if msb == nil || msb.Level() != e.circuit.profile.booleanOutputLevel || msb.Degree() != 1 ||
+		!e.circuit.profile.booleanOutputScale.EqualScale(msb.Scale) {
+		return nil, fmt.Errorf("homchain: N16 full-packed Gao MSB output state changed")
+	}
+	conjugate, err := e.ckks.ConjugateNew(msb)
+	if err != nil {
+		return nil, fmt.Errorf("homchain: conjugate N16 full-packed Gao MSB output: %w", err)
+	}
+	if err = e.ckks.Add(msb, conjugate, msb); err != nil {
+		return nil, fmt.Errorf("homchain: recover N16 full-packed Gao MSB real output: %w", err)
+	}
+	return msb, nil
+}
+
+func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verifySealedGraph bool) (GaoA2BKernelResult, error) {
 	if e == nil || e.circuit == nil || e.ckks == nil || e.polynomial == nil {
 		return GaoA2BKernelResult{}, fmt.Errorf("homchain: nil N16/L11 Gao kernel evaluator")
-	}
-	if err := e.circuit.validate(); err != nil {
-		return GaoA2BKernelResult{}, err
 	}
 	if err := e.validateInput(input); err != nil {
 		return GaoA2BKernelResult{}, err
 	}
-	if err := e.preflightGraphAndKeys(); err != nil {
-		return GaoA2BKernelResult{}, err
-	}
-	exponentialOperand, err := cloneA2BKernelPolynomialVector(e.circuit.exponentialOperand)
-	if err != nil {
-		return GaoA2BKernelResult{}, err
-	}
-	identityOperand, err := cloneA2BKernelPolynomialVector(e.circuit.identityOperand)
-	if err != nil {
-		return GaoA2BKernelResult{}, err
-	}
-	msbOperand, err := cloneA2BKernelPolynomialVector(e.circuit.msbOperand)
-	if err != nil {
-		return GaoA2BKernelResult{}, err
-	}
-	plan, err := inspectA2BKernelOperands(exponentialOperand, identityOperand, msbOperand, e.circuit.profile.slots)
-	if err != nil || plan != e.circuit.profile.operandPlan {
-		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao cloned operand plan changed")
-	}
-	if digestA2BKernelOperands(exponentialOperand, identityOperand, msbOperand, plan) != e.circuit.profile.operandGraphDigest {
-		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao cloned operand digest changed")
+
+	exponentialOperand := e.circuit.exponentialOperand
+	identityOperand := e.circuit.identityOperand
+	msbOperand := e.circuit.msbOperand
+	plan := e.circuit.profile.operandPlan
+	var inputBefore *rlwe.Ciphertext
+	if verifySealedGraph {
+		if err := e.circuit.validate(); err != nil {
+			return GaoA2BKernelResult{}, err
+		}
+		if err := e.preflightGraphAndKeys(); err != nil {
+			return GaoA2BKernelResult{}, err
+		}
+		var err error
+		if exponentialOperand, err = cloneA2BKernelPolynomialVector(exponentialOperand); err != nil {
+			return GaoA2BKernelResult{}, err
+		}
+		if identityOperand, err = cloneA2BKernelPolynomialVector(identityOperand); err != nil {
+			return GaoA2BKernelResult{}, err
+		}
+		if msbOperand, err = cloneA2BKernelPolynomialVector(msbOperand); err != nil {
+			return GaoA2BKernelResult{}, err
+		}
+		if plan, err = inspectA2BKernelOperands(exponentialOperand, identityOperand, msbOperand, e.circuit.profile.slots); err != nil || plan != e.circuit.profile.operandPlan {
+			return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao cloned operand plan changed")
+		}
+		if digestA2BKernelOperands(exponentialOperand, identityOperand, msbOperand, plan) != e.circuit.profile.operandGraphDigest {
+			return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao cloned operand digest changed")
+		}
+		inputBefore = input.CopyNew()
 	}
 
-	inputBefore := input.CopyNew()
 	states := make([]GaoA2BKernelCiphertextState, 0, 8)
 	state, err := snapshotA2BKernelState(GaoA2BKernelStageInput, input, e.circuit.params.DefaultScale())
 	if err != nil || !state.ScaleExact {
@@ -343,7 +533,20 @@ func (e *GaoA2BKernelN16L11Evaluator) EvaluateNew(input *rlwe.Ciphertext) (GaoA2
 	states = append(states, state)
 	counts := GaoA2BKernelOperationCounts{}
 
-	exponential, err := e.polynomial.Evaluate(input, exponentialOperand, e.circuit.params.DefaultScale())
+	evaluationExponential, evaluationLUTs := e.circuit.polynomialEvaluationOperands()
+	if verifySealedGraph {
+		if e.circuit.profile.claim == GaoA2BKernelN16FullPackedKernelOnlyUnverified {
+			evaluationExponential = ckkspolynomial.Polynomial(exponentialOperand.Value[0])
+			evaluationLUTs = []interface{}{
+				ckkspolynomial.Polynomial(identityOperand.Value[0]),
+				ckkspolynomial.Polynomial(msbOperand.Value[0]),
+			}
+		} else {
+			evaluationExponential = exponentialOperand
+			evaluationLUTs = []interface{}{identityOperand, msbOperand}
+		}
+	}
+	exponential, err := e.polynomial.Evaluate(input, evaluationExponential, e.circuit.params.DefaultScale())
 	counts.ExpPolynomialEvaluations++
 	if err != nil {
 		return GaoA2BKernelResult{}, fmt.Errorf("homchain: evaluate N16/L11 Gao exponential polynomial: %w", err)
@@ -384,7 +587,7 @@ func (e *GaoA2BKernelN16L11Evaluator) EvaluateNew(input *rlwe.Ciphertext) (GaoA2
 	rootOfUnity := root.CopyNew()
 
 	lutOutputs, err := e.polynomial.EvaluateMultiPoly(
-		root, []interface{}{identityOperand, msbOperand}, e.circuit.params.DefaultScale(),
+		root, evaluationLUTs, e.circuit.params.DefaultScale(),
 	)
 	counts.MultiPolynomialEvaluations++
 	counts.SharedPowerBases++
@@ -426,7 +629,7 @@ func (e *GaoA2BKernelN16L11Evaluator) EvaluateNew(input *rlwe.Ciphertext) (GaoA2
 		states = append(states, state)
 	}
 
-	if !input.Equal(inputBefore) {
+	if verifySealedGraph && !input.Equal(inputBefore) {
 		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao kernel mutated its input")
 	}
 	return GaoA2BKernelResult{
@@ -520,7 +723,11 @@ func (c *GaoA2BKernelN16L11Circuit) validate() error {
 	if c == nil || c.encoder == nil {
 		return fmt.Errorf("homchain: nil N16/L11 Gao kernel circuit")
 	}
-	expected, err := securityparams.GaoCompatibleN16Parameters()
+	packing, err := gaoA2BKernelN16PackingForProfile(c.profile)
+	if err != nil {
+		return err
+	}
+	expected, err := gaoA2BKernelN16ParametersForPacking(packing)
 	if err != nil {
 		return err
 	}
@@ -542,17 +749,17 @@ func (c *GaoA2BKernelN16L11Circuit) validate() error {
 		return err
 	}
 	plan, err := inspectA2BKernelOperands(
-		c.exponentialOperand, c.identityOperand, c.msbOperand, gaoA2BKernelN16L11Slots,
+		c.exponentialOperand, c.identityOperand, c.msbOperand, packing.slots,
 	)
 	if err != nil || plan != c.profile.operandPlan ||
 		digestA2BKernelOperands(c.exponentialOperand, c.identityOperand, c.msbOperand, plan) != c.profile.operandGraphDigest {
 		return fmt.Errorf("homchain: N16/L11 Gao sealed operand graph changed")
 	}
-	if c.profile.claim != GaoA2BKernelN16L11KernelOnlyUnverified ||
+	if c.profile.claim != packing.claim ||
 		c.profile.inputLevel != gaoA2BKernelN16L11InputLevel ||
 		c.profile.booleanOutputLevel != gaoA2BKernelN16L11OutputLevel ||
-		c.profile.slots != gaoA2BKernelN16L11Slots ||
-		c.profile.logDimensions != (ring.Dimensions{Rows: 0, Cols: gaoA2BKernelN16L11LogSlots}) ||
+		c.profile.slots != packing.slots ||
+		c.profile.logDimensions != (ring.Dimensions{Rows: 0, Cols: packing.logSlots}) ||
 		c.profile.operationalEncoderPrecision != gaoA2BKernelEncoderPrecision ||
 		!c.profile.inputScale.EqualScale(c.params.DefaultScale()) ||
 		!c.profile.booleanOutputScale.EqualScale(c.params.DefaultScale()) ||
@@ -566,16 +773,26 @@ func (c *GaoA2BKernelN16L11Circuit) validate() error {
 		!c.profile.keyProfile.requiresRelinearization || !c.profile.keyProfile.requiresConjugation ||
 		c.profile.keyProfile.conjugationElement != c.params.GaloisElementForComplexConjugation() ||
 		len(c.profile.keyProfile.rotationIndexes) != 0 ||
-		c.profile.digest != digestGaoA2BKernelN16L11Profile(c.profile) {
+		c.profile.keyProfile.digest != a2bKernelDigestText(fmt.Sprintf(
+			"%s;relinearization=true;conjugation=true;conjugation-element=%d;rotations=[];min-level-q=%d;level-p=%d",
+			packing.keyDigestSchema, c.profile.keyProfile.conjugationElement,
+			gaoA2BKernelN16L11InputLevel, c.params.MaxLevelP(),
+		)) ||
+		c.profile.RuntimePath() != packing.runtimePath ||
+		c.profile.digest != digestGaoA2BKernelN16Profile(c.profile, packing.profileDigestSchema) {
 		return fmt.Errorf("homchain: N16/L11 Gao profile or fixed contract changed")
 	}
 	return nil
 }
 
 func digestGaoA2BKernelN16L11Profile(profile GaoA2BKernelN16L11Profile) string {
+	return digestGaoA2BKernelN16Profile(profile, gaoA2BKernelN16L11Packing().profileDigestSchema)
+}
+
+func digestGaoA2BKernelN16Profile(profile GaoA2BKernelN16L11Profile, schema string) string {
 	return a2bKernelDigestText(fmt.Sprintf(
-		"gao-a2b-kernel-n16-l11-v1|claim=%s|input-level=%d|slots=%d|dimensions=%d,%d|encoder-precision=%d|input-scale=%s|boolean-output-level=%d|boolean-output-scale=%s|exp-degree=%d|squares=%d|lut-degrees=%v|input-normalization=%s|exp-profile=%s|exp-artifact=%s|lut-table=%s|params=%s|operand-graph=%s|operand=%s,%d,%v,%v,%v|key=%s|path=%s",
-		profile.claim, profile.inputLevel, profile.slots, profile.logDimensions.Rows, profile.logDimensions.Cols,
+		"%s|claim=%s|input-level=%d|slots=%d|dimensions=%d,%d|encoder-precision=%d|input-scale=%s|boolean-output-level=%d|boolean-output-scale=%s|exp-degree=%d|squares=%d|lut-degrees=%v|input-normalization=%s|exp-profile=%s|exp-artifact=%s|lut-table=%s|params=%s|operand-graph=%s|operand=%s,%d,%v,%v,%v|key=%s|path=%s",
+		schema, profile.claim, profile.inputLevel, profile.slots, profile.logDimensions.Rows, profile.logDimensions.Cols,
 		profile.operationalEncoderPrecision, profile.inputScale.canonicalString(), profile.booleanOutputLevel,
 		profile.booleanOutputScale.canonicalString(), profile.exponentialDegree, profile.squaringRounds,
 		profile.lutDegrees, profile.InputNormalization(), profile.exponentialProfileDigest,

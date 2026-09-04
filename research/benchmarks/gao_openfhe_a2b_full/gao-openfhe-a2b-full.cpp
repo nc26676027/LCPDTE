@@ -26,10 +26,41 @@ constexpr uint32_t kPackingSlots = kWordBits * kUsefulWords / 2;
 constexpr uint32_t kRingDimension = 1U << 16;
 constexpr uint32_t kWarmupCount = 1;
 constexpr uint32_t kRepeatCount = 5;
+constexpr uint32_t kQModuliCount = 21;
+constexpr uint32_t kQLog2Aggregate = 904;
+constexpr uint32_t kPModuliCount = 7;
+constexpr uint32_t kPLog2Aggregate = 350;
+constexpr uint32_t kScalingModulusBits = 43;
+constexpr uint32_t kFirstModulusBits = 43;
+constexpr uint32_t kMultiplicativeDepth = 20;
+constexpr uint32_t kLargeDigits = 3;
+constexpr uint32_t kEphemeralSecretHammingWeight = 32;
+constexpr uint32_t kChunkWidth = 4;
+constexpr int32_t kCutoffBits = -24;
+constexpr char kSourceRevision[] = "08f1eb87434e7be072cba889270a8400bbffc08e";
+constexpr char kBuildProfile[] =
+    "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON";
 
 struct Options {
     std::string hostId;
     std::string outputPath;
+    bool checkParametersOnly = false;
+};
+
+struct RuntimeModulusProfile {
+    uint32_t qCount;
+    uint32_t qBits;
+    uint32_t pCount;
+    uint32_t pBits;
+};
+
+struct ExecutionMetadata {
+    std::string sourceRevision;
+    bool sourceModified;
+    std::string compiler;
+    std::string buildProfile;
+    std::string os;
+    std::string arch;
 };
 
 struct Verification {
@@ -81,6 +112,39 @@ std::string JsonEscape(const std::string& value) {
     return output.str();
 }
 
+std::string RequireEnvironment(const char* name) {
+    const char* value = std::getenv(name);
+    if (value == nullptr || value[0] == '\0') {
+        throw std::runtime_error(std::string(name) + " must be supplied by run_wsl.sh");
+    }
+    return value;
+}
+
+ExecutionMetadata RequireExecutionMetadata() {
+    ExecutionMetadata metadata{
+        RequireEnvironment("LCPDTE_GAO_SOURCE_REVISION"),
+        false,
+        RequireEnvironment("LCPDTE_GAO_COMPILER"),
+        RequireEnvironment("LCPDTE_GAO_BUILD_PROFILE"),
+        RequireEnvironment("LCPDTE_GAO_OS"),
+        RequireEnvironment("LCPDTE_GAO_ARCH"),
+    };
+    const auto sourceModified = RequireEnvironment("LCPDTE_GAO_SOURCE_MODIFIED");
+    if (metadata.sourceRevision != kSourceRevision) {
+        throw std::runtime_error("execution metadata source revision differs from the pinned checkout");
+    }
+    if (sourceModified != "false") {
+        throw std::runtime_error("execution metadata requires an unmodified pinned source");
+    }
+    if (metadata.buildProfile != kBuildProfile) {
+        throw std::runtime_error("execution metadata build profile differs from the acceptance configuration");
+    }
+    if (metadata.os != "linux" || metadata.arch != "amd64") {
+        throw std::runtime_error("execution metadata requires the admitted linux/amd64 build target");
+    }
+    return metadata;
+}
+
 Options ParseOptions(int argc, char* argv[]) {
     Options options;
     for (int index = 1; index < argc; ++index) {
@@ -96,8 +160,12 @@ Options ParseOptions(int argc, char* argv[]) {
         else if (argument == "-out" || argument == "--output") {
             options.outputPath = argv[++index];
         }
+        else if (argument == "--check-parameters-only") {
+            options.checkParametersOnly = true;
+        }
         else if (argument == "--help" || argument == "-h") {
-            std::cout << "Usage: " << argv[0] << " -host-id ID [-out RESULT.json]\n";
+            std::cout << "Usage: " << argv[0]
+                      << " -host-id ID [-out RESULT.json] [--check-parameters-only]\n";
             std::exit(0);
         }
         else {
@@ -141,7 +209,35 @@ Verification VerifyAllBits(CiphertextGroup ciphertexts, const PKEZ& pke,
     return verification;
 }
 
-std::string BuildArtifact(const Options& options, uint64_t setupNanoseconds,
+RuntimeModulusProfile RequireCanonicalRuntimeParameters(
+    const std::shared_ptr<CryptoParametersCKKSRNS>& cryptoParameters) {
+    if (!cryptoParameters) {
+        throw std::runtime_error("CKKS crypto parameters are unavailable");
+    }
+    const auto paramsQ = cryptoParameters->GetElementParams();
+    const auto paramsP = cryptoParameters->GetParamsP();
+    const auto qCount = static_cast<uint32_t>(paramsQ->GetParams().size());
+    const auto pCount = static_cast<uint32_t>(paramsP->GetParams().size());
+    const auto qBits = static_cast<uint32_t>(paramsQ->GetModulus().GetMSB());
+    const auto pBits = static_cast<uint32_t>(paramsP->GetModulus().GetMSB());
+    if (qCount != kQModuliCount || qBits != kQLog2Aggregate ||
+        pCount != kPModuliCount || pBits != kPLog2Aggregate) {
+        std::ostringstream message;
+        message << "generated modulus profile Q=" << qCount << "/" << qBits
+                << " P=" << pCount << "/" << pBits << "; want Q="
+                << kQModuliCount << "/" << kQLog2Aggregate << " P="
+                << kPModuliCount << "/" << kPLog2Aggregate;
+        throw std::runtime_error(message.str());
+    }
+    if (cryptoParameters->GetSecretKeyDist() != SPARSE_ENCAPSULATED) {
+        throw std::runtime_error(
+            "SPARSE_ENCAPSULATED is required for the weight-32 bootstrap key");
+    }
+    return {qCount, qBits, pCount, pBits};
+}
+
+std::string BuildArtifact(const Options& options, const ExecutionMetadata& metadata,
+                          uint64_t setupNanoseconds,
                           const std::vector<uint64_t>& samples, bool warmupVerified,
                           uint32_t verifiedEvaluations, uint64_t mismatchCount) {
     std::ostringstream output;
@@ -149,6 +245,17 @@ std::string BuildArtifact(const Options& options, uint64_t setupNanoseconds,
            << "  \"schema\": \"lcpdte-ckksint-a2b-benchmark-v2\",\n"
            << "  \"implementation\": \"gao-openfhe-a2b-full\",\n"
            << "  \"host_id\": \"" << JsonEscape(options.hostId) << "\",\n"
+           << "  \"encryption_mode\": \"public-key\",\n"
+           << "  \"factor_storage_mode\": \"resident-precomputed\",\n"
+           << "  \"scale_schedule\": \"openfhe-flexiblemanual-native\",\n"
+           << "  \"backend_bsgs_plan\": \"openfhe-auto-dim1-0\",\n"
+           << "  \"source_revision\": \"" << JsonEscape(metadata.sourceRevision) << "\",\n"
+           << "  \"source_modified\": " << (metadata.sourceModified ? "true" : "false") << ",\n"
+           << "  \"runtime\": \"openfhe-fhe-simd-alu\",\n"
+           << "  \"compiler\": \"" << JsonEscape(metadata.compiler) << "\",\n"
+           << "  \"build_profile\": \"" << JsonEscape(metadata.buildProfile) << "\",\n"
+           << "  \"os\": \"" << JsonEscape(metadata.os) << "\",\n"
+           << "  \"arch\": \"" << JsonEscape(metadata.arch) << "\",\n"
            << "  \"protocol\": \"gao-a2b-full-z8-w4-v1\",\n"
            << "  \"workload_id\": \"uint8-0to255-x32\",\n"
            << "  \"packing_id\": \"n65536-cslots32768-zslots8192-w4\",\n"
@@ -157,6 +264,23 @@ std::string BuildArtifact(const Options& options, uint64_t setupNanoseconds,
            << "  \"ring_dimension\": " << kRingDimension << ",\n"
            << "  \"packing_slots\": " << kPackingSlots << ",\n"
            << "  \"useful_words\": " << kUsefulWords << ",\n"
+           << "  \"parameters\": {\n"
+           << "    \"comparison_scope\": \"gao-algorithm-and-aggregate-modulus-bits\",\n"
+           << "    \"q_moduli_count\": " << kQModuliCount << ",\n"
+           << "    \"q_log2_aggregate\": " << kQLog2Aggregate << ",\n"
+           << "    \"p_moduli_count\": " << kPModuliCount << ",\n"
+           << "    \"p_log2_aggregate\": " << kPLog2Aggregate << ",\n"
+           << "    \"scaling_modulus_bits\": " << kScalingModulusBits << ",\n"
+           << "    \"first_modulus_bits\": " << kFirstModulusBits << ",\n"
+           << "    \"multiplicative_depth\": " << kMultiplicativeDepth << ",\n"
+           << "    \"large_digits\": " << kLargeDigits << ",\n"
+           << "    \"ephemeral_secret_hamming_weight\": "
+           << kEphemeralSecretHammingWeight << ",\n"
+           << "    \"level_budget\": [3, 2],\n"
+           << "    \"openfhe_requested_bsgs_dimensions\": [0, 0],\n"
+           << "    \"chunk_width\": " << kChunkWidth << ",\n"
+           << "    \"cutoff_bits\": " << kCutoffBits << "\n"
+           << "  },\n"
            << "  \"threads\": 1,\n"
            << "  \"timing_scope\": \"prepared-online\",\n"
            << "  \"setup_nanoseconds\": " << setupNanoseconds << ",\n"
@@ -197,6 +321,7 @@ void WriteArtifact(const std::string& document, const std::string& outputPath) {
 int main(int argc, char* argv[]) {
     try {
         const Options options = ParseOptions(argc, argv);
+        const auto executionMetadata = RequireExecutionMetadata();
         if (OpenFHEParallelControls.GetMachineThreads() != 1) {
             throw std::runtime_error("OMP_NUM_THREADS must be set to 1 before process startup");
         }
@@ -215,14 +340,30 @@ int main(int argc, char* argv[]) {
         parameters.SetSecretKeyDist(lbcrypto::SPARSE_ENCAPSULATED);
         parameters.SetSecurityLevel(lbcrypto::HEStd_128_classic);
         parameters.SetRingDim(kRingDimension);
-        parameters.SetScalingModSize(43);
-        parameters.SetFirstModSize(43);
+        parameters.SetScalingModSize(kScalingModulusBits);
+        parameters.SetFirstModSize(kFirstModulusBits);
         parameters.SetScalingTechnique(FLEXIBLEMANUAL);
-        parameters.SetNumLargeDigits(3);
-        parameters.SetMultiplicativeDepth(20);
+        parameters.SetNumLargeDigits(kLargeDigits);
+        parameters.SetMultiplicativeDepth(kMultiplicativeDepth);
         AUXMODSIZE_FLEXIBLEMANUAL = 50;
 
         CryptoContext<DCRTPoly> context = GenCryptoContext(parameters);
+        const auto cryptoParameters =
+            std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(context->GetCryptoParameters());
+        const auto runtimeProfile = RequireCanonicalRuntimeParameters(cryptoParameters);
+        if (options.checkParametersOnly) {
+            std::cout << "validated canonical OpenFHE parameters: Q=" << runtimeProfile.qCount
+                      << "/" << runtimeProfile.qBits << " P=" << runtimeProfile.pCount << "/"
+                      << runtimeProfile.pBits << " scale=" << kScalingModulusBits
+                      << " first=" << kFirstModulusBits
+                      << " depth=" << kMultiplicativeDepth
+                      << " large_digits=" << kLargeDigits
+                      << " ephemeral_weight=" << kEphemeralSecretHammingWeight
+                      << " level_budget=[3,2] openfhe_requested_bsgs=[0,0]"
+                      << " backend_bsgs_plan=openfhe-auto-dim1-0 w=" << kChunkWidth
+                      << " cutoff=" << kCutoffBits << '\n';
+            return 0;
+        }
         context->Enable(PKE);
         context->Enable(KEYSWITCH);
         context->Enable(LEVELEDSHE);
@@ -236,11 +377,10 @@ int main(int argc, char* argv[]) {
         PKEZ pke = std::make_shared<PKEZImpl>(keyPair.publicKey, keyPair.secretKey);
         pkeZ_global = pke;
 
-        fhe->EvalBootstrapSetup(*context, kWordBits, kUsefulWords, {3, 2}, {0, 0}, 4, -24, 1);
+        fhe->EvalBootstrapSetup(*context, kWordBits, kUsefulWords, {3, 2}, {0, 0},
+                                kChunkWidth, kCutoffBits, 1);
         fhe->EvalBootstrapKeyGen(keyPair.secretKey, kWordBits, kUsefulWords);
 
-        const auto cryptoParameters =
-            std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(context->GetCryptoParameters());
         const auto elementParameters = context->GetCryptoParameters()->GetElementParams();
         const auto scalingFactor = cryptoParameters->GetScalingFactorBFP(0);
         auto encodedInput =
@@ -288,8 +428,8 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        const auto artifact = BuildArtifact(options, setupNanoseconds, samples, warmupVerified,
-                                            verifiedEvaluations, mismatchCount);
+        const auto artifact = BuildArtifact(options, executionMetadata, setupNanoseconds, samples,
+                                            warmupVerified, verifiedEvaluations, mismatchCount);
         WriteArtifact(artifact, options.outputPath);
         return 0;
     }

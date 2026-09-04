@@ -8,6 +8,8 @@ operation, decrypts the result, and checks the output.
 - `conversion`: fixed four-lane signed-int8 A2B, B2A, and public comparison.
 - `depth2`: the complete selected-child depth-2 tree path.
 - `routeb_a2b`: the canonical N=2^16 reusable 8-bit A2B client/server flow.
+- `gao_full_a2b`: Gao-compatible N=2^16, logSlots=15 A2B over 8,192 bytes,
+  using all 32,768 complex slots and separate low4/high4 outputs.
 - `routeb_depth2`: the canonical N=2^16 Route-B client/server workflow for a
   batch of encrypted signed-int8 queries. It covers setup, key generation,
   encryption, evaluation, decryption, an independent plaintext oracle, phase
@@ -18,8 +20,14 @@ full Route-B examples from the repository root:
 
 ```bash
 go run ./examples/ckksint/routeb_a2b
+go run ./examples/ckksint/gao_full_a2b
 go run ./examples/ckksint/routeb_depth2
 ```
+
+`gao_full_a2b` runs the canonical `0..255` sequence repeated 32 times, checks
+all 65,536 decrypted bits, and prints setup time, prepared-online time,
+throughput, trace digest, and mismatch count. Any mismatch produces a nonzero
+exit status.
 
 `routeb_a2b` encrypts representative bytes, evaluates the complete A2B graph,
 decrypts all eight LSB-first bits, reconstructs every input byte, and prints

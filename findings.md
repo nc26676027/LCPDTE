@@ -403,6 +403,13 @@ Update this file after every two browsing/view operations and after each materia
 - The installed evaluator already transitions to an `Operational` lineage after the first authorized operation, but no API consumes that state. The public depth-2 server adds a second single-use boolean. A reusable prepared A2B seam can preserve the first-operation preflight and serialize later calls instead of rebuilding cryptographic setup.
 - The current comparator hard-codes Gao as `warmup=1/repeats=5` and Lattigo as `warmup=0/repeats=1`, and intentionally allows a 16× lane mismatch. Those constants and the v1 summary are the behavioral seam to replace with measured sample metadata and matched-workload admission.
 
+### Full-packed parity diagnosis
+
+- The large initial gap was not evidence that Lattigo bootstrapping is intrinsically slower. The first Lattigo full-packed path performed factor file I/O, deserialization and duplicate validation inside every timed transform, while OpenFHE reused resident precomputed plaintexts after warmup. Making the two residency models equivalent removed that measurement distortion.
+- OpenFHE reports consumed levels while Lattigo exposes remaining levels. Translating both as `L=20-O` is required for the same circuit: the original full path entered transforms at incorrect Lattigo levels even though its numeric labels looked similar.
+- A same-host CPU profile attributes the remaining time primarily to native DFT planning/execution and the exp46/LUT kernels. Lattigo ratio 3 reduced BSGS work but increased pre-rotation work, memory pressure and sample variance; ratio 2 is the measured backend-native choice. OpenFHE `dim1=[0,0]` and Lattigo ratio 2 describe different native planners for the same mathematical DFT, not identical operation graphs.
+- Only returned low4/high4 outputs define the focused A2B API. First-round low self-removal and final high self-removal are dead for those outputs, while the first-round `ID0/16` high update is live and mandatory. The benchmark records `live-output-optimized` so the operation-graph difference is explicit rather than presented as backend-identical execution.
+
 ### Phase-10 diagnosis and repaired benchmark
 
 - The reusable Route-B evaluator moves immutable circuit construction and both bound Gao kernels out of prepared-online timing. Five final-code Lattigo samples are `25.080237627`, `26.298585630`, `24.436183473`, `25.039048162`, and `25.267682842` seconds: mean `25.2243475468 s`, median `25.080237627 s`, 512 words, zero mismatches. This is a `22.85%` improvement over the former `32.693327852 s` cold one-shot result.

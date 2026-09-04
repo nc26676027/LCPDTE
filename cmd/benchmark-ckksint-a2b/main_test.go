@@ -13,10 +13,40 @@ import (
 	"github.com/nc26676027/LCPDTE/internal/benchcmp"
 )
 
-func TestCanonicalInputContainsTwoByteCycles(t *testing.T) {
+func testExecutionMetadata() benchmarkExecutionMetadata {
+	return benchmarkExecutionMetadata{
+		SourceRevision: "0123456789abcdef0123456789abcdef01234567",
+		Runtime:        "go-test",
+		Compiler:       "gc",
+		BuildProfile:   "GOOS=linux;GOARCH=amd64;GOAMD64=v1;GOMAXPROCS=1",
+		OS:             "linux",
+		Arch:           "amd64",
+	}
+}
+
+func testSetupInfo() ckksint.GaoFullPackedA2BSetupInfo {
+	return ckksint.GaoFullPackedA2BSetupInfo{
+		ParameterWallTime:          2 * time.Second,
+		KeyGenerationWallTime:      3 * time.Second,
+		ServerConstructionWallTime: 4 * time.Second,
+		Parameters: ckksint.GaoFullPackedA2BParameterInfo{
+			RingDimension: 65_536, PackingSlots: 32_768, UsefulWords: 8_192,
+			QModuliCount: 21, QLog2Aggregate: 904, PModuliCount: 7, PLog2Aggregate: 350,
+			ScalingModulusBits: 43, FirstModulusBits: 43, MultiplicativeDepth: 20,
+			LargeDigits: 3, EphemeralSecretHammingWeight: 32,
+			LevelBudget: [2]int{3, 2}, OpenFHERequestedBSGSDimensions: [2]int{0, 0},
+			ChunkWidth: 4, CutoffBits: -24,
+			STCLogBSGSRatio: 2, CTSLogBSGSRatio: 2, SpecialB0LogBSGSRatio: 2,
+			EncryptionMode: "public-key", FactorStorageMode: "resident-prevalidated",
+			ScaleSchedule: "lattigo-explicit-level-scale-native",
+		},
+	}
+}
+
+func TestCanonicalInputContainsThirtyTwoByteCycles(t *testing.T) {
 	got := canonicalInput()
-	if len(got) != 512 {
-		t.Fatalf("len(input)=%d, want 512", len(got))
+	if len(got) != 8_192 {
+		t.Fatalf("len(input)=%d, want 8192", len(got))
 	}
 	for index, word := range got {
 		if want := uint8(index % 256); word != want {
@@ -26,35 +56,41 @@ func TestCanonicalInputContainsTwoByteCycles(t *testing.T) {
 }
 
 func TestCanonicalArtifactRecordsPreparedOnlineProtocol(t *testing.T) {
-	setup := ckksint.RouteBA2BSetupInfo{
-		ParameterArtifactWallTime: 2 * time.Second,
-		KeyGenerationWallTime:     3 * time.Second,
-		ServerInstallWallTime:     4 * time.Second,
-	}
-	warmup := ckksint.RouteBA2BPhaseInfo{PreparationWallTime: 5 * time.Second}
-	encryption := ckksint.RouteBA2BPhaseInfo{WallTime: 6 * time.Second}
+	setup := testSetupInfo()
+	warmup := ckksint.GaoFullPackedA2BPhaseInfo{}
+	encryption := ckksint.GaoFullPackedA2BPhaseInfo{WallTime: 6 * time.Second}
 	warmup.WallTime = 12 * time.Second
 	warmup.OnlineWallTime = 4 * time.Second
 	samples := []uint64{11, 12, 13, 14, 15}
 
-	got, err := canonicalArtifact("same-host", setup, encryption, warmup, samples)
+	got, err := canonicalArtifact("same-host", setup, encryption, warmup, samples, testExecutionMetadata())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if got.Schema != "lcpdte-ckksint-a2b-benchmark-v2" || got.Implementation != "lattigo-route-b" {
+	if got.Schema != "lcpdte-ckksint-a2b-benchmark-v2" || got.Implementation != "lattigo-gao-a2b-full" {
 		t.Fatalf("identity=%+v", got)
 	}
-	if got.HostID != "same-host" || got.Protocol != "gao-a2b-sparse-z8-w4-v1" ||
-		got.WorkloadID != "uint8-0to255-twice" ||
-		got.PackingID != "n65536-cslots2048-zslots512-w4" {
+	if got.HostID != "same-host" || got.Protocol != "gao-a2b-full-z8-w4-v1" ||
+		got.WorkloadID != "uint8-0to255-x32" ||
+		got.PackingID != "n65536-cslots32768-zslots8192-w4" {
 		t.Fatalf("protocol identity=%+v", got)
 	}
-	if got.WordBits != 8 || got.RingDimension != 65_536 || got.PackingSlots != 2_048 || got.UsefulWords != 512 {
+	if got.WordBits != 8 || got.RingDimension != 65_536 || got.PackingSlots != 32_768 || got.UsefulWords != 8_192 {
 		t.Fatalf("shape=%+v", got)
 	}
-	if got.Threads != 1 || got.TimingScope != "prepared-online" || got.SetupNanoseconds != 23_000_000_000 {
+	if got.Threads != 1 || got.TimingScope != "prepared-online" || got.SetupNanoseconds != 15_000_000_000 {
 		t.Fatalf("scope=%+v", got)
+	}
+	if got.Parameters == nil || *got.Parameters != *benchcmp.CanonicalGaoParameters() {
+		t.Fatalf("parameters=%+v", got.Parameters)
+	}
+	if got.EncryptionMode != "public-key" || got.FactorStorageMode != "resident-prevalidated" ||
+		got.ScaleSchedule != "lattigo-explicit-level-scale-native" ||
+		got.BackendBSGSPlan != "lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-optimized" ||
+		got.SourceRevision != testExecutionMetadata().SourceRevision || got.SourceModified ||
+		got.Runtime != "go-test" || got.Compiler != "gc" || got.OS != "linux" || got.Arch != "amd64" {
+		t.Fatalf("execution metadata=%+v", got)
 	}
 	if got.WarmupCount != 1 || !got.WarmupVerified || got.RepeatCount != 5 || got.VerifiedEvaluations != 5 {
 		t.Fatalf("repetition protocol=%+v", got)
@@ -145,46 +181,52 @@ func TestBenchmarkRecordsOnlyPreparedOnlineSamples(t *testing.T) {
 	evaluations := 0
 	encryptions := 0
 	decryptions := 0
-	factory := func() (sessionOps, ckksint.RouteBA2BSetupInfo, error) {
+	encryptedWords := 0
+	factory := func() (sessionOps, ckksint.GaoFullPackedA2BSetupInfo, error) {
 		return sessionOps{
 				close: func() {},
-				encrypt: func(words []uint8) (*ckksint.RouteBA2BEncryptedInput, ckksint.RouteBA2BPhaseInfo, error) {
+				encrypt: func(words []uint8) (*ckksint.GaoFullPackedA2BEncryptedInput, ckksint.GaoFullPackedA2BPhaseInfo, error) {
 					encryptions++
-					return nil, ckksint.RouteBA2BPhaseInfo{WallTime: 6 * time.Nanosecond}, nil
+					encryptedWords = len(words)
+					return nil, ckksint.GaoFullPackedA2BPhaseInfo{WallTime: 6 * time.Nanosecond}, nil
 				},
-				evaluate: func(*ckksint.RouteBA2BEncryptedInput) (*ckksint.RouteBA2BEncryptedOutput, ckksint.RouteBA2BPhaseInfo, error) {
+				evaluate: func(*ckksint.GaoFullPackedA2BEncryptedInput) (*ckksint.GaoFullPackedA2BEncryptedOutput, ckksint.GaoFullPackedA2BPhaseInfo, error) {
 					evaluations++
-					info := ckksint.RouteBA2BPhaseInfo{
+					info := ckksint.GaoFullPackedA2BPhaseInfo{
 						OnlineWallTime: time.Duration(100+evaluations) * time.Nanosecond,
 						WallTime:       time.Duration(110+evaluations) * time.Nanosecond,
 					}
-					if evaluations == 1 {
-						info.PreparationWallTime = 5 * time.Nanosecond
-					}
 					return nil, info, nil
 				},
-				decrypt: func(*ckksint.RouteBA2BEncryptedOutput) ([][8]uint8, error) {
+				decrypt: func(*ckksint.GaoFullPackedA2BEncryptedOutput) ([][8]uint8, error) {
 					decryptions++
 					return expectedBits(canonicalInput()), nil
 				},
-			}, ckksint.RouteBA2BSetupInfo{
-				ParameterArtifactWallTime: 2 * time.Nanosecond,
-				KeyGenerationWallTime:     3 * time.Nanosecond,
-				ServerInstallWallTime:     4 * time.Nanosecond,
-			}, nil
+			}, func() ckksint.GaoFullPackedA2BSetupInfo {
+				setup := testSetupInfo()
+				setup.ParameterWallTime = 2 * time.Nanosecond
+				setup.KeyGenerationWallTime = 3 * time.Nanosecond
+				setup.ServerConstructionWallTime = 4 * time.Nanosecond
+				return setup
+			}(), nil
 	}
 
-	got, err := runCanonicalBenchmarkWithFactory("same-host", factory)
+	got, err := runCanonicalBenchmarkWithFactory("same-host", factory, func() (benchmarkExecutionMetadata, error) {
+		return testExecutionMetadata(), nil
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if encryptions != 1 || evaluations != 6 || decryptions != 6 {
-		t.Fatalf("encryptions=%d evaluations=%d decryptions=%d", encryptions, evaluations, decryptions)
+	if encryptions != 1 || encryptedWords != 8_192 || evaluations != 6 || decryptions != 6 {
+		t.Fatalf("encryptions=%d encrypted_words=%d evaluations=%d decryptions=%d", encryptions, encryptedWords, evaluations, decryptions)
 	}
-	if got.SetupNanoseconds != 25 {
-		t.Fatalf("setup_ns=%d, want 25", got.SetupNanoseconds)
+	if got.SetupNanoseconds != 15 {
+		t.Fatalf("setup_ns=%d, want 15", got.SetupNanoseconds)
 	}
-	wantSamples := []uint64{102, 103, 104, 105, 106}
+	// The canonical samples wrap the complete prepared public Evaluate call,
+	// matching the OpenFHE driver's call-boundary timer. The narrower internal
+	// OnlineWallTime values above must not be emitted.
+	wantSamples := []uint64{112, 113, 114, 115, 116}
 	if !reflect.DeepEqual(got.TimedSamplesNanoseconds, wantSamples) {
 		t.Fatalf("samples=%v, want %v", got.TimedSamplesNanoseconds, wantSamples)
 	}
@@ -203,14 +245,19 @@ func expectedBits(words []uint8) [][8]uint8 {
 func TestWriteCanonicalArtifactProducesParseableV2JSON(t *testing.T) {
 	artifact, err := canonicalArtifact(
 		"same-host",
-		ckksint.RouteBA2BSetupInfo{ParameterArtifactWallTime: time.Nanosecond},
-		ckksint.RouteBA2BPhaseInfo{WallTime: time.Nanosecond},
-		ckksint.RouteBA2BPhaseInfo{
-			WallTime:            2 * time.Nanosecond,
-			PreparationWallTime: time.Nanosecond,
-			OnlineWallTime:      time.Nanosecond,
+		func() ckksint.GaoFullPackedA2BSetupInfo {
+			setup := testSetupInfo()
+			setup.ParameterWallTime = time.Nanosecond
+			setup.KeyGenerationWallTime = 0
+			setup.ServerConstructionWallTime = 0
+			return setup
+		}(),
+		ckksint.GaoFullPackedA2BPhaseInfo{WallTime: time.Nanosecond},
+		ckksint.GaoFullPackedA2BPhaseInfo{
+			WallTime:       2 * time.Nanosecond,
+			OnlineWallTime: time.Nanosecond,
 		},
-		[]uint64{1, 2, 3, 4, 5},
+		[]uint64{1, 2, 3, 4, 5}, testExecutionMetadata(),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -234,14 +281,13 @@ func TestWriteCanonicalArtifactProducesParseableV2JSON(t *testing.T) {
 func TestCanonicalArtifactRejectsIncompleteTimingProtocol(t *testing.T) {
 	_, err := canonicalArtifact(
 		"same-host",
-		ckksint.RouteBA2BSetupInfo{},
-		ckksint.RouteBA2BPhaseInfo{WallTime: time.Nanosecond},
-		ckksint.RouteBA2BPhaseInfo{
-			WallTime:            2 * time.Nanosecond,
-			PreparationWallTime: time.Nanosecond,
-			OnlineWallTime:      time.Nanosecond,
+		testSetupInfo(),
+		ckksint.GaoFullPackedA2BPhaseInfo{WallTime: time.Nanosecond},
+		ckksint.GaoFullPackedA2BPhaseInfo{
+			WallTime:       2 * time.Nanosecond,
+			OnlineWallTime: time.Nanosecond,
 		},
-		[]uint64{1, 2, 3, 4},
+		[]uint64{1, 2, 3, 4}, testExecutionMetadata(),
 	)
 	if err == nil || !strings.Contains(err.Error(), "five nonzero samples") {
 		t.Fatalf("error=%v", err)

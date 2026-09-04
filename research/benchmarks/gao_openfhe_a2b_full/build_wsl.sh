@@ -9,6 +9,7 @@ readonly source_root="${upstream}/build-acceptance/clean-source"
 readonly build_dir="${upstream}/build-acceptance/clean-build"
 readonly source_name="gao-openfhe-a2b-full.cpp"
 readonly target_source="${source_root}/src/pke/examples/${source_name}"
+readonly target_relative="src/pke/examples/${source_name}"
 
 if [[ ! -e "${source_root}/.git" || ! -f "${build_dir}/CMakeCache.txt" ]]; then
     echo "missing pinned fhe-simd-alu checkout or build-acceptance tree" >&2
@@ -24,6 +25,19 @@ if ! git -C "${source_root}" diff --quiet HEAD --; then
     echo "pinned fhe-simd-alu source has tracked modifications" >&2
     exit 1
 fi
+if git -C "${source_root}" ls-files --error-unmatch "${target_relative}" >/dev/null 2>&1; then
+    echo "refusing to overwrite tracked pinned source ${target_relative}" >&2
+    exit 1
+fi
+if [[ -e "${target_source}" ]] && ! cmp -s "${script_dir}/${source_name}" "${target_source}"; then
+    echo "untracked ${target_relative} differs from the focused driver; refusing to overwrite it" >&2
+    exit 1
+fi
+
+cleanup_driver_copy() {
+    rm -f -- "${target_source}"
+}
+trap cleanup_driver_copy EXIT
 
 readonly cache="${build_dir}/CMakeCache.txt"
 for required_setting in \
@@ -38,9 +52,7 @@ for required_setting in \
     fi
 done
 
-if ! cmp -s "${script_dir}/${source_name}" "${target_source}"; then
-    cp "${script_dir}/${source_name}" "${target_source}"
-fi
+cp "${script_dir}/${source_name}" "${target_source}"
 
 if [[ ! -d "${build_dir}/src/pke/CMakeFiles/gao-openfhe-a2b-full.dir" ]]; then
     cmake -S "${source_root}" -B "${build_dir}"

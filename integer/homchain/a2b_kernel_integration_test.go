@@ -683,26 +683,26 @@ func TestGaoA2BKernelSourceHasOneSharedLUTCallAndNoLevelOrScaleRetag(t *testing.
 		!strings.Contains(source, "[2]GaoA2BLUTKind{GaoA2BLUTIdentity, GaoA2BLUTMSB}") {
 		t.Fatal("production source does not bind the named ID-then-MSB shared-call order")
 	}
-	vendorFilename := filepath.Join(filepath.Dir(testFilename), "..", "..", "vendor", "github.com", "tuneinsight", "lattigo", "v6", "circuits", "common", "polynomial", "polynomial_evaluator.go")
-	vendorBytes, err := os.ReadFile(vendorFilename)
+	lattigoFilename := filepath.Join(filepath.Dir(testFilename), "..", "..", "lattigo", "circuits", "common", "polynomial", "polynomial_evaluator.go")
+	lattigoBytes, err := os.ReadFile(lattigoFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	vendorSource := string(vendorBytes)
-	multiStart := strings.Index(vendorSource, "func (eval Evaluator[T]) EvaluateMultiPoly")
+	lattigoSource := string(lattigoBytes)
+	multiStart := strings.Index(lattigoSource, "func (eval Evaluator[T]) EvaluateMultiPoly")
 	if multiStart < 0 {
-		t.Fatal("vendored patched Lattigo EvaluateMultiPoly implementation is missing")
+		t.Fatal("embedded patched Lattigo EvaluateMultiPoly implementation is missing")
 	}
-	multiEndOffset := strings.Index(vendorSource[multiStart:], "// BabyStep")
+	multiEndOffset := strings.Index(lattigoSource[multiStart:], "// BabyStep")
 	if multiEndOffset < 0 {
-		t.Fatal("cannot isolate vendored EvaluateMultiPoly implementation")
+		t.Fatal("cannot isolate embedded EvaluateMultiPoly implementation")
 	}
-	multiBody := vendorSource[multiStart : multiStart+multiEndOffset]
+	multiBody := lattigoSource[multiStart : multiStart+multiEndOffset]
 	if count := strings.Count(multiBody, "powerbasis = NewPowerBasis("); count != 1 {
-		t.Fatalf("vendored EvaluateMultiPoly creates %d power bases, want exactly one shared basis", count)
+		t.Fatalf("embedded EvaluateMultiPoly creates %d power bases, want exactly one shared basis", count)
 	}
 	if strings.Index(multiBody, "powerbasis = NewPowerBasis(") > strings.LastIndex(multiBody, "for i := 0; i < len(p_list); i++ {") {
-		t.Fatal("vendored EvaluateMultiPoly constructs its power basis inside the per-polynomial evaluation loop")
+		t.Fatal("embedded EvaluateMultiPoly constructs its power basis inside the per-polynomial evaluation loop")
 	}
 	params, err := GaoA2BKernelFunctionalParameters()
 	if err != nil {

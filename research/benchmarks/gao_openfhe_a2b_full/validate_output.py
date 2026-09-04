@@ -13,6 +13,14 @@ from typing import Any
 EXPECTED = {
     "schema": "lcpdte-ckksint-a2b-benchmark-v2",
     "implementation": "gao-openfhe-a2b-full",
+    "encryption_mode": "public-key",
+    "factor_storage_mode": "resident-precomputed",
+    "scale_schedule": "openfhe-flexiblemanual-native",
+    "backend_bsgs_plan": "openfhe-auto-dim1-0",
+    "source_revision": "08f1eb87434e7be072cba889270a8400bbffc08e",
+    "source_modified": False,
+    "runtime": "openfhe-fhe-simd-alu",
+    "build_profile": "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON",
     "protocol": "gao-a2b-full-z8-w4-v1",
     "workload_id": "uint8-0to255-x32",
     "packing_id": "n65536-cslots32768-zslots8192-w4",
@@ -30,20 +38,54 @@ EXPECTED = {
     "mismatch_count": 0,
 }
 
+EXPECTED_PARAMETERS = {
+    "comparison_scope": "gao-algorithm-and-aggregate-modulus-bits",
+    "q_moduli_count": 21,
+    "q_log2_aggregate": 904,
+    "p_moduli_count": 7,
+    "p_log2_aggregate": 350,
+    "scaling_modulus_bits": 43,
+    "first_modulus_bits": 43,
+    "multiplicative_depth": 20,
+    "large_digits": 3,
+    "ephemeral_secret_hamming_weight": 32,
+    "level_budget": [3, 2],
+    "openfhe_requested_bsgs_dimensions": [0, 0],
+    "chunk_width": 4,
+    "cutoff_bits": -24,
+}
+
 
 def validate(document: Any) -> None:
     if not isinstance(document, dict):
         raise ValueError("artifact must be a JSON object")
     for field, expected in EXPECTED.items():
         actual = document.get(field)
-        if actual != expected:
+        if type(actual) is not type(expected) or actual != expected:
             raise ValueError(f"{field}={actual!r}, want {expected!r}")
-    if isinstance(document.get("mismatch_count"), bool):
-        raise ValueError("mismatch_count must be an integer")
 
-    host_id = document.get("host_id")
-    if not isinstance(host_id, str) or not host_id.strip():
-        raise ValueError("host_id must be a non-empty string")
+    parameters = document.get("parameters")
+    if not isinstance(parameters, dict):
+        raise ValueError("parameters must be a JSON object")
+    unexpected = sorted(set(parameters) - set(EXPECTED_PARAMETERS))
+    if unexpected:
+        raise ValueError(f"parameters contains unexpected fields: {unexpected!r}")
+    for field, expected in EXPECTED_PARAMETERS.items():
+        actual = parameters.get(field)
+        if isinstance(expected, list):
+            correctly_typed = (
+                isinstance(actual, list)
+                and all(isinstance(value, int) and not isinstance(value, bool) for value in actual)
+            )
+        else:
+            correctly_typed = type(actual) is type(expected)
+        if not correctly_typed or actual != expected:
+            raise ValueError(f"parameters.{field}={actual!r}, want {expected!r}")
+
+    for field in ("host_id", "compiler", "os", "arch"):
+        value = document.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{field} must be a non-empty string")
 
     setup_ns = document.get("setup_nanoseconds")
     if not isinstance(setup_ns, int) or isinstance(setup_ns, bool) or setup_ns <= 0:

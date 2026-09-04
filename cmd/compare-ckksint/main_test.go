@@ -7,11 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/nc26676027/LCPDTE/internal/benchcmp"
 )
 
 func TestCLIComparesCanonicalArtifactsAndWritesJSON(t *testing.T) {
-	openfhe := writeCanonicalArtifact(t, "gao-openfhe-a2b-sparse", "one-ciphertext", canonicalSamples(10_000_000_000))
-	lattigo := writeCanonicalArtifact(t, "lattigo-route-b", "two-serial-ciphertexts", canonicalSamples(8_000_000_000))
+	openfhe := writeCanonicalArtifact(t, "gao-openfhe-a2b-full", "two-ciphertexts-low4-high4", canonicalSamples(10_000_000_000))
+	lattigo := writeCanonicalArtifact(t, "lattigo-gao-a2b-full", "two-ciphertexts-low4-high4", canonicalSamples(8_000_000_000))
 	output := filepath.Join(t.TempDir(), "comparison.json")
 
 	command := exec.Command("go", "run", ".", "-openfhe-json", openfhe, "-lattigo-json", lattigo, "-out", output)
@@ -40,6 +42,7 @@ func TestCLIComparesCanonicalArtifactsAndWritesJSON(t *testing.T) {
 		Comparison struct {
 			MeanRatio       float64 `json:"mean_latency_ratio_lattigo_over_openfhe"`
 			ThroughputRatio float64 `json:"effective_throughput_ratio_lattigo_over_openfhe"`
+			Pass            bool    `json:"pass"`
 		} `json:"comparison"`
 	}
 	if err = json.Unmarshal(payload, &summary); err != nil {
@@ -47,19 +50,19 @@ func TestCLIComparesCanonicalArtifactsAndWritesJSON(t *testing.T) {
 	}
 	if summary.Schema != "lcpdte-ckksint-a2b-comparison-v2" ||
 		summary.OpenFHE.Provenance != openfhe || summary.Lattigo.Provenance != lattigo ||
-		summary.Comparison.MeanRatio != 0.8 || summary.Comparison.ThroughputRatio != 1.25 {
+		summary.Comparison.MeanRatio != 0.8 || summary.Comparison.ThroughputRatio != 1.25 || !summary.Comparison.Pass {
 		t.Fatalf("JSON summary=%+v", summary)
 	}
 }
 
 func TestCLIExitsNonzeroForUnmatchedCanonicalArtifacts(t *testing.T) {
-	openfhe := writeCanonicalArtifact(t, "gao-openfhe-a2b-sparse", "one-ciphertext", canonicalSamples(10_000_000_000))
-	lattigo := writeCanonicalArtifact(t, "lattigo-route-b", "two-serial-ciphertexts", canonicalSamples(8_000_000_000))
+	openfhe := writeCanonicalArtifact(t, "gao-openfhe-a2b-full", "two-ciphertexts-low4-high4", canonicalSamples(10_000_000_000))
+	lattigo := writeCanonicalArtifact(t, "lattigo-gao-a2b-full", "two-ciphertexts-low4-high4", canonicalSamples(8_000_000_000))
 	payload, err := os.ReadFile(lattigo)
 	if err != nil {
 		t.Fatal(err)
 	}
-	payload = []byte(strings.Replace(string(payload), `"useful_words":512`, `"useful_words":256`, 1))
+	payload = []byte(strings.Replace(string(payload), `"useful_words":8192`, `"useful_words":4096`, 1))
 	if err = os.WriteFile(lattigo, payload, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +72,22 @@ func TestCLIExitsNonzeroForUnmatchedCanonicalArtifacts(t *testing.T) {
 	if err == nil {
 		t.Fatalf("command succeeded:\n%s", output)
 	}
-	if !strings.Contains(string(output), "useful_words mismatch") {
+	if !strings.Contains(string(output), "useful_words=4096, want 8192") {
+		t.Fatalf("output:\n%s", output)
+	}
+}
+
+func TestCLIExitsNonzeroWhenLattigoFailsPerformanceParity(t *testing.T) {
+	openfhe := writeCanonicalArtifact(t, "gao-openfhe-a2b-full", "two-ciphertexts-low4-high4", canonicalSamples(10_000_000_000))
+	lattigo := writeCanonicalArtifact(t, "lattigo-gao-a2b-full", "two-ciphertexts-low4-high4", canonicalSamples(12_000_000_000))
+
+	command := exec.Command("go", "run", ".", "-openfhe-json", openfhe, "-lattigo-json", lattigo)
+	output, err := command.CombinedOutput()
+	if err == nil {
+		t.Fatalf("command succeeded:\n%s", output)
+	}
+	if !strings.Contains(string(output), "performance parity gate failed") ||
+		!strings.Contains(string(output), "both must be <=1") {
 		t.Fatalf("output:\n%s", output)
 	}
 }
@@ -90,7 +108,7 @@ func TestCLIExitsNonzeroForTruncatedCanonicalJSON(t *testing.T) {
 	if err := os.WriteFile(openfhe, []byte(`{"schema":"lcpdte-ckksint-a2b-benchmark-v2"`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	lattigo := writeCanonicalArtifact(t, "lattigo-route-b", "two-serial-ciphertexts", canonicalSamples(8_000_000_000))
+	lattigo := writeCanonicalArtifact(t, "lattigo-gao-a2b-full", "two-ciphertexts-low4-high4", canonicalSamples(8_000_000_000))
 
 	command := exec.Command("go", "run", ".", "-openfhe-json", openfhe, "-lattigo-json", lattigo)
 	output, err := command.CombinedOutput()
@@ -106,36 +124,77 @@ func canonicalSamples(center uint64) []uint64 {
 	return []uint64{center - 1_000_000_000, center + 1_000_000_000, center, center + 2_000_000_000, center - 2_000_000_000}
 }
 
+func TestCLIRejectsSerialOutputContainer(t *testing.T) {
+	openfhe := writeCanonicalArtifact(t, "gao-openfhe-a2b-full", "two-ciphertexts-low4-high4", canonicalSamples(10_000_000_000))
+	lattigo := writeCanonicalArtifact(t, "lattigo-gao-a2b-full", "two-serial-ciphertexts-low4-high4", canonicalSamples(8_000_000_000))
+
+	command := exec.Command("go", "run", ".", "-openfhe-json", openfhe, "-lattigo-json", lattigo)
+	output, err := command.CombinedOutput()
+	if err == nil {
+		t.Fatalf("command succeeded:\n%s", output)
+	}
+	if !strings.Contains(string(output), "two-ciphertexts-low4-high4") {
+		t.Fatalf("output:\n%s", output)
+	}
+}
+
 func writeCanonicalArtifact(t *testing.T, implementation, outputContainer string, samples []uint64) string {
 	t.Helper()
 	payload := struct {
-		Schema                  string   `json:"schema"`
-		Implementation          string   `json:"implementation"`
-		HostID                  string   `json:"host_id"`
-		Protocol                string   `json:"protocol"`
-		WorkloadID              string   `json:"workload_id"`
-		PackingID               string   `json:"packing_id"`
-		OutputContainer         string   `json:"output_container"`
-		WordBits                uint32   `json:"word_bits"`
-		RingDimension           uint32   `json:"ring_dimension"`
-		PackingSlots            uint32   `json:"packing_slots"`
-		UsefulWords             uint32   `json:"useful_words"`
-		Threads                 uint32   `json:"threads"`
-		TimingScope             string   `json:"timing_scope"`
-		SetupNanoseconds        uint64   `json:"setup_nanoseconds"`
-		WarmupCount             uint32   `json:"warmup_count"`
-		WarmupVerified          bool     `json:"warmup_verified"`
-		RepeatCount             uint32   `json:"repeat_count"`
-		TimedSamplesNanoseconds []uint64 `json:"timed_samples_nanoseconds"`
-		MismatchCount           uint64   `json:"mismatch_count"`
-		VerifiedEvaluations     uint32   `json:"verified_evaluations"`
+		Schema                  string                          `json:"schema"`
+		Implementation          string                          `json:"implementation"`
+		HostID                  string                          `json:"host_id"`
+		EncryptionMode          string                          `json:"encryption_mode"`
+		FactorStorageMode       string                          `json:"factor_storage_mode"`
+		ScaleSchedule           string                          `json:"scale_schedule"`
+		BackendBSGSPlan         string                          `json:"backend_bsgs_plan"`
+		SourceRevision          string                          `json:"source_revision"`
+		SourceModified          bool                            `json:"source_modified"`
+		Runtime                 string                          `json:"runtime"`
+		Compiler                string                          `json:"compiler"`
+		BuildProfile            string                          `json:"build_profile"`
+		OS                      string                          `json:"os"`
+		Arch                    string                          `json:"arch"`
+		Protocol                string                          `json:"protocol"`
+		WorkloadID              string                          `json:"workload_id"`
+		PackingID               string                          `json:"packing_id"`
+		OutputContainer         string                          `json:"output_container"`
+		WordBits                uint32                          `json:"word_bits"`
+		RingDimension           uint32                          `json:"ring_dimension"`
+		PackingSlots            uint32                          `json:"packing_slots"`
+		UsefulWords             uint32                          `json:"useful_words"`
+		Parameters              *benchcmp.GaoParameterSemantics `json:"parameters"`
+		Threads                 uint32                          `json:"threads"`
+		TimingScope             string                          `json:"timing_scope"`
+		SetupNanoseconds        uint64                          `json:"setup_nanoseconds"`
+		WarmupCount             uint32                          `json:"warmup_count"`
+		WarmupVerified          bool                            `json:"warmup_verified"`
+		RepeatCount             uint32                          `json:"repeat_count"`
+		TimedSamplesNanoseconds []uint64                        `json:"timed_samples_nanoseconds"`
+		MismatchCount           uint64                          `json:"mismatch_count"`
+		VerifiedEvaluations     uint32                          `json:"verified_evaluations"`
 	}{
 		Schema: "lcpdte-ckksint-a2b-benchmark-v2", Implementation: implementation,
-		HostID: "ryzen-7-h-255", Protocol: "gao-zheng-int8-a2b-n8-w4", WorkloadID: "signed-int8-512-fixed-v1",
-		PackingID: "complex-slots-2048-words-512-v1", OutputContainer: outputContainer,
-		WordBits: 8, RingDimension: 65_536, PackingSlots: 2_048, UsefulWords: 512, Threads: 1,
+		HostID: "ryzen-7-h-255", EncryptionMode: "public-key",
+		FactorStorageMode: "resident-precomputed", ScaleSchedule: "openfhe-flexiblemanual-native",
+		BackendBSGSPlan: "openfhe-auto-dim1-0", SourceRevision: "08f1eb87434e7be072cba889270a8400bbffc08e",
+		Runtime: "openfhe-fhe-simd-alu", Compiler: "clang version 14.0.0",
+		BuildProfile: "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON",
+		OS:           "linux", Arch: "amd64", Protocol: "gao-a2b-full-z8-w4-v1", WorkloadID: "uint8-0to255-x32",
+		PackingID: "n65536-cslots32768-zslots8192-w4", OutputContainer: outputContainer,
+		WordBits: 8, RingDimension: 65_536, PackingSlots: 32_768, UsefulWords: 8_192,
+		Parameters: benchcmp.CanonicalGaoParameters(), Threads: 1,
 		TimingScope: "prepared-online", SetupNanoseconds: 2_000_000_000, WarmupCount: 1, WarmupVerified: true,
 		RepeatCount: uint32(len(samples)), TimedSamplesNanoseconds: samples, VerifiedEvaluations: uint32(len(samples)),
+	}
+	if implementation == "lattigo-gao-a2b-full" {
+		payload.FactorStorageMode = "resident-prevalidated"
+		payload.ScaleSchedule = "lattigo-explicit-level-scale-native"
+		payload.BackendBSGSPlan = "lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-optimized"
+		payload.SourceRevision = "lattigo-test-revision"
+		payload.Runtime = "lattigo-v6"
+		payload.Compiler = "go1.25.0"
+		payload.BuildProfile = "go-build"
 	}
 	encoded, err := json.Marshal(payload)
 	if err != nil {

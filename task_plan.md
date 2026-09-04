@@ -193,6 +193,17 @@ delivery remain later gates.
 - [x] Run focused/full affected tests, static checks, end-to-end example, independent Standards/Spec review, and commit on `main` without pushing.
 - **Status:** COMPLETE; final Lattigo and OpenFHE artifacts are correctness-verified, the focused matched OpenFHE candidate is rejected before timing, affected tests/static checks and the public example pass, and both independent reviews report no P0--P2 findings. The accepted change is committed on `main` without pushing.
 
+### Phase 11: Full-packed, same-host OpenFHE parity
+
+- [x] Freeze the acceptance gate: same physical host and WSL instance, pinned Gao/OpenFHE source, `N=65536`, `zN=8`, `w=4`, 32,768 complex slots, 8,192 useful bytes, one warmup, five verified timed calls, and one execution thread.
+- [x] Establish the red-capable feedback loop with the strict artifact comparator; the current Lattigo L11 artifact is rejected because it carries only 2,048 complex slots and 512 useful words.
+- [x] Implement a public reusable Lattigo Route-B full-packed session with the exact matched workload and complete 65,536-bit verification.
+- [x] Remove or redesign the measured full-packed memory and compute bottlenecks without weakening ciphertext correctness, parameter identity, or the first-operation setup gate.
+- [ ] Rerun Gao/OpenFHE locally immediately before the final Lattigo run and preserve both raw artifacts plus whole-process resource records.
+- [ ] Require strict artifact identity and `Lattigo mean online <= OpenFHE mean online`; do not substitute cross-host, source-reported, sparse, or native-packing ratios.
+- [ ] Add an end-to-end full-packed example/benchmark path, run affected tests and static checks, complete independent Standards/Spec review, and commit locally on `main` without pushing.
+- **Status:** implementation and full 8,192-word E2E are green; clean-revision same-host OpenFHE/Lattigo measurement, strict parity decision, final review and local commit remain.
+
 ## Candidate Research Questions
 
 1. Which algebraic, packing, and lazy-key-switch properties give the CCS 2026 CKKS evaluator its reported low complexity, and how do its separate BFV/BGV/TFHE baselines affect the comparison?

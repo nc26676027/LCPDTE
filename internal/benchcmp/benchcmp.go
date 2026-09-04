@@ -17,20 +17,40 @@ import (
 )
 
 const (
-	GaoOpenFHESource          = "gao-openfhe-benchmark-full"
-	LattigoRouteBSource       = "lattigo-route-b-l11-a2b-full"
-	CanonicalBenchmarkSchema  = "lcpdte-ckksint-a2b-benchmark-v2"
-	ComparisonSchema          = "lcpdte-ckksint-a2b-comparison-v2"
-	TimingScopePreparedOnline = "prepared-online"
-	lattigoRouteBSchema       = "lcpdte-route-b-l11-a2b-full-result-v1"
-	gaoWarmupCount            = 1
-	gaoRepeatCount            = 5
-	lattigoWarmupCount        = 0
-	lattigoRepeatCount        = 1
-	canonicalLogN             = 16
-	canonicalWordBits         = 8
-	canonicalSlots            = 2048
-	canonicalWords            = 512
+	GaoOpenFHESource            = "gao-openfhe-benchmark-full"
+	LattigoRouteBSource         = "lattigo-route-b-l11-a2b-full"
+	CanonicalBenchmarkSchema    = "lcpdte-ckksint-a2b-benchmark-v2"
+	ComparisonSchema            = "lcpdte-ckksint-a2b-comparison-v2"
+	TimingScopePreparedOnline   = "prepared-online"
+	GaoParameterComparisonScope = "gao-algorithm-and-aggregate-modulus-bits"
+	GaoFullProtocol             = "gao-a2b-full-z8-w4-v1"
+	GaoFullWorkloadID           = "uint8-0to255-x32"
+	GaoFullPackingID            = "n65536-cslots32768-zslots8192-w4"
+	GaoFullOutputContainer      = "two-ciphertexts-low4-high4"
+	FocusedOpenFHESource        = "gao-openfhe-a2b-full"
+	FocusedLattigoSource        = "lattigo-gao-a2b-full"
+	EncryptionModePublicKey     = "public-key"
+	OpenFHEFactorStorageMode    = "resident-precomputed"
+	LattigoFactorStorageMode    = "resident-prevalidated"
+	OpenFHEScaleSchedule        = "openfhe-flexiblemanual-native"
+	LattigoScaleSchedule        = "lattigo-explicit-level-scale-native"
+	OpenFHEBackendBSGSPlan      = "openfhe-auto-dim1-0"
+	LattigoBackendBSGSPlan      = "lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-optimized"
+	OpenFHEPinnedSourceRevision = "08f1eb87434e7be072cba889270a8400bbffc08e"
+	OpenFHERuntime              = "openfhe-fhe-simd-alu"
+	OpenFHEBuildProfile         = "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON"
+	lattigoRouteBSchema         = "lcpdte-route-b-l11-a2b-full-result-v1"
+	gaoWarmupCount              = 1
+	gaoRepeatCount              = 5
+	lattigoWarmupCount          = 0
+	lattigoRepeatCount          = 1
+	canonicalLogN               = 16
+	canonicalWordBits           = 8
+	canonicalRingDimension      = 1 << canonicalLogN
+	canonicalPackingSlots       = 32768
+	canonicalUsefulWords        = 8192
+	legacyRouteBSlots           = 2048
+	legacyRouteBWords           = 512
 )
 
 var (
@@ -43,31 +63,84 @@ var (
 
 // Measurement is one whole-call A2B timing and its effective packed workload.
 type Measurement struct {
-	Source                  string   `json:"source"`
-	Provenance              string   `json:"provenance"`
-	HostID                  string   `json:"host_id"`
-	Protocol                string   `json:"protocol"`
-	WorkloadID              string   `json:"workload_id"`
-	PackingID               string   `json:"packing_id"`
-	OutputContainer         string   `json:"output_container,omitempty"`
-	WordBits                uint32   `json:"word_bits"`
-	RingDimension           uint32   `json:"ring_dimension"`
-	PackingSlots            uint32   `json:"packing_slots"`
-	UsefulWords             uint32   `json:"useful_words"`
-	Threads                 uint32   `json:"threads"`
-	TimingScope             string   `json:"timing_scope"`
-	SetupNanoseconds        uint64   `json:"setup_nanoseconds"`
-	Warmup                  uint32   `json:"warmup_count"`
-	WarmupVerified          bool     `json:"warmup_verified"`
-	Repeats                 uint32   `json:"repeat_count"`
-	TimedSamplesNanoseconds []uint64 `json:"timed_samples_nanoseconds"`
-	VerifiedEvaluations     uint32   `json:"verified_evaluations"`
-	MismatchCount           uint64   `json:"mismatch_count"`
-	A2BMeanNanoseconds      float64  `json:"a2b_mean_nanoseconds"`
-	A2BMedianNanoseconds    float64  `json:"a2b_median_nanoseconds"`
-	EffectiveWordsPerSecond float64  `json:"effective_words_per_second"`
-	A2BLatencyNanoseconds   uint64   `json:"a2b_latency_nanoseconds,omitempty"`
-	Lanes                   uint32   `json:"lanes,omitempty"`
+	Source                  string                 `json:"source"`
+	Provenance              string                 `json:"provenance"`
+	HostID                  string                 `json:"host_id"`
+	EncryptionMode          string                 `json:"encryption_mode"`
+	FactorStorageMode       string                 `json:"factor_storage_mode"`
+	ScaleSchedule           string                 `json:"scale_schedule"`
+	BackendBSGSPlan         string                 `json:"backend_bsgs_plan"`
+	SourceRevision          string                 `json:"source_revision"`
+	SourceModified          bool                   `json:"source_modified"`
+	Runtime                 string                 `json:"runtime"`
+	Compiler                string                 `json:"compiler"`
+	BuildProfile            string                 `json:"build_profile"`
+	OS                      string                 `json:"os"`
+	Arch                    string                 `json:"arch"`
+	Protocol                string                 `json:"protocol"`
+	WorkloadID              string                 `json:"workload_id"`
+	PackingID               string                 `json:"packing_id"`
+	OutputContainer         string                 `json:"output_container,omitempty"`
+	WordBits                uint32                 `json:"word_bits"`
+	RingDimension           uint32                 `json:"ring_dimension"`
+	PackingSlots            uint32                 `json:"packing_slots"`
+	UsefulWords             uint32                 `json:"useful_words"`
+	Parameters              *GaoParameterSemantics `json:"parameters"`
+	Threads                 uint32                 `json:"threads"`
+	TimingScope             string                 `json:"timing_scope"`
+	SetupNanoseconds        uint64                 `json:"setup_nanoseconds"`
+	Warmup                  uint32                 `json:"warmup_count"`
+	WarmupVerified          bool                   `json:"warmup_verified"`
+	Repeats                 uint32                 `json:"repeat_count"`
+	TimedSamplesNanoseconds []uint64               `json:"timed_samples_nanoseconds"`
+	VerifiedEvaluations     uint32                 `json:"verified_evaluations"`
+	MismatchCount           uint64                 `json:"mismatch_count"`
+	A2BMeanNanoseconds      float64                `json:"a2b_mean_nanoseconds"`
+	A2BMedianNanoseconds    float64                `json:"a2b_median_nanoseconds"`
+	EffectiveWordsPerSecond float64                `json:"effective_words_per_second"`
+	A2BLatencyNanoseconds   uint64                 `json:"a2b_latency_nanoseconds,omitempty"`
+	Lanes                   uint32                 `json:"lanes,omitempty"`
+}
+
+// GaoParameterSemantics records the algorithm parameters and aggregate
+// modulus sizes that must match across backends. It deliberately does not
+// claim that the generated RNS primes are identical.
+type GaoParameterSemantics struct {
+	ComparisonScope                string    `json:"comparison_scope"`
+	QModuliCount                   uint32    `json:"q_moduli_count"`
+	QLog2Aggregate                 uint32    `json:"q_log2_aggregate"`
+	PModuliCount                   uint32    `json:"p_moduli_count"`
+	PLog2Aggregate                 uint32    `json:"p_log2_aggregate"`
+	ScalingModulusBits             uint32    `json:"scaling_modulus_bits"`
+	FirstModulusBits               uint32    `json:"first_modulus_bits"`
+	MultiplicativeDepth            uint32    `json:"multiplicative_depth"`
+	LargeDigits                    uint32    `json:"large_digits"`
+	EphemeralSecretHammingWeight   uint32    `json:"ephemeral_secret_hamming_weight"`
+	LevelBudget                    [2]uint32 `json:"level_budget"`
+	OpenFHERequestedBSGSDimensions [2]uint32 `json:"openfhe_requested_bsgs_dimensions"`
+	ChunkWidth                     uint32    `json:"chunk_width"`
+	CutoffBits                     int32     `json:"cutoff_bits"`
+}
+
+// CanonicalGaoParameters returns the parameter contract shared by the focused
+// Gao/OpenFHE and Lattigo full-packed A2B benchmarks.
+func CanonicalGaoParameters() *GaoParameterSemantics {
+	return &GaoParameterSemantics{
+		ComparisonScope:                GaoParameterComparisonScope,
+		QModuliCount:                   21,
+		QLog2Aggregate:                 904,
+		PModuliCount:                   7,
+		PLog2Aggregate:                 350,
+		ScalingModulusBits:             43,
+		FirstModulusBits:               43,
+		MultiplicativeDepth:            20,
+		LargeDigits:                    3,
+		EphemeralSecretHammingWeight:   32,
+		LevelBudget:                    [2]uint32{3, 2},
+		OpenFHERequestedBSGSDimensions: [2]uint32{0, 0},
+		ChunkWidth:                     4,
+		CutoffBits:                     -24,
+	}
 }
 
 // Comparison records ratios derived from matched, verified online samples.
@@ -75,6 +148,9 @@ type Comparison struct {
 	MeanLatencyRatioLattigoOverOpenFHE         float64 `json:"mean_latency_ratio_lattigo_over_openfhe"`
 	MedianLatencyRatioLattigoOverOpenFHE       float64 `json:"median_latency_ratio_lattigo_over_openfhe"`
 	EffectiveThroughputRatioLattigoOverOpenFHE float64 `json:"effective_throughput_ratio_lattigo_over_openfhe"`
+	MeanNotSlower                              bool    `json:"mean_not_slower"`
+	MedianNotSlower                            bool    `json:"median_not_slower"`
+	Pass                                       bool    `json:"pass"`
 }
 
 // Summary is the stable comparison document emitted by compare-ckksint.
@@ -88,11 +164,11 @@ type Summary struct {
 // Compare admits only matched single-thread prepared-online measurements and
 // derives every aggregate from their verified, nonzero timed samples.
 func Compare(openfhe, lattigo Measurement) (Summary, error) {
-	if !strings.HasPrefix(openfhe.Source, "gao-openfhe-a2b-") {
-		return Summary{}, fmt.Errorf("compare A2B artifacts: OpenFHE implementation=%q, want gao-openfhe-a2b-*", openfhe.Source)
+	if openfhe.Source != FocusedOpenFHESource {
+		return Summary{}, fmt.Errorf("compare A2B artifacts: OpenFHE implementation=%q, want %q", openfhe.Source, FocusedOpenFHESource)
 	}
-	if lattigo.Source != "lattigo-route-b" {
-		return Summary{}, fmt.Errorf("compare A2B artifacts: Lattigo implementation=%q, want lattigo-route-b", lattigo.Source)
+	if lattigo.Source != FocusedLattigoSource {
+		return Summary{}, fmt.Errorf("compare A2B artifacts: Lattigo implementation=%q, want %q", lattigo.Source, FocusedLattigoSource)
 	}
 	if openfhe.WordBits != lattigo.WordBits {
 		return Summary{}, fmt.Errorf("compare A2B artifacts: word_bits mismatch: OpenFHE=%d Lattigo=%d", openfhe.WordBits, lattigo.WordBits)
@@ -121,6 +197,12 @@ func Compare(openfhe, lattigo Measurement) (Summary, error) {
 	if openfhe.HostID != lattigo.HostID {
 		return Summary{}, fmt.Errorf("compare A2B artifacts: host_id mismatch: OpenFHE=%q Lattigo=%q", openfhe.HostID, lattigo.HostID)
 	}
+	if openfhe.OS != lattigo.OS {
+		return Summary{}, fmt.Errorf("compare A2B artifacts: os mismatch: OpenFHE=%q Lattigo=%q", openfhe.OS, lattigo.OS)
+	}
+	if openfhe.Arch != lattigo.Arch {
+		return Summary{}, fmt.Errorf("compare A2B artifacts: arch mismatch: OpenFHE=%q Lattigo=%q", openfhe.Arch, lattigo.Arch)
+	}
 	if openfhe.Protocol != lattigo.Protocol {
 		return Summary{}, fmt.Errorf("compare A2B artifacts: protocol mismatch: OpenFHE=%q Lattigo=%q", openfhe.Protocol, lattigo.Protocol)
 	}
@@ -143,36 +225,63 @@ func Compare(openfhe, lattigo Measurement) (Summary, error) {
 	if lattigo, err = normalizeMeasurement(lattigo); err != nil {
 		return Summary{}, fmt.Errorf("compare A2B artifacts: Lattigo: %w", err)
 	}
-	return Summary{
+	if openfhe.OutputContainer != GaoFullOutputContainer {
+		return Summary{}, fmt.Errorf("compare A2B artifacts: OpenFHE output_container=%q, want %q", openfhe.OutputContainer, GaoFullOutputContainer)
+	}
+	if lattigo.OutputContainer != GaoFullOutputContainer {
+		return Summary{}, fmt.Errorf("compare A2B artifacts: Lattigo output_container=%q, want %q", lattigo.OutputContainer, GaoFullOutputContainer)
+	}
+
+	meanRatio := lattigo.A2BMeanNanoseconds / openfhe.A2BMeanNanoseconds
+	medianRatio := lattigo.A2BMedianNanoseconds / openfhe.A2BMedianNanoseconds
+	meanPass := meanRatio <= 1
+	medianPass := medianRatio <= 1
+	summary := Summary{
 		Schema:  ComparisonSchema,
 		OpenFHE: openfhe,
 		Lattigo: lattigo,
 		Comparison: Comparison{
-			MeanLatencyRatioLattigoOverOpenFHE:         lattigo.A2BMeanNanoseconds / openfhe.A2BMeanNanoseconds,
-			MedianLatencyRatioLattigoOverOpenFHE:       lattigo.A2BMedianNanoseconds / openfhe.A2BMedianNanoseconds,
+			MeanLatencyRatioLattigoOverOpenFHE:         meanRatio,
+			MedianLatencyRatioLattigoOverOpenFHE:       medianRatio,
 			EffectiveThroughputRatioLattigoOverOpenFHE: lattigo.EffectiveWordsPerSecond / openfhe.EffectiveWordsPerSecond,
+			MeanNotSlower:   meanPass,
+			MedianNotSlower: medianPass,
+			Pass:            meanPass && medianPass,
 		},
-	}, nil
+	}
+	if !summary.Comparison.Pass {
+		return summary, fmt.Errorf(
+			"performance parity gate failed: Lattigo/OpenFHE mean ratio=%.6f (pass=%t), median ratio=%.6f (pass=%t); both must be <=1",
+			meanRatio, meanPass, medianRatio, medianPass,
+		)
+	}
+	return summary, nil
 }
 
 // FormatText renders a deterministic, line-oriented human summary.
 func FormatText(summary Summary) string {
 	return fmt.Sprintf(
-		"schema=%s\n%s\n%s\ncomparison mean_latency_ratio_lattigo_over_openfhe=%.6f median_latency_ratio_lattigo_over_openfhe=%.6f effective_throughput_ratio_lattigo_over_openfhe=%.6f\n",
+		"schema=%s\n%s\n%s\ncomparison mean_latency_ratio_lattigo_over_openfhe=%.6f median_latency_ratio_lattigo_over_openfhe=%.6f effective_throughput_ratio_lattigo_over_openfhe=%.6f mean_not_slower=%t median_not_slower=%t pass=%t\n",
 		summary.Schema,
 		formatMeasurement("openfhe", summary.OpenFHE),
 		formatMeasurement("lattigo", summary.Lattigo),
 		summary.Comparison.MeanLatencyRatioLattigoOverOpenFHE,
 		summary.Comparison.MedianLatencyRatioLattigoOverOpenFHE,
 		summary.Comparison.EffectiveThroughputRatioLattigoOverOpenFHE,
+		summary.Comparison.MeanNotSlower,
+		summary.Comparison.MedianNotSlower,
+		summary.Comparison.Pass,
 	)
 }
 
 func formatMeasurement(label string, measurement Measurement) string {
 	return fmt.Sprintf(
-		"%s implementation=%s provenance=%q host_id=%q protocol=%q workload_id=%q packing_id=%q output_container=%q word_bits=%d ring_dimension=%d packing_slots=%d useful_words=%d threads=%d timing_scope=%s setup_ns=%d warmup=%d warmup_verified=%t repeats=%d verified_evaluations=%d mean_ns=%.3f median_ns=%.3f effective_words_per_second=%.6f mismatch_count=%d samples_ns=%v",
-		label, measurement.Source, measurement.Provenance, measurement.HostID, measurement.Protocol,
-		measurement.WorkloadID, measurement.PackingID, measurement.OutputContainer,
+		"%s implementation=%s provenance=%q host_id=%q os=%q arch=%q encryption_mode=%q factor_storage_mode=%q scale_schedule=%q backend_bsgs_plan=%q source_revision=%q source_modified=%t runtime=%q compiler=%q build_profile=%q protocol=%q workload_id=%q packing_id=%q output_container=%q word_bits=%d ring_dimension=%d packing_slots=%d useful_words=%d threads=%d timing_scope=%s setup_ns=%d warmup=%d warmup_verified=%t repeats=%d verified_evaluations=%d mean_ns=%.3f median_ns=%.3f effective_words_per_second=%.6f mismatch_count=%d samples_ns=%v",
+		label, measurement.Source, measurement.Provenance, measurement.HostID,
+		measurement.OS, measurement.Arch, measurement.EncryptionMode, measurement.FactorStorageMode,
+		measurement.ScaleSchedule, measurement.BackendBSGSPlan, measurement.SourceRevision,
+		measurement.SourceModified, measurement.Runtime, measurement.Compiler, measurement.BuildProfile,
+		measurement.Protocol, measurement.WorkloadID, measurement.PackingID, measurement.OutputContainer,
 		measurement.WordBits, measurement.RingDimension, measurement.PackingSlots, measurement.UsefulWords,
 		measurement.Threads, measurement.TimingScope, measurement.SetupNanoseconds,
 		measurement.Warmup, measurement.WarmupVerified, measurement.Repeats, measurement.VerifiedEvaluations,
@@ -194,32 +303,48 @@ func MarshalJSON(summary Summary) ([]byte, error) {
 // focused implementations. Statistics are deliberately absent: consumers
 // derive them from TimedSamplesNanoseconds after validating the protocol.
 type CanonicalArtifact struct {
-	Schema                  string     `json:"schema"`
-	Implementation          string     `json:"implementation"`
-	CompletedAt             *time.Time `json:"completed_at,omitempty"`
-	HostID                  string     `json:"host_id"`
-	Protocol                string     `json:"protocol"`
-	WorkloadID              string     `json:"workload_id"`
-	PackingID               string     `json:"packing_id"`
-	OutputContainer         string     `json:"output_container,omitempty"`
-	WordBits                uint32     `json:"word_bits"`
-	RingDimension           uint32     `json:"ring_dimension"`
-	PackingSlots            uint32     `json:"packing_slots"`
-	UsefulWords             uint32     `json:"useful_words"`
-	Threads                 uint32     `json:"threads"`
-	TimingScope             string     `json:"timing_scope"`
-	SetupNanoseconds        uint64     `json:"setup_nanoseconds"`
-	WarmupCount             uint32     `json:"warmup_count"`
-	WarmupVerified          bool       `json:"warmup_verified"`
-	RepeatCount             uint32     `json:"repeat_count"`
-	TimedSamplesNanoseconds []uint64   `json:"timed_samples_nanoseconds"`
-	MismatchCount           uint64     `json:"mismatch_count"`
-	VerifiedEvaluations     uint32     `json:"verified_evaluations"`
+	Schema                  string                 `json:"schema"`
+	Implementation          string                 `json:"implementation"`
+	CompletedAt             *time.Time             `json:"completed_at,omitempty"`
+	HostID                  string                 `json:"host_id"`
+	EncryptionMode          string                 `json:"encryption_mode"`
+	FactorStorageMode       string                 `json:"factor_storage_mode"`
+	ScaleSchedule           string                 `json:"scale_schedule"`
+	BackendBSGSPlan         string                 `json:"backend_bsgs_plan"`
+	SourceRevision          string                 `json:"source_revision"`
+	SourceModified          bool                   `json:"source_modified"`
+	Runtime                 string                 `json:"runtime"`
+	Compiler                string                 `json:"compiler"`
+	BuildProfile            string                 `json:"build_profile"`
+	OS                      string                 `json:"os"`
+	Arch                    string                 `json:"arch"`
+	Protocol                string                 `json:"protocol"`
+	WorkloadID              string                 `json:"workload_id"`
+	PackingID               string                 `json:"packing_id"`
+	OutputContainer         string                 `json:"output_container,omitempty"`
+	WordBits                uint32                 `json:"word_bits"`
+	RingDimension           uint32                 `json:"ring_dimension"`
+	PackingSlots            uint32                 `json:"packing_slots"`
+	UsefulWords             uint32                 `json:"useful_words"`
+	Parameters              *GaoParameterSemantics `json:"parameters"`
+	Threads                 uint32                 `json:"threads"`
+	TimingScope             string                 `json:"timing_scope"`
+	SetupNanoseconds        uint64                 `json:"setup_nanoseconds"`
+	WarmupCount             uint32                 `json:"warmup_count"`
+	WarmupVerified          bool                   `json:"warmup_verified"`
+	RepeatCount             uint32                 `json:"repeat_count"`
+	TimedSamplesNanoseconds []uint64               `json:"timed_samples_nanoseconds"`
+	MismatchCount           uint64                 `json:"mismatch_count"`
+	VerifiedEvaluations     uint32                 `json:"verified_evaluations"`
 }
 
 // ParseCanonical parses and validates a v2 focused A2B benchmark artifact.
 func ParseCanonical(input io.Reader, provenance string) (Measurement, error) {
-	decoder := json.NewDecoder(input)
+	payload, err := io.ReadAll(input)
+	if err != nil {
+		return Measurement{}, fmt.Errorf("read canonical A2B benchmark JSON: %w", err)
+	}
+	decoder := json.NewDecoder(bytes.NewReader(payload))
 	decoder.DisallowUnknownFields()
 	var artifact CanonicalArtifact
 	if err := decoder.Decode(&artifact); err != nil {
@@ -235,13 +360,34 @@ func ParseCanonical(input io.Reader, provenance string) (Measurement, error) {
 	if artifact.Schema != CanonicalBenchmarkSchema {
 		return Measurement{}, fmt.Errorf("parse canonical A2B benchmark JSON: schema=%q, want %q", artifact.Schema, CanonicalBenchmarkSchema)
 	}
+	var present map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &present); err != nil {
+		return Measurement{}, fmt.Errorf("parse canonical A2B benchmark JSON fields: %w", err)
+	}
+	for _, field := range []string{
+		"encryption_mode", "factor_storage_mode", "scale_schedule", "backend_bsgs_plan",
+		"source_revision", "source_modified", "runtime", "compiler", "build_profile", "os", "arch",
+	} {
+		if _, ok := present[field]; !ok {
+			return Measurement{}, fmt.Errorf("parse canonical A2B benchmark JSON: %s is required", field)
+		}
+	}
+	if !bytes.Equal(bytes.TrimSpace(present["source_modified"]), []byte("false")) {
+		return Measurement{}, fmt.Errorf("parse canonical A2B benchmark JSON: source_modified must be boolean false")
+	}
 
 	measurement, err := normalizeMeasurement(Measurement{
 		Source: artifact.Implementation, Provenance: provenance, HostID: artifact.HostID,
+		EncryptionMode: artifact.EncryptionMode, FactorStorageMode: artifact.FactorStorageMode,
+		ScaleSchedule: artifact.ScaleSchedule, BackendBSGSPlan: artifact.BackendBSGSPlan,
+		SourceRevision: artifact.SourceRevision, SourceModified: artifact.SourceModified,
+		Runtime: artifact.Runtime, Compiler: artifact.Compiler, BuildProfile: artifact.BuildProfile,
+		OS: artifact.OS, Arch: artifact.Arch,
 		Protocol: artifact.Protocol, WorkloadID: artifact.WorkloadID, PackingID: artifact.PackingID,
 		OutputContainer: artifact.OutputContainer, WordBits: artifact.WordBits,
 		RingDimension: artifact.RingDimension, PackingSlots: artifact.PackingSlots,
-		UsefulWords: artifact.UsefulWords, Threads: artifact.Threads, TimingScope: artifact.TimingScope,
+		UsefulWords: artifact.UsefulWords, Parameters: artifact.Parameters,
+		Threads: artifact.Threads, TimingScope: artifact.TimingScope,
 		SetupNanoseconds: artifact.SetupNanoseconds, Warmup: artifact.WarmupCount,
 		WarmupVerified: artifact.WarmupVerified, Repeats: artifact.RepeatCount,
 		TimedSamplesNanoseconds: artifact.TimedSamplesNanoseconds,
@@ -263,26 +409,47 @@ func normalizeMeasurement(measurement Measurement) (Measurement, error) {
 	if strings.TrimSpace(measurement.HostID) == "" {
 		return Measurement{}, fmt.Errorf("host_id is required")
 	}
+	if err := validateExecutionMetadata(measurement); err != nil {
+		return Measurement{}, err
+	}
 	if strings.TrimSpace(measurement.Protocol) == "" {
 		return Measurement{}, fmt.Errorf("protocol is required")
+	}
+	if measurement.Protocol != GaoFullProtocol {
+		return Measurement{}, fmt.Errorf("protocol=%q, want %q", measurement.Protocol, GaoFullProtocol)
 	}
 	if strings.TrimSpace(measurement.WorkloadID) == "" {
 		return Measurement{}, fmt.Errorf("workload_id is required")
 	}
+	if measurement.WorkloadID != GaoFullWorkloadID {
+		return Measurement{}, fmt.Errorf("workload_id=%q, want %q", measurement.WorkloadID, GaoFullWorkloadID)
+	}
 	if strings.TrimSpace(measurement.PackingID) == "" {
 		return Measurement{}, fmt.Errorf("packing_id is required")
+	}
+	if measurement.PackingID != GaoFullPackingID {
+		return Measurement{}, fmt.Errorf("packing_id=%q, want %q", measurement.PackingID, GaoFullPackingID)
+	}
+	if measurement.OutputContainer != GaoFullOutputContainer {
+		return Measurement{}, fmt.Errorf("output_container=%q, want %q", measurement.OutputContainer, GaoFullOutputContainer)
 	}
 	if measurement.WordBits != canonicalWordBits {
 		return Measurement{}, fmt.Errorf("word_bits=%d, want %d", measurement.WordBits, canonicalWordBits)
 	}
-	if measurement.RingDimension == 0 {
-		return Measurement{}, fmt.Errorf("ring_dimension must be nonzero")
+	if measurement.RingDimension != canonicalRingDimension {
+		return Measurement{}, fmt.Errorf("ring_dimension=%d, want %d", measurement.RingDimension, canonicalRingDimension)
 	}
-	if measurement.PackingSlots == 0 {
-		return Measurement{}, fmt.Errorf("packing_slots must be nonzero")
+	if measurement.PackingSlots != canonicalPackingSlots {
+		return Measurement{}, fmt.Errorf("packing_slots=%d, want %d", measurement.PackingSlots, canonicalPackingSlots)
 	}
-	if measurement.UsefulWords == 0 || measurement.UsefulWords > measurement.PackingSlots {
-		return Measurement{}, fmt.Errorf("useful_words=%d, want 1..%d", measurement.UsefulWords, measurement.PackingSlots)
+	if measurement.UsefulWords != canonicalUsefulWords {
+		return Measurement{}, fmt.Errorf("useful_words=%d, want %d", measurement.UsefulWords, canonicalUsefulWords)
+	}
+	if measurement.Parameters == nil {
+		return Measurement{}, fmt.Errorf("parameters are required")
+	}
+	if err := validateGaoParameters(*measurement.Parameters); err != nil {
+		return Measurement{}, err
 	}
 	if measurement.Threads != 1 {
 		return Measurement{}, fmt.Errorf("threads must be 1, got %d", measurement.Threads)
@@ -293,14 +460,14 @@ func normalizeMeasurement(measurement Measurement) (Measurement, error) {
 	if measurement.SetupNanoseconds == 0 {
 		return Measurement{}, fmt.Errorf("setup_nanoseconds must be nonzero")
 	}
-	if measurement.Warmup == 0 {
-		return Measurement{}, fmt.Errorf("warmup_count must be nonzero")
+	if measurement.Warmup != gaoWarmupCount {
+		return Measurement{}, fmt.Errorf("warmup_count=%d, want %d", measurement.Warmup, gaoWarmupCount)
 	}
 	if !measurement.WarmupVerified {
 		return Measurement{}, fmt.Errorf("warmup_verified must be true")
 	}
-	if measurement.Repeats == 0 {
-		return Measurement{}, fmt.Errorf("repeat_count must be nonzero")
+	if measurement.Repeats != gaoRepeatCount {
+		return Measurement{}, fmt.Errorf("repeat_count=%d, want %d", measurement.Repeats, gaoRepeatCount)
 	}
 	if uint32(len(measurement.TimedSamplesNanoseconds)) != measurement.Repeats {
 		return Measurement{}, fmt.Errorf("timed sample count=%d, want repeat_count=%d", len(measurement.TimedSamplesNanoseconds), measurement.Repeats)
@@ -336,6 +503,110 @@ func normalizeMeasurement(measurement Measurement) (Measurement, error) {
 	measurement.A2BLatencyNanoseconds = 0
 	measurement.Lanes = 0
 	return measurement, nil
+}
+
+func validateExecutionMetadata(measurement Measurement) error {
+	if measurement.EncryptionMode != EncryptionModePublicKey {
+		return fmt.Errorf("encryption_mode=%q, want %q", measurement.EncryptionMode, EncryptionModePublicKey)
+	}
+	for field, value := range map[string]string{
+		"factor_storage_mode": measurement.FactorStorageMode,
+		"scale_schedule":      measurement.ScaleSchedule,
+		"backend_bsgs_plan":   measurement.BackendBSGSPlan,
+		"source_revision":     measurement.SourceRevision,
+		"runtime":             measurement.Runtime,
+		"compiler":            measurement.Compiler,
+		"build_profile":       measurement.BuildProfile,
+		"os":                  measurement.OS,
+		"arch":                measurement.Arch,
+	} {
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf("%s is required", field)
+		}
+	}
+	if measurement.SourceModified {
+		return fmt.Errorf("source_modified must be false")
+	}
+
+	switch measurement.Source {
+	case FocusedOpenFHESource:
+		if measurement.FactorStorageMode != OpenFHEFactorStorageMode {
+			return fmt.Errorf("factor_storage_mode=%q, want %q for %s", measurement.FactorStorageMode, OpenFHEFactorStorageMode, FocusedOpenFHESource)
+		}
+		if measurement.ScaleSchedule != OpenFHEScaleSchedule {
+			return fmt.Errorf("scale_schedule=%q, want %q for %s", measurement.ScaleSchedule, OpenFHEScaleSchedule, FocusedOpenFHESource)
+		}
+		if measurement.BackendBSGSPlan != OpenFHEBackendBSGSPlan {
+			return fmt.Errorf("backend_bsgs_plan=%q, want %q for %s", measurement.BackendBSGSPlan, OpenFHEBackendBSGSPlan, FocusedOpenFHESource)
+		}
+		if measurement.SourceRevision != OpenFHEPinnedSourceRevision {
+			return fmt.Errorf("source_revision=%q, want pinned OpenFHE revision %q", measurement.SourceRevision, OpenFHEPinnedSourceRevision)
+		}
+		if measurement.Runtime != OpenFHERuntime {
+			return fmt.Errorf("runtime=%q, want %q for %s", measurement.Runtime, OpenFHERuntime, FocusedOpenFHESource)
+		}
+		if measurement.BuildProfile != OpenFHEBuildProfile {
+			return fmt.Errorf("build_profile=%q, want %q for %s", measurement.BuildProfile, OpenFHEBuildProfile, FocusedOpenFHESource)
+		}
+	case FocusedLattigoSource:
+		if measurement.FactorStorageMode != LattigoFactorStorageMode {
+			return fmt.Errorf("factor_storage_mode=%q, want %q for %s", measurement.FactorStorageMode, LattigoFactorStorageMode, FocusedLattigoSource)
+		}
+		if measurement.ScaleSchedule != LattigoScaleSchedule {
+			return fmt.Errorf("scale_schedule=%q, want %q for %s", measurement.ScaleSchedule, LattigoScaleSchedule, FocusedLattigoSource)
+		}
+		if measurement.BackendBSGSPlan != LattigoBackendBSGSPlan {
+			return fmt.Errorf("backend_bsgs_plan=%q, want %q for %s", measurement.BackendBSGSPlan, LattigoBackendBSGSPlan, FocusedLattigoSource)
+		}
+	}
+	return nil
+}
+
+func validateGaoParameters(actual GaoParameterSemantics) error {
+	expected := *CanonicalGaoParameters()
+	if actual.ComparisonScope != expected.ComparisonScope {
+		return fmt.Errorf("parameters.comparison_scope=%q, want %q", actual.ComparisonScope, expected.ComparisonScope)
+	}
+	if actual.QModuliCount != expected.QModuliCount {
+		return fmt.Errorf("parameters.q_moduli_count=%d, want %d", actual.QModuliCount, expected.QModuliCount)
+	}
+	if actual.QLog2Aggregate != expected.QLog2Aggregate {
+		return fmt.Errorf("parameters.q_log2_aggregate=%d, want %d", actual.QLog2Aggregate, expected.QLog2Aggregate)
+	}
+	if actual.PModuliCount != expected.PModuliCount {
+		return fmt.Errorf("parameters.p_moduli_count=%d, want %d", actual.PModuliCount, expected.PModuliCount)
+	}
+	if actual.PLog2Aggregate != expected.PLog2Aggregate {
+		return fmt.Errorf("parameters.p_log2_aggregate=%d, want %d", actual.PLog2Aggregate, expected.PLog2Aggregate)
+	}
+	if actual.ScalingModulusBits != expected.ScalingModulusBits {
+		return fmt.Errorf("parameters.scaling_modulus_bits=%d, want %d", actual.ScalingModulusBits, expected.ScalingModulusBits)
+	}
+	if actual.FirstModulusBits != expected.FirstModulusBits {
+		return fmt.Errorf("parameters.first_modulus_bits=%d, want %d", actual.FirstModulusBits, expected.FirstModulusBits)
+	}
+	if actual.MultiplicativeDepth != expected.MultiplicativeDepth {
+		return fmt.Errorf("parameters.multiplicative_depth=%d, want %d", actual.MultiplicativeDepth, expected.MultiplicativeDepth)
+	}
+	if actual.LargeDigits != expected.LargeDigits {
+		return fmt.Errorf("parameters.large_digits=%d, want %d", actual.LargeDigits, expected.LargeDigits)
+	}
+	if actual.EphemeralSecretHammingWeight != expected.EphemeralSecretHammingWeight {
+		return fmt.Errorf("parameters.ephemeral_secret_hamming_weight=%d, want %d", actual.EphemeralSecretHammingWeight, expected.EphemeralSecretHammingWeight)
+	}
+	if actual.LevelBudget != expected.LevelBudget {
+		return fmt.Errorf("parameters.level_budget=%v, want %v", actual.LevelBudget, expected.LevelBudget)
+	}
+	if actual.OpenFHERequestedBSGSDimensions != expected.OpenFHERequestedBSGSDimensions {
+		return fmt.Errorf("parameters.openfhe_requested_bsgs_dimensions=%v, want %v", actual.OpenFHERequestedBSGSDimensions, expected.OpenFHERequestedBSGSDimensions)
+	}
+	if actual.ChunkWidth != expected.ChunkWidth {
+		return fmt.Errorf("parameters.chunk_width=%d, want %d", actual.ChunkWidth, expected.ChunkWidth)
+	}
+	if actual.CutoffBits != expected.CutoffBits {
+		return fmt.Errorf("parameters.cutoff_bits=%d, want %d", actual.CutoffBits, expected.CutoffBits)
+	}
+	return nil
 }
 
 // ParseGaoOpenFHE parses the output of Gao et al.'s benchmark-full in bench mode.
@@ -442,14 +713,14 @@ func ParseLattigoRouteB(input io.Reader, provenance string) (Measurement, error)
 	if result.FirstOperation.LogN != canonicalLogN {
 		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: LogN=%d, want %d", result.FirstOperation.LogN, canonicalLogN)
 	}
-	if result.FirstOperation.PackingSlots != canonicalSlots {
-		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: PackingSlots=%d, want %d", result.FirstOperation.PackingSlots, canonicalSlots)
+	if result.FirstOperation.PackingSlots != legacyRouteBSlots {
+		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: PackingSlots=%d, want %d", result.FirstOperation.PackingSlots, legacyRouteBSlots)
 	}
 	if result.FirstOperation.WordBits != canonicalWordBits {
 		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: WordBits=%d, want %d", result.FirstOperation.WordBits, canonicalWordBits)
 	}
-	if result.FirstOperation.WordCapacity != canonicalWords {
-		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: WordCapacity=%d, want %d", result.FirstOperation.WordCapacity, canonicalWords)
+	if result.FirstOperation.WordCapacity != legacyRouteBWords {
+		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: WordCapacity=%d, want %d", result.FirstOperation.WordCapacity, legacyRouteBWords)
 	}
 	if result.InputWords != result.FirstOperation.WordCapacity {
 		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: input_words=%d, want WordCapacity=%d", result.InputWords, result.FirstOperation.WordCapacity)

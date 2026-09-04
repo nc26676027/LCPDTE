@@ -208,10 +208,17 @@ func TestParseCanonicalDerivesStatisticsFromVerifiedSamples(t *testing.T) {
 	if got.Source != "openfhe" || got.Provenance != "openfhe.json" {
 		t.Fatalf("identity=%+v", got)
 	}
+	if got.EncryptionMode != "public-key" || got.FactorStorageMode != "resident-precomputed" ||
+		got.ScaleSchedule != "openfhe-flexiblemanual-native" || got.BackendBSGSPlan != "openfhe-auto-dim1-0" ||
+		got.SourceRevision != "08f1eb87434e7be072cba889270a8400bbffc08e" || got.SourceModified ||
+		got.Runtime != "openfhe-fhe-simd-alu" || got.Compiler == "" || got.BuildProfile == "" ||
+		got.OS != "linux" || got.Arch != "amd64" {
+		t.Fatalf("execution metadata=%+v", got)
+	}
 	if got.A2BMeanNanoseconds != 10_000_000_000 || got.A2BMedianNanoseconds != 10_000_000_000 {
 		t.Fatalf("aggregates=%+v", got)
 	}
-	if math.Abs(got.EffectiveWordsPerSecond-51.2) > 1e-12 {
+	if math.Abs(got.EffectiveWordsPerSecond-819.2) > 1e-12 {
 		t.Fatalf("words/s=%.12f", got.EffectiveWordsPerSecond)
 	}
 	if got.Repeats != 5 || got.VerifiedEvaluations != 5 || len(got.TimedSamplesNanoseconds) != 5 {
@@ -219,16 +226,145 @@ func TestParseCanonicalDerivesStatisticsFromVerifiedSamples(t *testing.T) {
 	}
 }
 
-func TestParseCanonicalDerivesEvenSampleMedian(t *testing.T) {
+func TestParseCanonicalDerivesMedianFromFiveSamples(t *testing.T) {
 	got, err := benchcmp.ParseCanonical(
-		strings.NewReader(canonicalArtifactJSON("openfhe", []uint64{1, 2, 3, 100})),
+		strings.NewReader(canonicalArtifactJSON("openfhe", []uint64{1, 2, 3, 4, 100})),
 		"openfhe.json",
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.A2BMeanNanoseconds != 26.5 || got.A2BMedianNanoseconds != 2.5 {
+	if got.A2BMeanNanoseconds != 22 || got.A2BMedianNanoseconds != 3 {
 		t.Fatalf("mean=%f median=%f", got.A2BMeanNanoseconds, got.A2BMedianNanoseconds)
+	}
+}
+
+func TestParseCanonicalRequiresReproducibleExecutionMetadata(t *testing.T) {
+	for _, field := range []string{
+		"encryption_mode",
+		"factor_storage_mode",
+		"scale_schedule",
+		"backend_bsgs_plan",
+		"source_revision",
+		"source_modified",
+		"runtime",
+		"compiler",
+		"build_profile",
+		"os",
+		"arch",
+	} {
+		t.Run(field, func(t *testing.T) {
+			var document map[string]any
+			if err := json.Unmarshal([]byte(canonicalArtifactJSON("gao-openfhe-a2b-full", canonicalSamples())), &document); err != nil {
+				t.Fatal(err)
+			}
+			delete(document, field)
+			payload, err := json.Marshal(document)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = benchcmp.ParseCanonical(strings.NewReader(string(payload)), "missing-execution-metadata.json")
+			if err == nil || !strings.Contains(err.Error(), field) {
+				t.Fatalf("error=%v, want missing %s", err, field)
+			}
+		})
+	}
+}
+
+func TestParseCanonicalRejectsUnreproducibleExecutionMetadata(t *testing.T) {
+	tests := []struct {
+		name        string
+		old         string
+		replacement string
+		want        string
+	}{
+		{name: "encryption", old: `"encryption_mode":"public-key"`, replacement: `"encryption_mode":"secret-key"`, want: "encryption_mode"},
+		{name: "OpenFHE factor storage", old: `"factor_storage_mode":"resident-precomputed"`, replacement: `"factor_storage_mode":"streamed"`, want: "factor_storage_mode"},
+		{name: "OpenFHE scale schedule", old: `"scale_schedule":"openfhe-flexiblemanual-native"`, replacement: `"scale_schedule":"synthetic-shared"`, want: "scale_schedule"},
+		{name: "OpenFHE BSGS plan", old: `"backend_bsgs_plan":"openfhe-auto-dim1-0"`, replacement: `"backend_bsgs_plan":"openfhe-explicit-dim1-1"`, want: "backend_bsgs_plan"},
+		{name: "OpenFHE pinned revision", old: `"source_revision":"08f1eb87434e7be072cba889270a8400bbffc08e"`, replacement: `"source_revision":"other"`, want: "source_revision"},
+		{name: "modified source", old: `"source_modified":false`, replacement: `"source_modified":true`, want: "source_modified"},
+		{name: "runtime", old: `"runtime":"openfhe-fhe-simd-alu"`, replacement: `"runtime":"other-openfhe-runtime"`, want: "runtime"},
+		{name: "compiler", old: `"compiler":"clang version 14.0.0"`, replacement: `"compiler":""`, want: "compiler"},
+		{name: "build profile", old: `"build_profile":"CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON"`, replacement: `"build_profile":"Release"`, want: "build_profile"},
+		{name: "os", old: `"os":"linux"`, replacement: `"os":""`, want: "os"},
+		{name: "arch", old: `"arch":"amd64"`, replacement: `"arch":""`, want: "arch"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			valid := canonicalArtifactJSON("gao-openfhe-a2b-full", canonicalSamples())
+			payload := strings.Replace(valid, test.old, test.replacement, 1)
+			if payload == valid {
+				t.Fatalf("fixture field %q not found", test.old)
+			}
+			_, err := benchcmp.ParseCanonical(strings.NewReader(payload), "unreproducible.json")
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("error=%v, want %q", err, test.want)
+			}
+		})
+	}
+
+	lattigo := canonicalArtifactJSON("lattigo-gao-a2b-full", canonicalSamples())
+	lattigo = strings.Replace(lattigo, `"factor_storage_mode":"resident-prevalidated"`, `"factor_storage_mode":"streamed"`, 1)
+	if _, err := benchcmp.ParseCanonical(strings.NewReader(lattigo), "lattigo.json"); err == nil || !strings.Contains(err.Error(), "factor_storage_mode") {
+		t.Fatalf("Lattigo factor storage error=%v", err)
+	}
+	lattigo = canonicalArtifactJSON("lattigo-gao-a2b-full", canonicalSamples())
+	lattigo = strings.Replace(
+		lattigo,
+		`"backend_bsgs_plan":"lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-optimized"`,
+		`"backend_bsgs_plan":"lattigo-dft-unverified"`,
+		1,
+	)
+	if _, err := benchcmp.ParseCanonical(strings.NewReader(lattigo), "lattigo.json"); err == nil || !strings.Contains(err.Error(), "backend_bsgs_plan") {
+		t.Fatalf("Lattigo BSGS plan error=%v", err)
+	}
+}
+
+func TestParseCanonicalRejectsNullSourceModified(t *testing.T) {
+	payload := strings.Replace(
+		canonicalArtifactJSON("gao-openfhe-a2b-full", canonicalSamples()),
+		`"source_modified":false`,
+		`"source_modified":null`,
+		1,
+	)
+	_, err := benchcmp.ParseCanonical(strings.NewReader(payload), "null-source-modified.json")
+	if err == nil || !strings.Contains(err.Error(), "source_modified") {
+		t.Fatalf("error=%v, want source_modified type rejection", err)
+	}
+}
+
+func TestParseCanonicalRejectsNonFullOrUnmatchedProtocolShape(t *testing.T) {
+	tests := []struct {
+		name        string
+		old         string
+		replacement string
+		want        string
+	}{
+		{name: "protocol", old: `"protocol":"gao-a2b-full-z8-w4-v1"`, replacement: `"protocol":"sparse-route-b"`, want: "protocol"},
+		{name: "workload", old: `"workload_id":"uint8-0to255-x32"`, replacement: `"workload_id":"uint8-512"`, want: "workload_id"},
+		{name: "packing id", old: `"packing_id":"n65536-cslots32768-zslots8192-w4"`, replacement: `"packing_id":"sparse"`, want: "packing_id"},
+		{name: "output shape", old: `"output_container":"two-ciphertexts-low4-high4"`, replacement: `"output_container":"one-ciphertext"`, want: "output_container"},
+		{name: "ring dimension", old: `"ring_dimension":65536`, replacement: `"ring_dimension":32768`, want: "ring_dimension"},
+		{name: "complex slots", old: `"packing_slots":32768`, replacement: `"packing_slots":2048`, want: "packing_slots"},
+		{name: "useful words", old: `"useful_words":8192`, replacement: `"useful_words":512`, want: "useful_words"},
+		{name: "warmup", old: `"warmup_count":1`, replacement: `"warmup_count":2`, want: "warmup_count"},
+		{name: "repeat count", old: `"repeat_count":5`, replacement: `"repeat_count":4`, want: "repeat_count"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			valid := canonicalArtifactJSON("openfhe", canonicalSamples())
+			payload := strings.Replace(valid, test.old, test.replacement, 1)
+			if payload == valid {
+				t.Fatalf("fixture field %s not found", test.old)
+			}
+			_, err := benchcmp.ParseCanonical(strings.NewReader(payload), "invalid-shape.json")
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("error=%v, want %q", err, test.want)
+			}
+		})
 	}
 }
 
@@ -260,14 +396,81 @@ func TestParseCanonicalRejectsUnverifiedOrZeroTimedSamples(t *testing.T) {
 	}
 }
 
+func TestParseCanonicalRejectsArtifactWithoutGaoParameterSemantics(t *testing.T) {
+	payload := strings.Replace(
+		canonicalArtifactJSON("openfhe", canonicalSamples()),
+		`,"parameters":`+canonicalParametersJSON(),
+		"",
+		1,
+	)
+	_, err := benchcmp.ParseCanonical(
+		strings.NewReader(payload),
+		"missing-parameters.json",
+	)
+	if err == nil || !strings.Contains(err.Error(), "parameters") {
+		t.Fatalf("error=%v, want missing parameters", err)
+	}
+}
+
+func TestParseCanonicalRejectsUnmatchedGaoParameterSemantics(t *testing.T) {
+	tests := []struct {
+		name        string
+		old         string
+		replacement string
+		want        string
+	}{
+		{name: "comparison scope", old: `"comparison_scope":"gao-algorithm-and-aggregate-modulus-bits"`, replacement: `"comparison_scope":"prime-identical"`, want: "comparison_scope"},
+		{name: "Q count", old: `"q_moduli_count":21`, replacement: `"q_moduli_count":20`, want: "q_moduli_count"},
+		{name: "Q aggregate", old: `"q_log2_aggregate":904`, replacement: `"q_log2_aggregate":903`, want: "q_log2_aggregate"},
+		{name: "P count", old: `"p_moduli_count":7`, replacement: `"p_moduli_count":6`, want: "p_moduli_count"},
+		{name: "P aggregate", old: `"p_log2_aggregate":350`, replacement: `"p_log2_aggregate":349`, want: "p_log2_aggregate"},
+		{name: "scaling modulus", old: `"scaling_modulus_bits":43`, replacement: `"scaling_modulus_bits":42`, want: "scaling_modulus_bits"},
+		{name: "first modulus", old: `"first_modulus_bits":43`, replacement: `"first_modulus_bits":42`, want: "first_modulus_bits"},
+		{name: "depth", old: `"multiplicative_depth":20`, replacement: `"multiplicative_depth":19`, want: "multiplicative_depth"},
+		{name: "large digits", old: `"large_digits":3`, replacement: `"large_digits":2`, want: "large_digits"},
+		{name: "ephemeral weight", old: `"ephemeral_secret_hamming_weight":32`, replacement: `"ephemeral_secret_hamming_weight":31`, want: "ephemeral_secret_hamming_weight"},
+		{name: "level budget", old: `"level_budget":[3,2]`, replacement: `"level_budget":[2,3]`, want: "level_budget"},
+		{name: "OpenFHE requested BSGS", old: `"openfhe_requested_bsgs_dimensions":[0,0]`, replacement: `"openfhe_requested_bsgs_dimensions":[1,0]`, want: "openfhe_requested_bsgs_dimensions"},
+		{name: "chunk width", old: `"chunk_width":4`, replacement: `"chunk_width":3`, want: "chunk_width"},
+		{name: "cutoff", old: `"cutoff_bits":-24`, replacement: `"cutoff_bits":-23`, want: "cutoff_bits"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			payload := strings.Replace(canonicalArtifactJSON("openfhe", canonicalSamples()), test.old, test.replacement, 1)
+			if payload == canonicalArtifactJSON("openfhe", canonicalSamples()) {
+				t.Fatalf("fixture field %s not found", test.old)
+			}
+			_, err := benchcmp.ParseCanonical(strings.NewReader(payload), "unmatched-parameters.json")
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("error=%v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestParseCanonicalRejectsAmbiguousLegacyBSGSDimensions(t *testing.T) {
+	payload := strings.Replace(
+		canonicalArtifactJSON("gao-openfhe-a2b-full", canonicalSamples()),
+		`"openfhe_requested_bsgs_dimensions":[0,0]`,
+		`"bsgs_dimensions":[0,0]`,
+		1,
+	)
+	_, err := benchcmp.ParseCanonical(strings.NewReader(payload), "legacy-bsgs-name.json")
+	if err == nil || !strings.Contains(err.Error(), `unknown field "bsgs_dimensions"`) {
+		t.Fatalf("error=%v, want legacy bsgs_dimensions rejection", err)
+	}
+}
+
 func TestComparisonUsesOnlyMatchedCanonicalMeasurements(t *testing.T) {
-	openfhe := mustParseCanonical(t, "gao-openfhe-a2b-sparse", []uint64{
+	openfhe := mustParseCanonical(t, "gao-openfhe-a2b-full", []uint64{
 		9_000_000_000, 11_000_000_000, 10_000_000_000, 12_000_000_000, 8_000_000_000,
 	})
-	lattigo := mustParseCanonical(t, "lattigo-route-b", []uint64{
+	lattigo := mustParseCanonical(t, "lattigo-gao-a2b-full", []uint64{
 		7_000_000_000, 9_000_000_000, 8_000_000_000, 10_000_000_000, 6_000_000_000,
 	})
-	lattigo.OutputContainer = "two-serial-ciphertexts"
+	openfhe.A2BMeanNanoseconds, openfhe.A2BMedianNanoseconds, openfhe.EffectiveWordsPerSecond = 1, 1, 1
+	lattigo.A2BMeanNanoseconds, lattigo.A2BMedianNanoseconds, lattigo.EffectiveWordsPerSecond = 1, 1, 1
 
 	got, err := benchcmp.Compare(openfhe, lattigo)
 	if err != nil {
@@ -301,9 +504,20 @@ func TestComparisonUsesOnlyMatchedCanonicalMeasurements(t *testing.T) {
 	}
 }
 
+func TestComparisonRejectsSerialOutputContainer(t *testing.T) {
+	openfhe := mustParseCanonical(t, "gao-openfhe-a2b-full", canonicalSamples())
+	lattigo := mustParseCanonical(t, "lattigo-gao-a2b-full", canonicalSamples())
+	lattigo.OutputContainer = "two-serial-ciphertexts-low4-high4"
+
+	_, err := benchcmp.Compare(openfhe, lattigo)
+	if err == nil || !strings.Contains(err.Error(), "two-ciphertexts-low4-high4") {
+		t.Fatalf("error=%v, want strict two-ciphertext output rejection", err)
+	}
+}
+
 func TestComparisonRejectsSwappedOrDuplicatedImplementationRoles(t *testing.T) {
-	openfhe := mustParseCanonical(t, "gao-openfhe-a2b-sparse", canonicalSamples())
-	lattigo := mustParseCanonical(t, "lattigo-route-b", canonicalSamples())
+	openfhe := mustParseCanonical(t, "gao-openfhe-a2b-full", canonicalSamples())
+	lattigo := mustParseCanonical(t, "lattigo-gao-a2b-full", canonicalSamples())
 
 	if _, err := benchcmp.Compare(lattigo, openfhe); err == nil || !strings.Contains(err.Error(), "OpenFHE implementation") {
 		t.Fatalf("swapped roles error=%v", err)
@@ -313,6 +527,50 @@ func TestComparisonRejectsSwappedOrDuplicatedImplementationRoles(t *testing.T) {
 	}
 	if _, err := benchcmp.Compare(openfhe, openfhe); err == nil || !strings.Contains(err.Error(), "Lattigo implementation") {
 		t.Fatalf("duplicated OpenFHE role error=%v", err)
+	}
+}
+
+func TestComparisonRejectsLegacyLattigoRole(t *testing.T) {
+	openfhe := mustParseCanonical(t, "gao-openfhe-a2b-full", canonicalSamples())
+	legacy := mustParseCanonical(t, "lattigo-route-b", canonicalSamples())
+
+	_, err := benchcmp.Compare(openfhe, legacy)
+	if err == nil || !strings.Contains(err.Error(), "lattigo-gao-a2b-full") {
+		t.Fatalf("error=%v", err)
+	}
+}
+
+func TestComparisonFailsWhenMeanOrMedianIsSlowerThanOpenFHE(t *testing.T) {
+	tests := []struct {
+		name           string
+		openFHESamples []uint64
+		lattigoSamples []uint64
+		wantMetric     string
+	}{
+		{
+			name:           "mean",
+			openFHESamples: []uint64{10, 10, 10, 10, 10},
+			lattigoSamples: []uint64{9, 9, 9, 9, 20},
+			wantMetric:     "mean",
+		},
+		{
+			name:           "median",
+			openFHESamples: []uint64{10, 10, 10, 10, 20},
+			lattigoSamples: []uint64{1, 11, 11, 11, 11},
+			wantMetric:     "median",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			openfhe := mustParseCanonical(t, "gao-openfhe-a2b-full", test.openFHESamples)
+			lattigo := mustParseCanonical(t, "lattigo-gao-a2b-full", test.lattigoSamples)
+			summary, err := benchcmp.Compare(openfhe, lattigo)
+			if err == nil || !strings.Contains(err.Error(), "performance parity gate failed") ||
+				!strings.Contains(err.Error(), test.wantMetric) {
+				t.Fatalf("summary=%+v error=%v", summary, err)
+			}
+		})
 	}
 }
 
@@ -335,6 +593,17 @@ func TestComparisonRejectsAnyUnmatchedOrNonCanonicalProtocolDimension(t *testing
 		}, wantMessage: "timing protocol mismatch"},
 		{name: "threads", mutate: func(a, b *benchcmp.Measurement) { b.Threads = 2 }, wantMessage: "threads must be 1"},
 		{name: "host", mutate: func(a, b *benchcmp.Measurement) { b.HostID = "other-host" }, wantMessage: "host_id mismatch"},
+		{name: "os", mutate: func(a, b *benchcmp.Measurement) { b.OS = "windows" }, wantMessage: "os mismatch"},
+		{name: "arch", mutate: func(a, b *benchcmp.Measurement) { b.Arch = "arm64" }, wantMessage: "arch mismatch"},
+		{name: "public key", mutate: func(a, b *benchcmp.Measurement) { b.EncryptionMode = "secret-key" }, wantMessage: "encryption_mode"},
+		{name: "resident factors", mutate: func(a, b *benchcmp.Measurement) { b.FactorStorageMode = "streamed" }, wantMessage: "factor_storage_mode"},
+		{name: "native scale schedule", mutate: func(a, b *benchcmp.Measurement) { b.ScaleSchedule = "synthetic-shared" }, wantMessage: "scale_schedule"},
+		{name: "backend BSGS plan", mutate: func(a, b *benchcmp.Measurement) { b.BackendBSGSPlan = "" }, wantMessage: "backend_bsgs_plan"},
+		{name: "source revision", mutate: func(a, b *benchcmp.Measurement) { b.SourceRevision = "" }, wantMessage: "source_revision"},
+		{name: "source modified", mutate: func(a, b *benchcmp.Measurement) { b.SourceModified = true }, wantMessage: "source_modified"},
+		{name: "runtime", mutate: func(a, b *benchcmp.Measurement) { b.Runtime = "" }, wantMessage: "runtime"},
+		{name: "compiler", mutate: func(a, b *benchcmp.Measurement) { b.Compiler = "" }, wantMessage: "compiler"},
+		{name: "build profile", mutate: func(a, b *benchcmp.Measurement) { b.BuildProfile = "" }, wantMessage: "build_profile"},
 		{name: "protocol", mutate: func(a, b *benchcmp.Measurement) { b.Protocol = "other-protocol" }, wantMessage: "protocol mismatch"},
 		{name: "workload", mutate: func(a, b *benchcmp.Measurement) { b.WorkloadID = "other-workload" }, wantMessage: "workload_id mismatch"},
 		{name: "packing id", mutate: func(a, b *benchcmp.Measurement) { b.PackingID = "other-packing" }, wantMessage: "packing_id mismatch"},
@@ -346,8 +615,8 @@ func TestComparisonRejectsAnyUnmatchedOrNonCanonicalProtocolDimension(t *testing
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			openfhe := mustParseCanonical(t, "gao-openfhe-a2b-sparse", canonicalSamples())
-			lattigo := mustParseCanonical(t, "lattigo-route-b", canonicalSamples())
+			openfhe := mustParseCanonical(t, "gao-openfhe-a2b-full", canonicalSamples())
+			lattigo := mustParseCanonical(t, "lattigo-gao-a2b-full", canonicalSamples())
 			test.mutate(&openfhe, &lattigo)
 			_, err := benchcmp.Compare(openfhe, lattigo)
 			if err == nil || !strings.Contains(err.Error(), test.wantMessage) {
@@ -372,35 +641,83 @@ func canonicalSamples() []uint64 {
 
 func canonicalArtifactJSON(implementation string, samples []uint64) string {
 	payload := struct {
-		Schema                  string   `json:"schema"`
-		Implementation          string   `json:"implementation"`
-		HostID                  string   `json:"host_id"`
-		Protocol                string   `json:"protocol"`
-		WorkloadID              string   `json:"workload_id"`
-		PackingID               string   `json:"packing_id"`
-		OutputContainer         string   `json:"output_container"`
-		WordBits                uint32   `json:"word_bits"`
-		RingDimension           uint32   `json:"ring_dimension"`
-		PackingSlots            uint32   `json:"packing_slots"`
-		UsefulWords             uint32   `json:"useful_words"`
-		Threads                 uint32   `json:"threads"`
-		TimingScope             string   `json:"timing_scope"`
-		SetupNanoseconds        uint64   `json:"setup_nanoseconds"`
-		WarmupCount             uint32   `json:"warmup_count"`
-		WarmupVerified          bool     `json:"warmup_verified"`
-		RepeatCount             uint32   `json:"repeat_count"`
-		TimedSamplesNanoseconds []uint64 `json:"timed_samples_nanoseconds"`
-		MismatchCount           uint64   `json:"mismatch_count"`
-		VerifiedEvaluations     uint32   `json:"verified_evaluations"`
+		Schema                  string                          `json:"schema"`
+		Implementation          string                          `json:"implementation"`
+		HostID                  string                          `json:"host_id"`
+		EncryptionMode          string                          `json:"encryption_mode"`
+		FactorStorageMode       string                          `json:"factor_storage_mode"`
+		ScaleSchedule           string                          `json:"scale_schedule"`
+		BackendBSGSPlan         string                          `json:"backend_bsgs_plan"`
+		SourceRevision          string                          `json:"source_revision"`
+		SourceModified          bool                            `json:"source_modified"`
+		Runtime                 string                          `json:"runtime"`
+		Compiler                string                          `json:"compiler"`
+		BuildProfile            string                          `json:"build_profile"`
+		OS                      string                          `json:"os"`
+		Arch                    string                          `json:"arch"`
+		Protocol                string                          `json:"protocol"`
+		WorkloadID              string                          `json:"workload_id"`
+		PackingID               string                          `json:"packing_id"`
+		OutputContainer         string                          `json:"output_container"`
+		WordBits                uint32                          `json:"word_bits"`
+		RingDimension           uint32                          `json:"ring_dimension"`
+		PackingSlots            uint32                          `json:"packing_slots"`
+		UsefulWords             uint32                          `json:"useful_words"`
+		Parameters              *benchcmp.GaoParameterSemantics `json:"parameters"`
+		Threads                 uint32                          `json:"threads"`
+		TimingScope             string                          `json:"timing_scope"`
+		SetupNanoseconds        uint64                          `json:"setup_nanoseconds"`
+		WarmupCount             uint32                          `json:"warmup_count"`
+		WarmupVerified          bool                            `json:"warmup_verified"`
+		RepeatCount             uint32                          `json:"repeat_count"`
+		TimedSamplesNanoseconds []uint64                        `json:"timed_samples_nanoseconds"`
+		MismatchCount           uint64                          `json:"mismatch_count"`
+		VerifiedEvaluations     uint32                          `json:"verified_evaluations"`
 	}{
 		Schema: "lcpdte-ckksint-a2b-benchmark-v2", Implementation: implementation,
-		HostID: "ryzen-7-h-255", Protocol: "gao-zheng-int8-a2b-n8-w4", WorkloadID: "signed-int8-512-fixed-v1",
-		PackingID: "complex-slots-2048-words-512-v1", OutputContainer: "one-ciphertext",
-		WordBits: 8, RingDimension: 65_536, PackingSlots: 2_048, UsefulWords: 512, Threads: 1,
+		HostID: "ryzen-7-h-255", EncryptionMode: "public-key",
+		FactorStorageMode: "resident-precomputed", ScaleSchedule: "openfhe-flexiblemanual-native",
+		BackendBSGSPlan: "openfhe-auto-dim1-0", SourceRevision: "08f1eb87434e7be072cba889270a8400bbffc08e",
+		Runtime: "openfhe-fhe-simd-alu", Compiler: "clang version 14.0.0",
+		BuildProfile: "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON", OS: "linux", Arch: "amd64",
+		Protocol: "gao-a2b-full-z8-w4-v1", WorkloadID: "uint8-0to255-x32",
+		PackingID: "n65536-cslots32768-zslots8192-w4", OutputContainer: "two-ciphertexts-low4-high4",
+		WordBits: 8, RingDimension: 65_536, PackingSlots: 32_768, UsefulWords: 8_192,
+		Parameters: canonicalParameters(), Threads: 1,
 		TimingScope: "prepared-online", SetupNanoseconds: 2_000_000_000, WarmupCount: 1, WarmupVerified: true,
 		RepeatCount: uint32(len(samples)), TimedSamplesNanoseconds: samples, VerifiedEvaluations: uint32(len(samples)),
 	}
+	if implementation == "lattigo-gao-a2b-full" {
+		payload.FactorStorageMode = "resident-prevalidated"
+		payload.ScaleSchedule = "lattigo-explicit-level-scale-native"
+		payload.BackendBSGSPlan = "lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-optimized"
+		payload.SourceRevision = "lattigo-test-revision"
+		payload.Runtime = "lattigo-v6"
+		payload.Compiler = "go1.25.0"
+		payload.BuildProfile = "go-build"
+	}
 	encoded, err := json.Marshal(payload)
+	if err != nil {
+		panic(err)
+	}
+	return string(encoded)
+}
+
+func canonicalParameters() *benchcmp.GaoParameterSemantics {
+	return &benchcmp.GaoParameterSemantics{
+		ComparisonScope: "gao-algorithm-and-aggregate-modulus-bits",
+		QModuliCount:    21, QLog2Aggregate: 904,
+		PModuliCount: 7, PLog2Aggregate: 350,
+		ScalingModulusBits: 43, FirstModulusBits: 43,
+		MultiplicativeDepth: 20, LargeDigits: 3,
+		EphemeralSecretHammingWeight: 32,
+		LevelBudget:                  [2]uint32{3, 2}, OpenFHERequestedBSGSDimensions: [2]uint32{0, 0},
+		ChunkWidth: 4, CutoffBits: -24,
+	}
+}
+
+func canonicalParametersJSON() string {
+	encoded, err := json.Marshal(canonicalParameters())
 	if err != nil {
 		panic(err)
 	}

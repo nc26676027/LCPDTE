@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"runtime/debug"
+	"runtime/pprof"
 	"strings"
 	"time"
 
@@ -17,25 +19,36 @@ import (
 
 type benchmarkFunc func(hostID string) (benchcmp.CanonicalArtifact, error)
 type artifactWriter func(path string, artifact benchcmp.CanonicalArtifact) error
-type sessionFactory func() (sessionOps, ckksint.RouteBA2BSetupInfo, error)
+type sessionFactory func() (sessionOps, ckksint.GaoFullPackedA2BSetupInfo, error)
+type executionMetadataReader func() (benchmarkExecutionMetadata, error)
+
+type benchmarkExecutionMetadata struct {
+	SourceRevision string
+	SourceModified bool
+	Runtime        string
+	Compiler       string
+	BuildProfile   string
+	OS             string
+	Arch           string
+}
 
 type sessionOps struct {
 	close    func()
-	encrypt  func([]uint8) (*ckksint.RouteBA2BEncryptedInput, ckksint.RouteBA2BPhaseInfo, error)
-	evaluate func(*ckksint.RouteBA2BEncryptedInput) (*ckksint.RouteBA2BEncryptedOutput, ckksint.RouteBA2BPhaseInfo, error)
-	decrypt  func(*ckksint.RouteBA2BEncryptedOutput) ([][8]uint8, error)
+	encrypt  func([]uint8) (*ckksint.GaoFullPackedA2BEncryptedInput, ckksint.GaoFullPackedA2BPhaseInfo, error)
+	evaluate func(*ckksint.GaoFullPackedA2BEncryptedInput) (*ckksint.GaoFullPackedA2BEncryptedOutput, ckksint.GaoFullPackedA2BPhaseInfo, error)
+	decrypt  func(*ckksint.GaoFullPackedA2BEncryptedOutput) ([][8]uint8, error)
 }
 
 const (
-	benchmarkProtocol        = "gao-a2b-sparse-z8-w4-v1"
-	benchmarkWorkloadID      = "uint8-0to255-twice"
-	benchmarkPackingID       = "n65536-cslots2048-zslots512-w4"
+	benchmarkProtocol        = "gao-a2b-full-z8-w4-v1"
+	benchmarkWorkloadID      = "uint8-0to255-x32"
+	benchmarkPackingID       = "n65536-cslots32768-zslots8192-w4"
 	benchmarkOutputContainer = "two-ciphertexts-low4-high4"
 	benchmarkRepeats         = 5
 )
 
 func canonicalInput() []uint8 {
-	words := make([]uint8, 512)
+	words := make([]uint8, 8_192)
 	for index := range words {
 		words[index] = uint8(index % 256)
 	}
@@ -67,21 +80,21 @@ func countBitMismatches(words []uint8, got [][8]uint8) uint64 {
 
 func canonicalArtifact(
 	hostID string,
-	setup ckksint.RouteBA2BSetupInfo,
-	encryption ckksint.RouteBA2BPhaseInfo,
-	warmup ckksint.RouteBA2BPhaseInfo,
+	setup ckksint.GaoFullPackedA2BSetupInfo,
+	encryption ckksint.GaoFullPackedA2BPhaseInfo,
+	warmup ckksint.GaoFullPackedA2BPhaseInfo,
 	samples []uint64,
+	execution benchmarkExecutionMetadata,
 ) (benchcmp.CanonicalArtifact, error) {
 	if strings.TrimSpace(hostID) == "" {
 		return benchcmp.CanonicalArtifact{}, fmt.Errorf("host_id is required")
 	}
 	if encryption.WallTime <= 0 || warmup.WallTime <= 0 || warmup.OnlineWallTime <= 0 ||
-		warmup.PreparationWallTime <= 0 || warmup.WallTime < warmup.OnlineWallTime ||
-		warmup.PreparationWallTime > warmup.WallTime-warmup.OnlineWallTime {
+		warmup.PreparationWallTime != 0 || warmup.WallTime < warmup.OnlineWallTime {
 		return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark requires complete encryption and warmup timing")
 	}
-	setupWallTime := setup.ParameterArtifactWallTime + setup.KeyGenerationWallTime +
-		setup.ServerInstallWallTime + encryption.WallTime + warmup.WallTime - warmup.OnlineWallTime
+	setupWallTime := setup.ParameterWallTime + setup.KeyGenerationWallTime +
+		setup.ServerConstructionWallTime + encryption.WallTime
 	if setupWallTime <= 0 || len(samples) != benchmarkRepeats {
 		return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark requires positive setup time and five nonzero samples")
 	}
@@ -90,18 +103,49 @@ func canonicalArtifact(
 			return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark requires positive setup time and five nonzero samples")
 		}
 	}
+	parameters, err := canonicalParametersFromSetup(setup.Parameters)
+	if err != nil {
+		return benchcmp.CanonicalArtifact{}, err
+	}
+	if execution.SourceModified {
+		return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark requires a clean Lattigo source revision")
+	}
+	for field, value := range map[string]string{
+		"source_revision": execution.SourceRevision,
+		"runtime":         execution.Runtime,
+		"compiler":        execution.Compiler,
+		"build_profile":   execution.BuildProfile,
+		"os":              execution.OS,
+		"arch":            execution.Arch,
+	} {
+		if strings.TrimSpace(value) == "" {
+			return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark execution metadata %s is required", field)
+		}
+	}
 	return benchcmp.CanonicalArtifact{
 		Schema:                  benchcmp.CanonicalBenchmarkSchema,
-		Implementation:          "lattigo-route-b",
+		Implementation:          "lattigo-gao-a2b-full",
 		HostID:                  strings.TrimSpace(hostID),
+		EncryptionMode:          setup.Parameters.EncryptionMode,
+		FactorStorageMode:       setup.Parameters.FactorStorageMode,
+		ScaleSchedule:           setup.Parameters.ScaleSchedule,
+		BackendBSGSPlan:         benchcmp.LattigoBackendBSGSPlan,
+		SourceRevision:          strings.TrimSpace(execution.SourceRevision),
+		SourceModified:          execution.SourceModified,
+		Runtime:                 strings.TrimSpace(execution.Runtime),
+		Compiler:                strings.TrimSpace(execution.Compiler),
+		BuildProfile:            strings.TrimSpace(execution.BuildProfile),
+		OS:                      strings.TrimSpace(execution.OS),
+		Arch:                    strings.TrimSpace(execution.Arch),
 		Protocol:                benchmarkProtocol,
 		WorkloadID:              benchmarkWorkloadID,
 		PackingID:               benchmarkPackingID,
 		OutputContainer:         benchmarkOutputContainer,
 		WordBits:                8,
-		RingDimension:           65_536,
-		PackingSlots:            2_048,
-		UsefulWords:             512,
+		RingDimension:           uint32(setup.Parameters.RingDimension),
+		PackingSlots:            uint32(setup.Parameters.PackingSlots),
+		UsefulWords:             uint32(setup.Parameters.UsefulWords),
+		Parameters:              parameters,
 		Threads:                 1,
 		TimingScope:             benchcmp.TimingScopePreparedOnline,
 		SetupNanoseconds:        uint64(setupWallTime / time.Nanosecond),
@@ -114,13 +158,113 @@ func canonicalArtifact(
 	}, nil
 }
 
+func canonicalParametersFromSetup(info ckksint.GaoFullPackedA2BParameterInfo) (*benchcmp.GaoParameterSemantics, error) {
+	if info.STCLogBSGSRatio != 2 || info.CTSLogBSGSRatio != 2 || info.SpecialB0LogBSGSRatio != 2 {
+		return nil, fmt.Errorf(
+			"benchmark live Lattigo BSGS ratios changed: stc=%d cts=%d special_b0=%d",
+			info.STCLogBSGSRatio, info.CTSLogBSGSRatio, info.SpecialB0LogBSGSRatio,
+		)
+	}
+	parameters := &benchcmp.GaoParameterSemantics{
+		ComparisonScope:                benchcmp.GaoParameterComparisonScope,
+		QModuliCount:                   uint32(info.QModuliCount),
+		QLog2Aggregate:                 uint32(info.QLog2Aggregate),
+		PModuliCount:                   uint32(info.PModuliCount),
+		PLog2Aggregate:                 uint32(info.PLog2Aggregate),
+		ScalingModulusBits:             uint32(info.ScalingModulusBits),
+		FirstModulusBits:               uint32(info.FirstModulusBits),
+		MultiplicativeDepth:            uint32(info.MultiplicativeDepth),
+		LargeDigits:                    uint32(info.LargeDigits),
+		EphemeralSecretHammingWeight:   uint32(info.EphemeralSecretHammingWeight),
+		LevelBudget:                    [2]uint32{uint32(info.LevelBudget[0]), uint32(info.LevelBudget[1])},
+		OpenFHERequestedBSGSDimensions: [2]uint32{uint32(info.OpenFHERequestedBSGSDimensions[0]), uint32(info.OpenFHERequestedBSGSDimensions[1])},
+		ChunkWidth:                     uint32(info.ChunkWidth),
+		CutoffBits:                     int32(info.CutoffBits),
+	}
+	if *parameters != *benchcmp.CanonicalGaoParameters() {
+		return nil, fmt.Errorf("benchmark live Gao parameters differ from the admitted OpenFHE contract: got=%+v", *parameters)
+	}
+	if info.RingDimension != 65_536 || info.PackingSlots != 32_768 || info.UsefulWords != 8_192 {
+		return nil, fmt.Errorf(
+			"benchmark live packing differs from the admitted OpenFHE contract: ring=%d slots=%d words=%d",
+			info.RingDimension, info.PackingSlots, info.UsefulWords,
+		)
+	}
+	if info.EncryptionMode != benchcmp.EncryptionModePublicKey ||
+		info.FactorStorageMode != benchcmp.LattigoFactorStorageMode ||
+		info.ScaleSchedule != benchcmp.LattigoScaleSchedule {
+		return nil, fmt.Errorf(
+			"benchmark live execution profile changed: encryption=%q factor_storage=%q scale_schedule=%q",
+			info.EncryptionMode, info.FactorStorageMode, info.ScaleSchedule,
+		)
+	}
+	return parameters, nil
+}
+
+func currentExecutionMetadata() (benchmarkExecutionMetadata, error) {
+	build, ok := debug.ReadBuildInfo()
+	if !ok {
+		return benchmarkExecutionMetadata{}, fmt.Errorf("read Go build provenance")
+	}
+	settings := make(map[string]string, len(build.Settings))
+	for _, setting := range build.Settings {
+		settings[setting.Key] = setting.Value
+	}
+	revision := strings.TrimSpace(settings["vcs.revision"])
+	if revision == "" {
+		return benchmarkExecutionMetadata{}, fmt.Errorf("Go build is missing vcs.revision")
+	}
+	modified, err := parseBuildBool(settings["vcs.modified"])
+	if err != nil {
+		return benchmarkExecutionMetadata{}, err
+	}
+	goamd64 := strings.TrimSpace(settings["GOAMD64"])
+	if goamd64 == "" {
+		goamd64 = "unspecified"
+	}
+	return benchmarkExecutionMetadata{
+		SourceRevision: revision,
+		SourceModified: modified,
+		Runtime:        build.GoVersion,
+		Compiler:       runtime.Compiler,
+		BuildProfile: fmt.Sprintf(
+			"GOOS=%s;GOARCH=%s;GOAMD64=%s;GOMAXPROCS=1",
+			runtime.GOOS, runtime.GOARCH, goamd64,
+		),
+		OS:   runtime.GOOS,
+		Arch: runtime.GOARCH,
+	}, nil
+}
+
+func parseBuildBool(value string) (bool, error) {
+	switch strings.TrimSpace(value) {
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	default:
+		return false, fmt.Errorf("Go build has invalid vcs.modified=%q", value)
+	}
+}
+
 func runCanonicalBenchmark(hostID string) (benchcmp.CanonicalArtifact, error) {
 	previousProcs := runtime.GOMAXPROCS(1)
 	defer runtime.GOMAXPROCS(previousProcs)
-	return runCanonicalBenchmarkWithFactory(hostID, newSession)
+	return runCanonicalBenchmarkWithFactory(hostID, newSession, currentExecutionMetadata)
 }
 
-func runCanonicalBenchmarkWithFactory(hostID string, factory sessionFactory) (benchcmp.CanonicalArtifact, error) {
+func runCanonicalBenchmarkWithFactory(
+	hostID string,
+	factory sessionFactory,
+	readMetadata executionMetadataReader,
+) (benchcmp.CanonicalArtifact, error) {
+	execution, err := readMetadata()
+	if err != nil {
+		return benchcmp.CanonicalArtifact{}, fmt.Errorf("read benchmark execution metadata: %w", err)
+	}
+	if execution.SourceModified {
+		return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark requires a clean Lattigo source revision")
+	}
 	session, setup, err := factory()
 	if err != nil {
 		return benchcmp.CanonicalArtifact{}, fmt.Errorf("create canonical Route-B A2B session: %w", err)
@@ -137,8 +281,9 @@ func runCanonicalBenchmarkWithFactory(hostID string, factory sessionFactory) (be
 	if err != nil {
 		return benchcmp.CanonicalArtifact{}, fmt.Errorf("evaluate warmup: %w", err)
 	}
-	if warmupInfo.OnlineWallTime <= 0 {
-		return benchcmp.CanonicalArtifact{}, fmt.Errorf("evaluate warmup: online wall time must be positive")
+	if warmupInfo.PreparationWallTime != 0 || warmupInfo.OnlineWallTime <= 0 ||
+		warmupInfo.WallTime <= 0 || warmupInfo.WallTime < warmupInfo.OnlineWallTime {
+		return benchcmp.CanonicalArtifact{}, fmt.Errorf("evaluate warmup: prepared call timing is invalid")
 	}
 	warmupBits, err := session.decrypt(warmupOutput)
 	if err != nil {
@@ -147,6 +292,24 @@ func runCanonicalBenchmarkWithFactory(hostID string, factory sessionFactory) (be
 	if mismatches := countBitMismatches(words, warmupBits); mismatches != 0 {
 		return benchcmp.CanonicalArtifact{}, fmt.Errorf("verify warmup: mismatch_count=%d", mismatches)
 	}
+	warmupOutput = nil
+	warmupBits = nil
+	runtime.GC()
+	var profileFile *os.File
+	if profilePath := strings.TrimSpace(os.Getenv("LCPDTE_GAO_CPU_PROFILE")); profilePath != "" {
+		profileFile, err = os.Create(profilePath)
+		if err != nil {
+			return benchcmp.CanonicalArtifact{}, fmt.Errorf("create CPU profile: %w", err)
+		}
+		if err = pprof.StartCPUProfile(profileFile); err != nil {
+			_ = profileFile.Close()
+			return benchcmp.CanonicalArtifact{}, fmt.Errorf("start CPU profile: %w", err)
+		}
+		defer func() {
+			pprof.StopCPUProfile()
+			_ = profileFile.Close()
+		}()
+	}
 
 	samples := make([]uint64, benchmarkRepeats)
 	for repeat := 0; repeat < benchmarkRepeats; repeat++ {
@@ -154,10 +317,11 @@ func runCanonicalBenchmarkWithFactory(hostID string, factory sessionFactory) (be
 		if err != nil {
 			return benchcmp.CanonicalArtifact{}, fmt.Errorf("evaluate repeat %d: %w", repeat+1, err)
 		}
-		if phase.OnlineWallTime <= 0 {
-			return benchcmp.CanonicalArtifact{}, fmt.Errorf("evaluate repeat %d: online wall time must be positive", repeat+1)
+		if phase.PreparationWallTime != 0 || phase.OnlineWallTime <= 0 ||
+			phase.WallTime <= 0 || phase.WallTime < phase.OnlineWallTime {
+			return benchcmp.CanonicalArtifact{}, fmt.Errorf("evaluate repeat %d: prepared call timing is invalid", repeat+1)
 		}
-		samples[repeat] = uint64(phase.OnlineWallTime / time.Nanosecond)
+		samples[repeat] = uint64(phase.WallTime / time.Nanosecond)
 
 		bits, err := session.decrypt(output)
 		if err != nil {
@@ -168,7 +332,7 @@ func runCanonicalBenchmarkWithFactory(hostID string, factory sessionFactory) (be
 		}
 	}
 
-	artifact, err := canonicalArtifact(hostID, setup, encryption, warmupInfo, samples)
+	artifact, err := canonicalArtifact(hostID, setup, encryption, warmupInfo, samples, execution)
 	if err != nil {
 		return benchcmp.CanonicalArtifact{}, err
 	}
@@ -177,18 +341,18 @@ func runCanonicalBenchmarkWithFactory(hostID string, factory sessionFactory) (be
 	return artifact, nil
 }
 
-func newSession() (sessionOps, ckksint.RouteBA2BSetupInfo, error) {
-	client, server, setup, err := ckksint.NewCanonicalRouteBA2B()
+func newSession() (sessionOps, ckksint.GaoFullPackedA2BSetupInfo, error) {
+	client, server, setup, err := ckksint.NewGaoFullPackedA2B()
 	if err != nil {
-		return sessionOps{}, ckksint.RouteBA2BSetupInfo{}, err
+		return sessionOps{}, ckksint.GaoFullPackedA2BSetupInfo{}, err
 	}
 	return sessionOps{
 		close: server.Close,
-		encrypt: func(words []uint8) (*ckksint.RouteBA2BEncryptedInput, ckksint.RouteBA2BPhaseInfo, error) {
+		encrypt: func(words []uint8) (*ckksint.GaoFullPackedA2BEncryptedInput, ckksint.GaoFullPackedA2BPhaseInfo, error) {
 			return client.EncryptA2B(words)
 		},
 		evaluate: server.EvaluateA2B,
-		decrypt: func(output *ckksint.RouteBA2BEncryptedOutput) ([][8]uint8, error) {
+		decrypt: func(output *ckksint.GaoFullPackedA2BEncryptedOutput) ([][8]uint8, error) {
 			bits, _, err := client.DecryptA2B(output)
 			return bits, err
 		},

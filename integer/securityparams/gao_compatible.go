@@ -107,6 +107,35 @@ func GaoCompatibleN16Parameters() (ckks.Parameters, error) {
 	})
 }
 
+// GaoOpenFHEFullN16Parameters returns the independent Lattigo parameter tuple
+// used for the shape-matched Gao/OpenFHE full-packed benchmark. It preserves
+// the 21-prime Q chain and seven-prime P chain while matching the aggregate
+// runtime modulus sizes reported by OpenFHE: |Q|=904 bits and |P|=350 bits.
+// The final 49-bit auxiliary-prime target compensates for the Lattigo prime
+// generator's upper-side convention; the generated P product is checked by
+// the full-packed transport contract.
+func GaoOpenFHEFullN16Parameters() (ckks.Parameters, error) {
+	logQ := make([]int, 21)
+	for i := range logQ {
+		logQ[i] = 43
+	}
+	logP := make([]int, 7)
+	for i := range logP {
+		logP[i] = 50
+	}
+	logP[len(logP)-1] = 49
+
+	return ckks.NewParametersFromLiteral(ckks.ParametersLiteral{
+		LogN:            GaoCompatibleLogN,
+		LogQ:            logQ,
+		LogP:            logP,
+		Xs:              ring.Ternary{H: GaoCompatibleMainWeight},
+		Xe:              ring.DiscreteGaussian{Sigma: GaoCompatibleSigma, Bound: GaoCompatibleBound},
+		RingType:        ring.Standard,
+		LogDefaultScale: GaoCompatibleDefaultScale,
+	})
+}
+
 // FunctionalA2BN8Parameters reproduces the parameter literal used by the
 // accepted fixed n=8 A2B circuit. It is intentionally insecure.
 func FunctionalA2BN8Parameters() (ckks.Parameters, error) {
