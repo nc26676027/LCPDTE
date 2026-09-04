@@ -1,3 +1,6 @@
+// Modified by the LCPDTE project for local module integration and, where applicable,
+// runtime instrumentation. See lattigo/NOTICE for attribution and modification details.
+
 // Package cosine method is the Go implementation of the polynomial-approximation algorithm by Han and Ki in
 //
 //	"Better Bootstrapping for Approximate Homomorphic Encryption", <https://epring.iacr.org/2019/688O>.

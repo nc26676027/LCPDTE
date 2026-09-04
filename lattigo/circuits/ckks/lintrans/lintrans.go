@@ -1,3 +1,6 @@
+// Modified by the LCPDTE project for local module integration and, where applicable,
+// runtime instrumentation. See lattigo/NOTICE for attribution and modification details.
+
 // Package lintrans implements homomorphic linear transformations for the CKKS scheme.
 package lintrans
 

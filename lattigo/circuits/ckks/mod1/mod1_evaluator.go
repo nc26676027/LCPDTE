@@ -1,3 +1,6 @@
+// Modified by the LCPDTE project for local module integration and, where applicable,
+// runtime instrumentation. See lattigo/NOTICE for attribution and modification details.
+
 // Package mod1 implements a homomorphic mod1 circuit for the CKKS scheme.
 package mod1
 

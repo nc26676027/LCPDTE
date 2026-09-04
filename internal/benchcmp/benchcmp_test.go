@@ -3,7 +3,6 @@ package benchcmp_test
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"math"
 	"os"
 	"strings"
@@ -11,6 +10,8 @@ import (
 
 	"github.com/nc26676027/LCPDTE/internal/benchcmp"
 )
+
+const lattigoFullArtifact = "../../research/reproduction/route_b/route_b_l11_a2b_full_2026-09-01.json"
 
 func TestParseGaoOpenFHEBenchmarkFullA2B(t *testing.T) {
 	input, err := os.Open("testdata/openfhe_bench8.log")
@@ -69,7 +70,7 @@ Time for A2B : 10.1368 s`
 }
 
 func TestParseLattigoRouteBA2B(t *testing.T) {
-	input, err := os.Open("testdata/lattigo_route_b.json")
+	input, err := os.Open(lattigoFullArtifact)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,18 +102,64 @@ func TestParseLattigoRouteBA2B(t *testing.T) {
 	}
 }
 
-func TestParseLattigoRouteBRejectsMismatch(t *testing.T) {
-	result := `{
-  "schema": "lcpdte-route-b-l11-a2b-full-result-v1",
-  "result": {
-    "first_operation": {"LogN": 16, "PackingSlots": 2048, "WordBits": 8, "WordCapacity": 512},
-    "full_a2b": {"wall_nanoseconds": 25830240800},
-    "input_words": 512,
-    "mismatch_count": 1
-  }
-}`
+func TestParseLattigoRouteBRejectsTruncatedSummary(t *testing.T) {
+	input, err := os.Open("testdata/lattigo_route_b_truncated.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer input.Close()
 
-	_, err := benchcmp.ParseLattigoRouteB(strings.NewReader(result), "failed.json")
+	_, err = benchcmp.ParseLattigoRouteB(input, "truncated.json")
+	if err == nil {
+		t.Fatal("accepted a field-only summary without the full correctness envelope")
+	}
+}
+
+func TestParseLattigoRouteBRejectsMissingMismatchCount(t *testing.T) {
+	payload := mustReadLattigoArtifact(t)
+	needle := []byte(",\n    \"mismatch_count\": 0")
+	withoutField := bytes.Replace(payload, needle, nil, 1)
+	if bytes.Equal(withoutField, payload) {
+		t.Fatal("mismatch_count fixture field not found")
+	}
+
+	_, err := benchcmp.ParseLattigoRouteB(bytes.NewReader(withoutField), "missing-mismatch.json")
+	if err == nil || !strings.Contains(err.Error(), "missing mismatch_count") {
+		t.Fatalf("error=%v", err)
+	}
+}
+
+func TestParseLattigoRouteBRejectsZeroCompletedAt(t *testing.T) {
+	payload := mustReadLattigoArtifact(t)
+	completedAt := []byte("2026-09-01T03:43:23.4393245Z")
+	zero := bytes.Replace(payload, completedAt, []byte("0001-01-01T00:00:00Z"), 1)
+	if bytes.Equal(zero, payload) {
+		t.Fatal("completed_at fixture field not found")
+	}
+
+	_, err := benchcmp.ParseLattigoRouteB(bytes.NewReader(zero), "zero-completed-at.json")
+	if err == nil || !strings.Contains(err.Error(), "completed_at") {
+		t.Fatalf("error=%v", err)
+	}
+}
+
+func TestParseLattigoRouteBRejectsTrailingJSON(t *testing.T) {
+	payload := append(mustReadLattigoArtifact(t), []byte("{}\n")...)
+
+	_, err := benchcmp.ParseLattigoRouteB(bytes.NewReader(payload), "trailing.json")
+	if err == nil || !strings.Contains(err.Error(), "trailing") {
+		t.Fatalf("error=%v", err)
+	}
+}
+
+func TestParseLattigoRouteBRejectsMismatch(t *testing.T) {
+	payload := mustReadLattigoArtifact(t)
+	result := bytes.Replace(payload, []byte(`"mismatch_count": 0`), []byte(`"mismatch_count": 1`), 1)
+	if bytes.Equal(result, payload) {
+		t.Fatal("mismatch_count fixture field not found")
+	}
+
+	_, err := benchcmp.ParseLattigoRouteB(bytes.NewReader(result), "failed.json")
 	if err == nil || !strings.Contains(err.Error(), "mismatch_count=1") {
 		t.Fatalf("error=%v", err)
 	}
@@ -121,38 +168,28 @@ func TestParseLattigoRouteBRejectsMismatch(t *testing.T) {
 func TestParseLattigoRouteBRejectsNonCanonicalShape(t *testing.T) {
 	tests := []struct {
 		name          string
-		logN          uint32
-		packingSlots  uint32
-		wordBits      uint32
-		wordCapacity  uint32
-		inputWords    uint32
+		replacements  [][2]string
 		wantErrorPart string
 	}{
-		{name: "log N", logN: 15, packingSlots: 2048, wordBits: 8, wordCapacity: 512, inputWords: 512, wantErrorPart: "LogN=15, want 16"},
-		{name: "packing slots", logN: 16, packingSlots: 1024, wordBits: 8, wordCapacity: 512, inputWords: 512, wantErrorPart: "PackingSlots=1024, want 2048"},
-		{name: "word bits", logN: 16, packingSlots: 2048, wordBits: 16, wordCapacity: 512, inputWords: 512, wantErrorPart: "WordBits=16, want 8"},
-		{name: "word capacity", logN: 16, packingSlots: 2048, wordBits: 8, wordCapacity: 256, inputWords: 256, wantErrorPart: "WordCapacity=256, want 512"},
-		{name: "partial workload", logN: 16, packingSlots: 2048, wordBits: 8, wordCapacity: 512, inputWords: 256, wantErrorPart: "input_words=256, want WordCapacity=512"},
+		{name: "log N", replacements: [][2]string{{`"LogN": 16`, `"LogN": 15`}}, wantErrorPart: "LogN=15, want 16"},
+		{name: "packing slots", replacements: [][2]string{{`"PackingSlots": 2048`, `"PackingSlots": 1024`}}, wantErrorPart: "PackingSlots=1024, want 2048"},
+		{name: "word bits", replacements: [][2]string{{`"WordBits": 8`, `"WordBits": 16`}}, wantErrorPart: "WordBits=16, want 8"},
+		{name: "word capacity", replacements: [][2]string{{`"WordCapacity": 512`, `"WordCapacity": 256`}, {`"input_words": 512`, `"input_words": 256`}}, wantErrorPart: "WordCapacity=256, want 512"},
+		{name: "partial workload", replacements: [][2]string{{`"input_words": 512`, `"input_words": 256`}}, wantErrorPart: "input_words=256, want WordCapacity=512"},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := fmt.Sprintf(`{
-  "schema": "lcpdte-route-b-l11-a2b-full-result-v1",
-  "result": {
-    "first_operation": {
-      "LogN": %d,
-      "PackingSlots": %d,
-      "WordBits": %d,
-      "WordCapacity": %d
-    },
-    "full_a2b": {"wall_nanoseconds": 25830240800},
-    "input_words": %d,
-    "mismatch_count": 0
-  }
-}`, test.logN, test.packingSlots, test.wordBits, test.wordCapacity, test.inputWords)
+			result := mustReadLattigoArtifact(t)
+			for _, replacement := range test.replacements {
+				updated := bytes.Replace(result, []byte(replacement[0]), []byte(replacement[1]), 1)
+				if bytes.Equal(updated, result) {
+					t.Fatalf("fixture field %q not found", replacement[0])
+				}
+				result = updated
+			}
 
-			_, err := benchcmp.ParseLattigoRouteB(strings.NewReader(result), "forged.json")
+			_, err := benchcmp.ParseLattigoRouteB(bytes.NewReader(result), "forged.json")
 			if err == nil || !strings.Contains(err.Error(), test.wantErrorPart) {
 				t.Fatalf("error=%v, want substring %q", err, test.wantErrorPart)
 			}
@@ -247,7 +284,7 @@ func mustParseOpenFHE(t *testing.T) benchcmp.Measurement {
 
 func mustParseLattigo(t *testing.T) benchcmp.Measurement {
 	t.Helper()
-	input, err := os.Open("testdata/lattigo_route_b.json")
+	input, err := os.Open(lattigoFullArtifact)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,4 +294,13 @@ func mustParseLattigo(t *testing.T) benchcmp.Measurement {
 		t.Fatal(err)
 	}
 	return measurement
+}
+
+func mustReadLattigoArtifact(t *testing.T) []byte {
+	t.Helper()
+	payload, err := os.ReadFile(lattigoFullArtifact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return payload
 }

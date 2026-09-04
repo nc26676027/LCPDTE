@@ -2,12 +2,16 @@
 package benchcmp
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"regexp"
 	"strconv"
+	"time"
+
+	"github.com/nc26676027/LCPDTE/integer/secureeval"
 )
 
 const (
@@ -181,27 +185,43 @@ func ParseGaoOpenFHE(input io.Reader, provenance string) (Measurement, error) {
 
 // ParseLattigoRouteB parses a route-b-l11-a2b-full JSON result envelope.
 func ParseLattigoRouteB(input io.Reader, provenance string) (Measurement, error) {
-	var envelope struct {
-		Schema string `json:"schema"`
-		Result struct {
-			FirstOperation struct {
-				LogN         uint32 `json:"LogN"`
-				PackingSlots uint32 `json:"PackingSlots"`
-				WordBits     uint32 `json:"WordBits"`
-				WordCapacity uint32 `json:"WordCapacity"`
-			} `json:"first_operation"`
-			FullA2B struct {
-				WallNanoseconds uint64 `json:"wall_nanoseconds"`
-			} `json:"full_a2b"`
-			InputWords    uint32 `json:"input_words"`
-			MismatchCount uint64 `json:"mismatch_count"`
-		} `json:"result"`
+	payload, err := io.ReadAll(input)
+	if err != nil {
+		return Measurement{}, fmt.Errorf("read Lattigo Route-B JSON: %w", err)
 	}
-	if err := json.NewDecoder(input).Decode(&envelope); err != nil {
+	var envelope struct {
+		Schema      string                                     `json:"schema"`
+		CompletedAt *time.Time                                 `json:"completed_at"`
+		Result      secureeval.RouteBCanonicalL11A2BFullResult `json:"result"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(payload))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&envelope); err != nil {
 		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: %w", err)
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: trailing JSON value")
+		}
+		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: trailing data: %w", err)
 	}
 	if envelope.Schema != lattigoRouteBSchema {
 		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: schema=%q, want %q", envelope.Schema, lattigoRouteBSchema)
+	}
+	if envelope.CompletedAt == nil || envelope.CompletedAt.IsZero() {
+		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: missing or zero completed_at")
+	}
+	var required struct {
+		Result *struct {
+			MismatchCount *uint64 `json:"mismatch_count"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(payload, &required); err != nil {
+		return Measurement{}, fmt.Errorf("parse Lattigo Route-B required fields: %w", err)
+	}
+	if required.Result == nil || required.Result.MismatchCount == nil {
+		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: missing mismatch_count")
 	}
 	result := envelope.Result
 	if result.FullA2B.WallNanoseconds == 0 || result.InputWords == 0 ||
@@ -225,6 +245,9 @@ func ParseLattigoRouteB(input io.Reader, provenance string) (Measurement, error)
 	}
 	if result.MismatchCount != 0 {
 		return Measurement{}, fmt.Errorf("Lattigo Route-B correctness failure: mismatch_count=%d", result.MismatchCount)
+	}
+	if err := result.Validate(); err != nil {
+		return Measurement{}, fmt.Errorf("validate complete Lattigo Route-B result: %w", err)
 	}
 	seconds := float64(result.FullA2B.WallNanoseconds) / 1e9
 

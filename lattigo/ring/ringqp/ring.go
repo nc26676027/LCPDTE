@@ -1,3 +1,6 @@
+// Modified by the LCPDTE project for local module integration and, where applicable,
+// runtime instrumentation. See lattigo/NOTICE for attribution and modification details.
+
 // Package ringqp is implements a wrapper for both the ringQ and ringP.
 package ringqp
 

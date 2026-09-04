@@ -1,3 +1,6 @@
+// Modified by the LCPDTE project for local module integration and, where applicable,
+// runtime instrumentation. See lattigo/NOTICE for attribution and modification details.
+
 // Package polynomial bundles generic parts of the homomorphic polynomial evaluation circuit.
 package polynomial
 

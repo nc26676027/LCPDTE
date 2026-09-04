@@ -19,3 +19,11 @@ Unless required by applicable law or agreed to in writing, software distributed
 under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 specific language governing permissions and limitations under the License.
+
+LCPDTE modifications, 2026
+
+This source tree is derived from Lattigo v6.1.1. The LCPDTE project localized
+package imports into the main module, added runtime-identity, observation, and
+streaming hooks needed by its CKKS integer evaluator, and retained the upstream
+license and attribution. Each Go file in this derivative carries a prominent
+LCPDTE modification notice.

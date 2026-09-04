@@ -1,3 +1,6 @@
+// Modified by the LCPDTE project for local module integration and, where applicable,
+// runtime instrumentation. See lattigo/NOTICE for attribution and modification details.
+
 // Package bootstrapping implements bootstrapping for fixed-point encrypted
 // approximate homomorphic encryption over the complex/real numbers (CKKS scheme).
 package bootstrapping

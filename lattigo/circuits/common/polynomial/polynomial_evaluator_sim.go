@@ -1,3 +1,6 @@
+// Modified by the LCPDTE project for local module integration and, where applicable,
+// runtime instrumentation. See lattigo/NOTICE for attribution and modification details.
+
 package polynomial
 
 import "github.com/nc26676027/LCPDTE/lattigo/core/rlwe"

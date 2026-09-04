@@ -1,3 +1,6 @@
+// Modified by the LCPDTE project for local module integration and, where applicable,
+// runtime instrumentation. See lattigo/NOTICE for attribution and modification details.
+
 // Package buffer implement methods for efficiently writing and reading values
 // to and from io.Writer and io.Reader that also expose their internal buffers.
 package buffer

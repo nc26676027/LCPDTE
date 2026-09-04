@@ -88,6 +88,9 @@ The command compares complete 8-bit A2B calls and reports both latency and
 effective words/second. It also exposes the packing difference: Gao/OpenFHE
 uses 8,192 lanes while the current Lattigo Route-B profile uses 512 words. An
 OpenFHE `Error in ...` line or a nonzero Lattigo mismatch count fails the run.
+The Lattigo input must be the complete result envelope: the command invokes its
+full validator to replay the 2×2,048 decoded slots, input digest, lifecycle
+linkage, error maxima, and zero-mismatch ledger before accepting the timing.
 
 ## Profiles and interoperation
 

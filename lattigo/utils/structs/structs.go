@@ -1,3 +1,6 @@
+// Modified by the LCPDTE project for local module integration and, where applicable,
+// runtime instrumentation. See lattigo/NOTICE for attribution and modification details.
+
 // Package structs implements helpers to generalize vectors and matrices of structs, as well as their serialization.
 package structs
 

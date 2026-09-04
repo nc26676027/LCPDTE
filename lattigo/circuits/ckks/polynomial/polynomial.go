@@ -1,3 +1,6 @@
+// Modified by the LCPDTE project for local module integration and, where applicable,
+// runtime instrumentation. See lattigo/NOTICE for attribution and modification details.
+
 // Package polynomial implements a homomorphic polynomial evaluator for the CKKS scheme.
 package polynomial
 

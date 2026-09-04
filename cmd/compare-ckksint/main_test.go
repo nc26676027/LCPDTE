@@ -18,7 +18,7 @@ func TestCLIComparesArtifactsAndWritesJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lattigo, err := filepath.Abs(filepath.Join(workingDirectory, "..", "..", "internal", "benchcmp", "testdata", "lattigo_route_b.json"))
+	lattigo, err := filepath.Abs(filepath.Join(workingDirectory, "..", "..", "research", "reproduction", "route_b", "route_b_l11_a2b_full_2026-09-01.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestCLIExitsNonzeroForNonCanonicalRouteBShape(t *testing.T) {
 		t.Fatal(err)
 	}
 	openfhe := filepath.Join(workingDirectory, "..", "..", "internal", "benchcmp", "testdata", "openfhe_bench8.log")
-	validLattigo := filepath.Join(workingDirectory, "..", "..", "internal", "benchcmp", "testdata", "lattigo_route_b.json")
+	validLattigo := filepath.Join(workingDirectory, "..", "..", "research", "reproduction", "route_b", "route_b_l11_a2b_full_2026-09-01.json")
 	payload, err := os.ReadFile(validLattigo)
 	if err != nil {
 		t.Fatal(err)
@@ -98,7 +98,7 @@ func TestCLIExitsNonzeroForTruncatedOpenFHELog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lattigo := filepath.Join(workingDirectory, "..", "..", "internal", "benchcmp", "testdata", "lattigo_route_b.json")
+	lattigo := filepath.Join(workingDirectory, "..", "..", "research", "reproduction", "route_b", "route_b_l11_a2b_full_2026-09-01.json")
 	truncated := filepath.Join(t.TempDir(), "truncated.log")
 	log := "CKKS scheme ring dimension: 65536\n" +
 		"Bootstrapping parameters: zN = 8, zSlots = 8192\n" +

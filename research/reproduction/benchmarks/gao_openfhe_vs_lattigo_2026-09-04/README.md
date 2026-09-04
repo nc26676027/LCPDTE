@@ -28,10 +28,13 @@ Both implementations were executed sequentially in Ubuntu 22.04.5 on WSL2 on
 the same Ryzen 7 H 255 host. OpenFHE used `OMP_NUM_THREADS=1`; Lattigo used
 `GOMAXPROCS=1`. Both runs used `N=65536` and complete 8-bit A2B.
 
-| Implementation | Complete A2B | Packed integers | Effective throughput | Peak RSS | Result |
+| Implementation | Complete A2B | Packed integers | Effective throughput | Whole-command peak RSS | Result |
 |---|---:|---:|---:|---:|---|
 | Gao et al. OpenFHE | 19.5693 s | 8,192 | 418.614871 words/s | 22.94 GiB | exit 0, no `Error in` |
 | Lattigo Route-B | 32.693327852 s | 512 | 15.660688 words/s | 12.11 GiB | exit 0, 0 mismatches |
+
+The RSS entries are whole-command peaks with different command scopes, so they
+are resource records rather than an operator-level memory comparison.
 
 OpenFHE completed one call `1.670644x` faster and delivered `26.730299x` the
 effective packed-integer throughput. The throughput ratio combines the
@@ -95,8 +98,10 @@ cd /mnt/d/WorkSpace/LCPDTE
 ```
 
 The raw benchmark command reported zero mismatches; the comparison tool reads
-the complete tracked JSON, checks its canonical shape, and computes throughput
-from its 512 input words and measured complete-A2B wall time.
+the complete tracked JSON and invokes its full validator to replay both 2,048-
+slot decoded outputs, the input digest, lifecycle linkage, error maxima, and
+zero-mismatch ledger. It then checks the canonical shape and computes
+throughput from the 512 input words and measured complete-A2B wall time.
 
 ## Source-artifact result
 
