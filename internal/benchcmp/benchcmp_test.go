@@ -635,7 +635,7 @@ func TestParseCanonicalRejectsUnmatchedGaoParameterSemantics(t *testing.T) {
 		replacement string
 		want        string
 	}{
-		{name: "comparison scope", old: `"comparison_scope":"gao-algorithm-and-aggregate-modulus-bits"`, replacement: `"comparison_scope":"prime-identical"`, want: "comparison_scope"},
+		{name: "comparison scope", old: `"comparison_scope":"gao-algorithm-exact-q-p-and-numerical-parameters"`, replacement: `"comparison_scope":"prime-identical"`, want: "comparison_scope"},
 		{name: "Q count", old: `"q_moduli_count":21`, replacement: `"q_moduli_count":20`, want: "q_moduli_count"},
 		{name: "Q aggregate", old: `"q_log2_aggregate":904`, replacement: `"q_log2_aggregate":903`, want: "q_log2_aggregate"},
 		{name: "P count", old: `"p_moduli_count":7`, replacement: `"p_moduli_count":6`, want: "p_moduli_count"},
@@ -931,7 +931,7 @@ func canonicalArtifactJSON(implementation string, samples []uint64) string {
 
 func canonicalParameters() *benchcmp.GaoParameterSemantics {
 	return &benchcmp.GaoParameterSemantics{
-		ComparisonScope: "gao-algorithm-and-aggregate-modulus-bits",
+		ComparisonScope: "gao-algorithm-exact-q-p-and-numerical-parameters",
 		QModuliCount:    21, QLog2Aggregate: 904,
 		PModuliCount: 7, PLog2Aggregate: 350,
 		ScalingModulusBits: 43, FirstModulusBits: 43,

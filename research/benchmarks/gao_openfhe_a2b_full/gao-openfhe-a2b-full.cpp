@@ -352,7 +352,7 @@ std::string BuildArtifact(const Options& options, const ExecutionMetadata& metad
            << "  \"packing_slots\": " << kPackingSlots << ",\n"
            << "  \"useful_words\": " << kUsefulWords << ",\n"
            << "  \"parameters\": {\n"
-           << "    \"comparison_scope\": \"gao-algorithm-and-aggregate-modulus-bits\",\n"
+           << "    \"comparison_scope\": \"gao-algorithm-exact-q-p-and-numerical-parameters\",\n"
            << "    \"q_moduli_count\": " << kQModuliCount << ",\n"
            << "    \"q_log2_aggregate\": " << kQLog2Aggregate << ",\n"
            << "    \"p_moduli_count\": " << kPModuliCount << ",\n"

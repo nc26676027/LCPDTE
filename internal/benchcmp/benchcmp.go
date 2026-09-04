@@ -25,7 +25,7 @@ const (
 	CanonicalBenchmarkSchema      = "lcpdte-ckksint-a2b-benchmark-v3"
 	ComparisonSchema              = "lcpdte-ckksint-a2b-comparison-v3"
 	TimingScopePreparedOnline     = "prepared-online"
-	GaoParameterComparisonScope   = "gao-algorithm-and-aggregate-modulus-bits"
+	GaoParameterComparisonScope   = "gao-algorithm-exact-q-p-and-numerical-parameters"
 	GaoFullProtocol               = "gao-a2b-full-z8-w4-v1"
 	GaoFullWorkloadID             = "uint8-0to255-x32"
 	GaoFullPackingID              = "n65536-cslots32768-zslots8192-w4"
@@ -42,7 +42,7 @@ const (
 	OpenFHEPinnedSourceRevision   = "08f1eb87434e7be072cba889270a8400bbffc08e"
 	OpenFHERuntime                = "OpenFHE-1.4.0;HEXL-1.2.6"
 	OpenFHEBuildProfile           = "CMAKE_BUILD_TYPE=Release;CXX_FLAGS=-march=native,-O3,-DNDEBUG,-fopenmp=libomp;MATHBACKEND=6;OPENFHE_VERSION=1.4.0;HEXL_VERSION=1.2.6;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_NTL=ON;WITH_TCM=ON;WITH_OPENMP=ON;OMP_NUM_THREADS=1"
-	LattigoAcceptanceBuildProfile = "GOOS=linux;GOARCH=amd64;GOAMD64=v4;GOMAXPROCS=1;GOGC=100;GOMEMLIMIT=20GiB;POST_WARMUP_GC=on;CPU_PROFILE=off"
+	LattigoAcceptanceBuildProfile = "GOOS=linux;GOARCH=amd64;GOAMD64=v4;GOMAXPROCS=1;GOGC=100;GOMEMLIMIT=20GiB;POST_WARMUP_GC=on;INTER_SAMPLE_GC=on;CPU_PROFILE=off"
 	lattigoRouteBSchema           = "lcpdte-route-b-l11-a2b-full-result-v1"
 	gaoWarmupCount                = 1
 	gaoRepeatCount                = 5

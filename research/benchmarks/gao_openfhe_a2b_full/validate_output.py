@@ -41,7 +41,7 @@ EXPECTED = {
 }
 
 EXPECTED_PARAMETERS = {
-    "comparison_scope": "gao-algorithm-and-aggregate-modulus-bits",
+    "comparison_scope": "gao-algorithm-exact-q-p-and-numerical-parameters",
     "q_moduli_count": 21,
     "q_log2_aggregate": 904,
     "p_moduli_count": 7,

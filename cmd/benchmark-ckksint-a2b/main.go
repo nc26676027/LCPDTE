@@ -365,7 +365,7 @@ func (state lattigoAcceptanceRuntime) lattigoBuildProfile() string {
 		cpuProfile = "on"
 	}
 	return fmt.Sprintf(
-		"GOOS=%s;GOARCH=%s;GOAMD64=%s;GOMAXPROCS=%s;GOGC=%s;GOMEMLIMIT=%s;POST_WARMUP_GC=%s;CPU_PROFILE=%s",
+		"GOOS=%s;GOARCH=%s;GOAMD64=%s;GOMAXPROCS=%s;GOGC=%s;GOMEMLIMIT=%s;POST_WARMUP_GC=%s;INTER_SAMPLE_GC=on;CPU_PROFILE=%s",
 		state.GOOS, state.GOARCH, state.BuildGOAMD64, state.GOMAXPROCSValue,
 		state.GOGCValue, state.GOMEMLIMITValue, state.PostWarmupGCValue, cpuProfile,
 	)

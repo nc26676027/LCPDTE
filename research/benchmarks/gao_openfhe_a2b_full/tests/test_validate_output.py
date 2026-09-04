@@ -92,7 +92,7 @@ def canonical_artifact() -> dict:
         "packing_slots": 32768,
         "useful_words": 8192,
         "parameters": {
-            "comparison_scope": "gao-algorithm-and-aggregate-modulus-bits",
+            "comparison_scope": "gao-algorithm-exact-q-p-and-numerical-parameters",
             "q_moduli_count": 21,
             "q_log2_aggregate": 904,
             "p_moduli_count": 7,
