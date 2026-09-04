@@ -148,6 +148,15 @@ func TestGaoA2BKernelN16PreparedMSBEntryRejectsNilEvaluator(t *testing.T) {
 	}
 }
 
+func TestGaoA2BKernelN16PreparedOutputsEntryRejectsNilEvaluator(t *testing.T) {
+	var _ func(*GaoA2BKernelN16FullPackedEvaluator, *rlwe.Ciphertext) (*rlwe.Ciphertext, *rlwe.Ciphertext, error) = (*GaoA2BKernelN16FullPackedEvaluator).EvaluatePreparedOutputsNew
+	var evaluator *GaoA2BKernelN16FullPackedEvaluator
+	identity, msb, err := evaluator.EvaluatePreparedOutputsNew(nil)
+	if err == nil || identity != nil || msb != nil {
+		t.Fatalf("nil prepared-output evaluator: identity=%v msb=%v err=%v", identity, msb, err)
+	}
+}
+
 func TestNormalizeGaoA2BKernelPolynomialScaleAcceptsOnlyRoundingResidue(t *testing.T) {
 	params, err := securityparams.GaoOpenFHEFullN16Parameters()
 	if err != nil {

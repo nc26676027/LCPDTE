@@ -406,12 +406,10 @@ func (e *gaoFullPackedA2BEvaluator) EvaluateNew(
 	if err = normalizeGaoFullPackedScale(iter0Refreshed, defaultScale); err != nil {
 		return nil, nil, 0, err
 	}
-	iter0Kernel, err := e.kernel0.EvaluatePreparedNew(iter0Refreshed)
+	id0, lowMSB, err := e.kernel0.EvaluatePreparedOutputsNew(iter0Refreshed)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("secureeval: Gao full-packed A2B iter0 kernel: %w", err)
 	}
-	id0 := iter0Kernel.IDCiphertext()
-	lowMSB = iter0Kernel.MSBCiphertext()
 	if err = requireGaoFullPackedCiphertext("iter0 ID", id0, 5, defaultScale); err != nil {
 		return nil, nil, 0, err
 	}
@@ -492,7 +490,7 @@ func (e *gaoFullPackedA2BEvaluator) refreshRealNew(input *rlwe.Ciphertext) (*rlw
 	if raised != input || raised.Level() != e.params.MaxLevel() || raised.LogSlots() != gaoFullPackedLogSlots {
 		return nil, fmt.Errorf("secureeval: Gao full-packed A2B ModUp output changed")
 	}
-	realOutput, err := e.source.DFTEvaluator.CoeffsToSlotsRealFromFactorsNew(raised, e.ctsFactors)
+	realOutput, err := e.source.DFTEvaluator.CoeffsToSlotsRealFromFactorsConsumeNew(raised, e.ctsFactors)
 	if err != nil {
 		return nil, err
 	}

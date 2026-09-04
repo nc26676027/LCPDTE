@@ -189,8 +189,23 @@ func TestFactorSourceDenseCoeffsToSlotsMatchesResidentMatrix(t *testing.T) {
 	if !reflect.DeepEqual(gotRealOnly, wantReal) {
 		t.Fatal("factor-source real-only CoeffsToSlots differs from resident-matrix real output")
 	}
+	consumeSource := &validatedMemoryFactorSource{literal: literal, factors: validated}
+	consumedInput := input.CopyNew()
+	gotConsumedReal, err := evaluator.CoeffsToSlotsRealFromFactorsConsumeNew(consumedInput, consumeSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(gotConsumedReal, wantReal) {
+		t.Fatal("consuming factor-source real-only CoeffsToSlots differs from resident-matrix real output")
+	}
+	if reflect.DeepEqual(consumedInput, input) {
+		t.Fatal("consuming factor-source real-only CoeffsToSlots preserved its input")
+	}
 	if source.legacyReads != 0 || source.validatedReads != len(matrix.Matrices) {
 		t.Fatalf("legacy/validated reads=%d/%d, want 0/%d", source.legacyReads, source.validatedReads, len(matrix.Matrices))
+	}
+	if consumeSource.legacyReads != 0 || consumeSource.validatedReads != len(matrix.Matrices) {
+		t.Fatalf("consume legacy/validated reads=%d/%d, want 0/%d", consumeSource.legacyReads, consumeSource.validatedReads, len(matrix.Matrices))
 	}
 }
 

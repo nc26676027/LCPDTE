@@ -495,7 +495,7 @@ func (e *GaoA2BKernelN16L11Evaluator) CoefficientSlots() int {
 }
 
 func (e *GaoA2BKernelN16L11Evaluator) EvaluateNew(input *rlwe.Ciphertext) (GaoA2BKernelResult, error) {
-	return e.evaluateNew(input, true)
+	return e.evaluateNew(input, true, true)
 }
 
 // EvaluatePreparedNew executes the sealed kernel after BindEvaluator has
@@ -503,7 +503,21 @@ func (e *GaoA2BKernelN16L11Evaluator) EvaluateNew(input *rlwe.Ciphertext) (GaoA2
 // privately owned server session: unlike EvaluateNew it does not re-hash the
 // immutable polynomial graph or clone its read-only operands on every call.
 func (e *GaoA2BKernelN16L11Evaluator) EvaluatePreparedNew(input *rlwe.Ciphertext) (GaoA2BKernelResult, error) {
-	return e.evaluateNew(input, false)
+	return e.evaluateNew(input, false, true)
+}
+
+// EvaluatePreparedOutputsNew executes the sealed full-packed kernel and
+// transfers ownership of its ID/MSB outputs to the caller. It omits the two
+// diagnostic checkpoint ciphertexts retained by EvaluatePreparedNew, so the
+// prepared production path does not copy values it never consumes.
+func (e *GaoA2BKernelN16L11Evaluator) EvaluatePreparedOutputsNew(
+	input *rlwe.Ciphertext,
+) (identity, msb *rlwe.Ciphertext, err error) {
+	result, err := e.evaluateNew(input, false, false)
+	if err != nil {
+		return nil, nil, err
+	}
+	return result.identity, result.msb, nil
 }
 
 // EvaluatePreparedMSBNew evaluates the full-packed kernel when only the MSB
@@ -565,7 +579,10 @@ func (e *GaoA2BKernelN16L11Evaluator) EvaluatePreparedMSBNew(input *rlwe.Ciphert
 	return msb, nil
 }
 
-func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verifySealedGraph bool) (GaoA2BKernelResult, error) {
+func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(
+	input *rlwe.Ciphertext,
+	verifySealedGraph, retainCheckpoints bool,
+) (GaoA2BKernelResult, error) {
 	if e == nil || e.circuit == nil || e.ckks == nil || e.polynomial == nil {
 		return GaoA2BKernelResult{}, fmt.Errorf("homchain: nil N16/L11 Gao kernel evaluator")
 	}
@@ -653,7 +670,12 @@ func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verify
 		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao exponential scale state changed: %w", err)
 	}
 	states = append(states, state)
-	exponentialBase := exponential.CopyNew()
+	var exponentialBase *rlwe.Ciphertext
+	if retainCheckpoints {
+		// MulRelinNew below creates a new ciphertext, so retaining this immutable
+		// value does not require a detached copy.
+		exponentialBase = exponential
+	}
 
 	root := exponential
 	for round, stage := range [...]GaoA2BKernelStage{GaoA2BKernelStageSquare0, GaoA2BKernelStageRootOfUnity} {
@@ -680,7 +702,11 @@ func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verify
 		}
 		states = append(states, state)
 	}
-	rootOfUnity := root.CopyNew()
+	var rootOfUnity *rlwe.Ciphertext
+	if retainCheckpoints {
+		// Polynomial evaluation seeds its power basis with a copy of root.
+		rootOfUnity = root
+	}
 
 	var lutOutputs []*rlwe.Ciphertext
 	if e.circuit.profile.claim == GaoA2BKernelN16FullPackedKernelOnlyUnverified {

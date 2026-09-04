@@ -274,6 +274,25 @@ func (eval *Evaluator) CoeffsToSlotsRealFromFactorsNew(
 	ctIn *rlwe.Ciphertext,
 	source FactorSource,
 ) (*rlwe.Ciphertext, error) {
+	return eval.coeffsToSlotsRealFromFactorsNew(ctIn, source, false)
+}
+
+// CoeffsToSlotsRealFromFactorsConsumeNew is the ownership-transferring form
+// of CoeffsToSlotsRealFromFactorsNew. It uses ctIn as the DFT output buffer;
+// callers must not use ctIn after this call. The returned real ciphertext is
+// newly allocated and remains owned by the caller.
+func (eval *Evaluator) CoeffsToSlotsRealFromFactorsConsumeNew(
+	ctIn *rlwe.Ciphertext,
+	source FactorSource,
+) (*rlwe.Ciphertext, error) {
+	return eval.coeffsToSlotsRealFromFactorsNew(ctIn, source, true)
+}
+
+func (eval *Evaluator) coeffsToSlotsRealFromFactorsNew(
+	ctIn *rlwe.Ciphertext,
+	source FactorSource,
+	consumeInput bool,
+) (*rlwe.Ciphertext, error) {
 	if eval == nil || ctIn == nil || source == nil {
 		return nil, fmt.Errorf("dft: evaluator, input or factor source is nil")
 	}
@@ -282,7 +301,10 @@ func (eval *Evaluator) CoeffsToSlotsRealFromFactorsNew(
 		literal.LogSlots != eval.parameters.LogMaxSlots() {
 		return nil, fmt.Errorf("dft: real-only CoeffsToSlots requires dense SplitRealAndImag HomomorphicEncode factors")
 	}
-	zV := ctIn.CopyNew()
+	zV := ctIn
+	if !consumeInput {
+		zV = ctIn.CopyNew()
+	}
 	if err := eval.EvaluateSequentialFromFactors(ctIn, source, zV); err != nil {
 		return nil, fmt.Errorf("dft: real-only CoeffsToSlots: %w", err)
 	}
