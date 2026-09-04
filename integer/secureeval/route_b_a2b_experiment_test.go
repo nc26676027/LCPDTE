@@ -4,8 +4,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/bootstrapping"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
 )
 
 func TestRouteBA2BFirstRoundOracleMatchesAuditedLowNibblePrefixes(t *testing.T) {

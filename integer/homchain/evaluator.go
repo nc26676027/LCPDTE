@@ -3,9 +3,9 @@ package homchain
 import (
 	"fmt"
 
-	ckkslintrans "github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
+	ckkslintrans "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/lintrans"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
 )
 
 // CiphertextPair contains the recovered low/high real coefficient halves.

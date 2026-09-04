@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/nc26676027/LCPDTE/integer/secureprofile"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/bootstrapping"
 )
 
 const routeBCapacitySnapshotDomain = "RBAUTH-capacity-snapshot-v1"

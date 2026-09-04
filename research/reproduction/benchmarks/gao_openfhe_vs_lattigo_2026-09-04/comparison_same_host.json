@@ -2,7 +2,7 @@
   "schema": "lcpdte-ckksint-a2b-comparison-v1",
   "openfhe": {
     "source": "gao-openfhe-benchmark-full",
-    "provenance": "research/upstream/fhe-simd-alu/build-acceptance/clean-build/bench.log",
+    "provenance": "research/reproduction/benchmarks/gao_openfhe_vs_lattigo_2026-09-04/gao_openfhe_bench8_local.log",
     "a2b_latency_nanoseconds": 19569300000,
     "effective_words_per_second": 418.6148712524209,
     "word_bits": 8,
@@ -14,7 +14,7 @@
   },
   "lattigo": {
     "source": "lattigo-route-b-l11-a2b-full",
-    "provenance": "research/upstream/fhe-simd-alu/build-acceptance/lattigo-wsl-a2b.json",
+    "provenance": "research/reproduction/benchmarks/gao_openfhe_vs_lattigo_2026-09-04/lattigo_route_b_a2b_local.json",
     "a2b_latency_nanoseconds": 32693327852,
     "effective_words_per_second": 15.660687780631624,
     "word_bits": 8,

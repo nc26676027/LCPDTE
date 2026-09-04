@@ -175,4 +175,7 @@ python, ipython, xgboost, pandas, numpy
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
-This project uses [Lattigo v6](https://github.com/tuneinsight/lattigo) (Apache 2.0), vendored under `vendor/`.
+This project incorporates its patched [Lattigo v6.1.1](https://github.com/tuneinsight/lattigo)
+source under [`lattigo`](lattigo) (Apache 2.0). Keeping the fork inside the
+LCPDTE module gives repository builds and external `ckksint` consumers the
+same implementation.

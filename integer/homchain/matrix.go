@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/tuneinsight/lattigo/v6/utils/bignum"
+	"github.com/nc26676027/LCPDTE/lattigo/utils/bignum"
 )
 
 // Matrix is a row-major arbitrary-precision complex matrix.

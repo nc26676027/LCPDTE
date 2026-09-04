@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
 )
 
 func TestSigned8Depth2ChildComparatorConstructorSealsClosedGraph(t *testing.T) {

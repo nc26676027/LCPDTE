@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"sort"
 
-	ckkslintrans "github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"
-	commonlintrans "github.com/tuneinsight/lattigo/v6/circuits/common/lintrans"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/schemes"
-	"github.com/tuneinsight/lattigo/v6/utils/bignum"
+	ckkslintrans "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/lintrans"
+	commonlintrans "github.com/nc26676027/LCPDTE/lattigo/circuits/common/lintrans"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes"
+	"github.com/nc26676027/LCPDTE/lattigo/utils/bignum"
 )
 
 // CompileOptions controls the Lattigo plaintext matrix encoding. The scale is

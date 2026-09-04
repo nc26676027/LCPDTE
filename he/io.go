@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
 )
 
 func Encrypt(values []complex128, level ...int) *rlwe.Ciphertext {

@@ -11,9 +11,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/ring/ringqp"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/bootstrapping"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/ring/ringqp"
 )
 
 func TestRouteBExpectedTracePairsUseDispatchOrderNotSortedKeyOrder(t *testing.T) {

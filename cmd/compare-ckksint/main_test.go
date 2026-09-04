@@ -66,7 +66,7 @@ func TestCLIComparesArtifactsAndWritesJSON(t *testing.T) {
 	}
 }
 
-func TestCLIExitsNonzeroForShapeMismatch(t *testing.T) {
+func TestCLIExitsNonzeroForNonCanonicalRouteBShape(t *testing.T) {
 	workingDirectory, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +88,7 @@ func TestCLIExitsNonzeroForShapeMismatch(t *testing.T) {
 	if err == nil {
 		t.Fatalf("command succeeded:\n%s", output)
 	}
-	if !strings.Contains(string(output), "word_bits mismatch") {
+	if !strings.Contains(string(output), "WordBits=16, want 8") {
 		t.Fatalf("output:\n%s", output)
 	}
 }

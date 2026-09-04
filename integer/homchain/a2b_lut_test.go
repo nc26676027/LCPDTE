@@ -13,7 +13,7 @@ import (
 
 	"github.com/nc26676027/LCPDTE/integer/homchain"
 
-	"github.com/tuneinsight/lattigo/v6/utils/bignum"
+	"github.com/nc26676027/LCPDTE/lattigo/utils/bignum"
 )
 
 const a2bLUTCanonicalDigest = "f3aa5c55fa47acd6c5a0f96d362d442948c6b2999d3bd4a6061870d3d21564e3"

@@ -19,6 +19,10 @@ const (
 	gaoRepeatCount      = 5
 	lattigoWarmupCount  = 0
 	lattigoRepeatCount  = 1
+	canonicalLogN       = 16
+	canonicalWordBits   = 8
+	canonicalSlots      = 2048
+	canonicalWords      = 512
 )
 
 var (
@@ -203,6 +207,21 @@ func ParseLattigoRouteB(input io.Reader, provenance string) (Measurement, error)
 	if result.FullA2B.WallNanoseconds == 0 || result.InputWords == 0 ||
 		result.FirstOperation.LogN == 0 || result.FirstOperation.WordBits == 0 {
 		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: incomplete A2B timing or workload")
+	}
+	if result.FirstOperation.LogN != canonicalLogN {
+		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: LogN=%d, want %d", result.FirstOperation.LogN, canonicalLogN)
+	}
+	if result.FirstOperation.PackingSlots != canonicalSlots {
+		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: PackingSlots=%d, want %d", result.FirstOperation.PackingSlots, canonicalSlots)
+	}
+	if result.FirstOperation.WordBits != canonicalWordBits {
+		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: WordBits=%d, want %d", result.FirstOperation.WordBits, canonicalWordBits)
+	}
+	if result.FirstOperation.WordCapacity != canonicalWords {
+		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: WordCapacity=%d, want %d", result.FirstOperation.WordCapacity, canonicalWords)
+	}
+	if result.InputWords != result.FirstOperation.WordCapacity {
+		return Measurement{}, fmt.Errorf("parse Lattigo Route-B JSON: input_words=%d, want WordCapacity=%d", result.InputWords, result.FirstOperation.WordCapacity)
 	}
 	if result.MismatchCount != 0 {
 		return Measurement{}, fmt.Errorf("Lattigo Route-B correctness failure: mismatch_count=%d", result.MismatchCount)

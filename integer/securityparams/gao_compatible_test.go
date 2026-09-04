@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/tuneinsight/lattigo/v6/ring"
+	"github.com/nc26676027/LCPDTE/lattigo/ring"
 )
 
 func TestGaoCompatibleN16ParametersAndManifest(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/nc26676027/LCPDTE/integer/homchain"
 	"github.com/nc26676027/LCPDTE/integer/z2n"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
 )
 
 func TestA2BRefreshOutputFeedsGaoKernelAtExactScale(t *testing.T) {

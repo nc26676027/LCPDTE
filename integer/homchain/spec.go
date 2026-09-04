@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math/bits"
 
-	ckkslintrans "github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"
-	"github.com/tuneinsight/lattigo/v6/ring"
-	"github.com/tuneinsight/lattigo/v6/utils/bignum"
+	ckkslintrans "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/lintrans"
+	"github.com/nc26676027/LCPDTE/lattigo/ring"
+	"github.com/nc26676027/LCPDTE/lattigo/utils/bignum"
 )
 
 // TransformName identifies one Gao--Zheng matrix variant.

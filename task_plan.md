@@ -183,7 +183,7 @@ and private remote delivery remain later gates.
 - [x] Expose the minimum public `ckksint` seam required by setup/keygen, client encryption, server evaluation, client decryption and result verification.
 - [x] Add a self-contained Lattigo-style end-to-end example that imports only `ckksint` and prints phase timings.
 - [ ] Run focused tests, the affected package suite, the end-to-end command and independent Standards/Spec review; commit the accepted implementation on `main` without pushing.
-- **Status:** implementation, real N=2^16 acceptance runs and affected-suite verification complete; independent Standards/Spec review and commit remain
+- **Status:** first Standards/Spec review findings repaired and post-fix verification complete; final independent re-review and fix commit remain
 
 ## Candidate Research Questions
 

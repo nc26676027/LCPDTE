@@ -1,6 +1,6 @@
 package he
 
-import "github.com/tuneinsight/lattigo/v6/core/rlwe"
+import "github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
 
 type CT struct {
 	Ct *rlwe.Ciphertext

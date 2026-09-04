@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/nc26676027/LCPDTE/integer/homchain"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/bootstrapping"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/lintrans"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
 )
 
 const routeBSigned8SameFeatureBinaryReportSchema = "lcpdte-route-b-signed8-same-feature-binary-control-report-v1"

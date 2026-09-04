@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/nc26676027/LCPDTE/integer/z2n"
-	ckkslintrans "github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/ring"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
-	"github.com/tuneinsight/lattigo/v6/utils/bignum"
+	ckkslintrans "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/lintrans"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/ring"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/utils/bignum"
 )
 
 func TestSignFusionAll256MatchesOracleAndGenericB2A(t *testing.T) {

@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/nc26676027/LCPDTE/integer/treeplan"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
-	ckksdft "github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
-	ckkslintrans "github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/mod1"
-	ckkspolynomial "github.com/tuneinsight/lattigo/v6/circuits/ckks/polynomial"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/bootstrapping"
+	ckksdft "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/dft"
+	ckkslintrans "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/lintrans"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/mod1"
+	ckkspolynomial "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/polynomial"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
 )
 
 func TestSigned8Depth2ChildSelectorDecodeEncryptedSelectedChildren(t *testing.T) {

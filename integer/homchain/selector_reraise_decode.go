@@ -12,15 +12,15 @@ import (
 
 	"github.com/nc26676027/LCPDTE/integer/z2n"
 
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
-	ckksdft "github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
-	ckkslintrans "github.com/tuneinsight/lattigo/v6/circuits/ckks/lintrans"
-	ckkspolynomial "github.com/tuneinsight/lattigo/v6/circuits/ckks/polynomial"
-	commonlintrans "github.com/tuneinsight/lattigo/v6/circuits/common/lintrans"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/ring"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
-	"github.com/tuneinsight/lattigo/v6/utils/bignum"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/bootstrapping"
+	ckksdft "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/dft"
+	ckkslintrans "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/lintrans"
+	ckkspolynomial "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/polynomial"
+	commonlintrans "github.com/nc26676027/LCPDTE/lattigo/circuits/common/lintrans"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/ring"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/utils/bignum"
 )
 
 const (

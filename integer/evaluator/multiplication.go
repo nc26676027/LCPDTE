@@ -3,8 +3,8 @@ package evaluator
 import (
 	"fmt"
 
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
 )
 
 // MultShort implements Gao--Zheng Definition 15. lhs carries

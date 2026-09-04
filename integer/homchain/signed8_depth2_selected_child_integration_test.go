@@ -5,7 +5,7 @@ import (
 	"math/cmplx"
 	"testing"
 
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
 )
 
 func TestSigned8Depth2SelectedChildEncryptedFourPathsPublic(t *testing.T) {

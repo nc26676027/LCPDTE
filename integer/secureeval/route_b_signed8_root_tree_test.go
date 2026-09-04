@@ -10,7 +10,7 @@ import (
 
 	"github.com/nc26676027/LCPDTE/integer/homchain"
 	"github.com/nc26676027/LCPDTE/integer/secureprofile"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
 )
 
 func TestRouteBSigned8RootTreeModelAndOracle(t *testing.T) {

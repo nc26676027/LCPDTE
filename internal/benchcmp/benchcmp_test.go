@@ -3,6 +3,7 @@ package benchcmp_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
 	"strings"
@@ -104,7 +105,7 @@ func TestParseLattigoRouteBRejectsMismatch(t *testing.T) {
 	result := `{
   "schema": "lcpdte-route-b-l11-a2b-full-result-v1",
   "result": {
-    "first_operation": {"LogN": 16, "WordBits": 8},
+    "first_operation": {"LogN": 16, "PackingSlots": 2048, "WordBits": 8, "WordCapacity": 512},
     "full_a2b": {"wall_nanoseconds": 25830240800},
     "input_words": 512,
     "mismatch_count": 1
@@ -114,6 +115,48 @@ func TestParseLattigoRouteBRejectsMismatch(t *testing.T) {
 	_, err := benchcmp.ParseLattigoRouteB(strings.NewReader(result), "failed.json")
 	if err == nil || !strings.Contains(err.Error(), "mismatch_count=1") {
 		t.Fatalf("error=%v", err)
+	}
+}
+
+func TestParseLattigoRouteBRejectsNonCanonicalShape(t *testing.T) {
+	tests := []struct {
+		name          string
+		logN          uint32
+		packingSlots  uint32
+		wordBits      uint32
+		wordCapacity  uint32
+		inputWords    uint32
+		wantErrorPart string
+	}{
+		{name: "log N", logN: 15, packingSlots: 2048, wordBits: 8, wordCapacity: 512, inputWords: 512, wantErrorPart: "LogN=15, want 16"},
+		{name: "packing slots", logN: 16, packingSlots: 1024, wordBits: 8, wordCapacity: 512, inputWords: 512, wantErrorPart: "PackingSlots=1024, want 2048"},
+		{name: "word bits", logN: 16, packingSlots: 2048, wordBits: 16, wordCapacity: 512, inputWords: 512, wantErrorPart: "WordBits=16, want 8"},
+		{name: "word capacity", logN: 16, packingSlots: 2048, wordBits: 8, wordCapacity: 256, inputWords: 256, wantErrorPart: "WordCapacity=256, want 512"},
+		{name: "partial workload", logN: 16, packingSlots: 2048, wordBits: 8, wordCapacity: 512, inputWords: 256, wantErrorPart: "input_words=256, want WordCapacity=512"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := fmt.Sprintf(`{
+  "schema": "lcpdte-route-b-l11-a2b-full-result-v1",
+  "result": {
+    "first_operation": {
+      "LogN": %d,
+      "PackingSlots": %d,
+      "WordBits": %d,
+      "WordCapacity": %d
+    },
+    "full_a2b": {"wall_nanoseconds": 25830240800},
+    "input_words": %d,
+    "mismatch_count": 0
+  }
+}`, test.logN, test.packingSlots, test.wordBits, test.wordCapacity, test.inputWords)
+
+			_, err := benchcmp.ParseLattigoRouteB(strings.NewReader(result), "forged.json")
+			if err == nil || !strings.Contains(err.Error(), test.wantErrorPart) {
+				t.Fatalf("error=%v, want substring %q", err, test.wantErrorPart)
+			}
+		})
 	}
 }
 

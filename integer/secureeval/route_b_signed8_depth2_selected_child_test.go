@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/nc26676027/LCPDTE/integer/homchain"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/ring"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/ring"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
 )
 
 func TestRouteBSigned8Depth2SelectedChildModelAndBindingAreClosed(t *testing.T) {

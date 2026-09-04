@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/utils/bignum"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/utils/bignum"
 )
 
 func TestSelectorReraiseDecodeEncryptedPeriodicPublicSmoke(t *testing.T) {

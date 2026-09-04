@@ -2,7 +2,7 @@ package ckksint
 
 import (
 	inteval "github.com/nc26676027/LCPDTE/integer/evaluator"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
 )
 
 // The byte prevents Go from coalescing pointers to zero-sized allocation

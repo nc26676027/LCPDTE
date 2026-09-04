@@ -9,7 +9,7 @@ import (
 	"github.com/nc26676027/LCPDTE/integer/homchain"
 	"github.com/nc26676027/LCPDTE/integer/secureprofile"
 	"github.com/nc26676027/LCPDTE/integer/securityparams"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/dft"
 )
 
 func TestRouteBA2BFullRejectsNilInstalledEvaluatorBeforeDispatch(t *testing.T) {

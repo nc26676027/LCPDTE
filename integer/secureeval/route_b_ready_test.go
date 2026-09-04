@@ -9,10 +9,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
-	"github.com/tuneinsight/lattigo/v6/ring/ringqp"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/bootstrapping"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/dft"
+	"github.com/nc26676027/LCPDTE/lattigo/ring/ringqp"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
 )
 
 type smallRouteBLiveFixture struct {

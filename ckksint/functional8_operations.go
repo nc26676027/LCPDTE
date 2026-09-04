@@ -6,7 +6,7 @@ import (
 
 	"github.com/nc26676027/LCPDTE/integer/homchain"
 	"github.com/nc26676027/LCPDTE/integer/treeplan"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
 )
 
 // A2B converts four arithmetic int8 words to encrypted LSB-first bits.

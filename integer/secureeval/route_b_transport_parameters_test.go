@@ -9,11 +9,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/mod1"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
-	"github.com/tuneinsight/lattigo/v6/utils/bignum"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/bootstrapping"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/dft"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/mod1"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/utils/bignum"
 )
 
 const gaoN16RouteBCompatibilityPolynomialFingerprintHex = "d40394a8477ac33b29fdc2ddc411124b59aee59314edeb05eb1c6631688f9a16"

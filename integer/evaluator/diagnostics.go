@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/nc26676027/LCPDTE/integer/z2n"
-	"github.com/tuneinsight/lattigo/v6/utils/bignum"
+	"github.com/nc26676027/LCPDTE/lattigo/utils/bignum"
 )
 
 // DecodeDiagnostics quantifies the strict-decoding safety margin after CKKS

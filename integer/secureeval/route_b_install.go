@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 
 	"github.com/nc26676027/LCPDTE/integer/secureprofile"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/bootstrapping"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/dft"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
 )
 
 // RouteBInstalledEvaluator is the sole opaque owner of a prebuilt Route-B

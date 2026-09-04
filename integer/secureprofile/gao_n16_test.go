@@ -5,8 +5,8 @@ import (
 
 	"github.com/nc26676027/LCPDTE/integer/secureprofile"
 	"github.com/nc26676027/LCPDTE/integer/securityparams"
-	"github.com/tuneinsight/lattigo/v6/ring"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/ring"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
 )
 
 func TestNewGaoN16BindsExactCandidateWithoutPromotingCircuitSecurity(t *testing.T) {

@@ -4,6 +4,10 @@
 Lattigo CKKS. Applications import this package instead of assembling research
 graphs from `integer/homchain` or `integer/secureeval`.
 
+The patched Lattigo v6.1.1 implementation is part of this Go module under
+`github.com/nc26676027/LCPDTE/lattigo`, so consumers do not need this
+repository's `vendor` mode or a separate fork replacement.
+
 ## API map
 
 - `Context` provides packed `Z/(2^n)` arithmetic for `n = 8, 16, 32, 64`:
@@ -111,6 +115,7 @@ the Route-B session serialize their public calls.
 ```powershell
 go test -count=1 ./ckksint ./integer/secureeval
 go test -count=1 ./internal/benchcmp ./cmd/compare-ckksint
+go test -mod=mod -count=1 ./ckksint -run TestExternalModuleImportsCKKSIntWithoutVendor
 ```
 
 The real Route-B test is opt-in because it executes the full N=2^16 graph:

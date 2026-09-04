@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	"github.com/nc26676027/LCPDTE/integer/z2n"
-	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
-	ckksdft "github.com/tuneinsight/lattigo/v6/circuits/ckks/dft"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/ring"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/bootstrapping"
+	ckksdft "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/dft"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/ring"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
 )
 
 // A2BFullFidelity is the strongest claim supported by this local graph.

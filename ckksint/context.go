@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	inteval "github.com/nc26676027/LCPDTE/integer/evaluator"
-	"github.com/tuneinsight/lattigo/v6/core/rlwe"
-	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
+	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
+	"github.com/nc26676027/LCPDTE/lattigo/schemes/ckks"
 )
 
 // Context owns one complete arithmetic codec and binds every value to the key
