@@ -4,9 +4,8 @@ This command runs the Lattigo side of the matched Gao/OpenFHE 8-bit A2B
 benchmark through the public `ckksint` API:
 
 ```powershell
-go run ./cmd/benchmark-ckksint-a2b `
-  -host-id <stable-host-id> `
-  -out lattigo-a2b.json
+wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/WorkSpace/LCPDTE && GOAMD64=v4 go build -o /tmp/lcpdte-benchmark-ckksint-a2b ./cmd/benchmark-ckksint-a2b'
+wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/WorkSpace/LCPDTE && GOAMD64=v4 GOMAXPROCS=1 GOGC=100 GOMEMLIMIT=20GiB POST_WARMUP_GC=on LCPDTE_GAO_CPU_PROFILE= /tmp/lcpdte-benchmark-ckksint-a2b -host-id <stable-host-id> -out lattigo-a2b.json'
 ```
 
 The workload is 8,192 bytes (`0..255` repeated 32 times) at `N=65536`. Every
@@ -18,7 +17,15 @@ separately verified evaluations. All 65,536 output bits must match.
 Each timed sample is the complete public `EvaluateA2B` server-call wall time.
 Parameter construction, keys, resident/prevalidated DFT factors, encryption,
 decryption, and correctness checks remain outside the prepared-online samples.
-The process fixes `GOMAXPROCS=1` while it runs.
+The command admits only the fixed acceptance process profile
+`GOAMD64=v4`, `GOMAXPROCS=1`, `GOGC=100`, `GOMEMLIMIT=20GiB`, and
+`POST_WARMUP_GC=on`, with CPU profiling off. It verifies `GOAMD64=v4` from the executable's embedded
+Go build settings, checks the live scheduler and GC/memory-limit state, and
+requires `LCPDTE_GAO_CPU_PROFILE` to be empty. It exits before constructing the
+HE session when any value differs. The single
+post-warmup GC runs before the five measured calls.
+The acceptance path uses an explicit `go build`: on this toolchain `go run`
+does not embed the required `vcs.revision` and is rejected before setup.
 
 `setup_nanoseconds` is the complete untimed envelope before the warmup:
 parameters, public/secret keys, reusable server construction, resident factor

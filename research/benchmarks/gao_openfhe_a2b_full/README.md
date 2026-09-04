@@ -17,7 +17,10 @@ The fixed benchmark shape is:
 - public-key encryption, resident bootstrap precomputation,
   `FLEXIBLEMANUAL`'s native scale schedule, and the recorded backend plan
   `openfhe-auto-dim1-0`;
-- one OpenMP thread;
+- OpenFHE 1.4.0 with Intel HEXL 1.2.6, NTL, TCMalloc, and OpenMP enabled;
+- a Release Clang 14 build whose focused target contains `-march=native`,
+  `-O3`, `-DNDEBUG`, `-DMATHBACKEND=6`, and `-fopenmp=libomp`;
+- one OpenMP thread (`OMP_NUM_THREADS=1`);
 - setup, key generation, bootstrapping precomputation, encoding and encryption
   outside the online timer;
 - one correctness warmup followed by five separately timed evaluations;
@@ -26,11 +29,16 @@ The fixed benchmark shape is:
 
 The build helper copies the tracked driver into the ignored clean-source
 example directory and links it with the existing Release/HEXL/native/OpenMP
-`build-acceptance/clean-build` configuration. It does not modify the pinned
-OpenFHE implementation. `run_wsl.sh` rechecks the clean pinned revision, reads
-the compiler and enabled build options from that CMake cache, and passes those
-values to the driver for inclusion in the artifact together with the runtime,
-OS, and architecture.
+`build-acceptance/clean-build` configuration. It validates the cache, focused
+target `flags.make`, HEXL package version, and link line before accepting the
+binary. It does not modify the pinned OpenFHE implementation. `run_wsl.sh`
+independently reconstructs the canonical build-profile string from those
+files, rechecks the clean pinned revision, and passes the exact profile to the
+driver together with the compiler, OS, architecture, and one-thread setting.
+Both scripts print the tracked driver SHA-256. The final reproduction report
+and `SHA256SUMS` bind that hash because the upstream `source_revision` covers
+only the pinned Gao/OpenFHE checkout, not this repository's temporary example
+driver.
 
 From PowerShell, compile without running the heavy benchmark:
 
@@ -69,5 +77,5 @@ modulus bit lengths. Both backends implement the same mathematical DFT target
 with their native scale schedules and execution plans; the comparison does not
 assert identical generated RNS primes or identical backend BSGS decompositions.
 The admitted Lattigo artifact records its live optimized plan as
-`lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-optimized`, while
+`lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-identity-mask-drop-complex-lut-optimized`, while
 the OpenFHE artifact records `openfhe-auto-dim1-0`.

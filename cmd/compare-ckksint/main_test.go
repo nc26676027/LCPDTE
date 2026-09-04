@@ -178,8 +178,8 @@ func writeCanonicalArtifact(t *testing.T, implementation, outputContainer string
 		HostID: "ryzen-7-h-255", EncryptionMode: "public-key",
 		FactorStorageMode: "resident-precomputed", ScaleSchedule: "openfhe-flexiblemanual-native",
 		BackendBSGSPlan: "openfhe-auto-dim1-0", SourceRevision: "08f1eb87434e7be072cba889270a8400bbffc08e",
-		Runtime: "openfhe-fhe-simd-alu", Compiler: "clang version 14.0.0",
-		BuildProfile: "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON",
+		Runtime: benchcmp.OpenFHERuntime, Compiler: "/usr/bin/clang++ :: Ubuntu clang version 14.0.0-1ubuntu1.1",
+		BuildProfile: benchcmp.OpenFHEBuildProfile,
 		OS:           "linux", Arch: "amd64", Protocol: "gao-a2b-full-z8-w4-v1", WorkloadID: "uint8-0to255-x32",
 		PackingID: "n65536-cslots32768-zslots8192-w4", OutputContainer: outputContainer,
 		WordBits: 8, RingDimension: 65_536, PackingSlots: 32_768, UsefulWords: 8_192,
@@ -190,11 +190,11 @@ func writeCanonicalArtifact(t *testing.T, implementation, outputContainer string
 	if implementation == "lattigo-gao-a2b-full" {
 		payload.FactorStorageMode = "resident-prevalidated"
 		payload.ScaleSchedule = "lattigo-explicit-level-scale-native"
-		payload.BackendBSGSPlan = "lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-optimized"
+		payload.BackendBSGSPlan = benchcmp.LattigoBackendBSGSPlan
 		payload.SourceRevision = "lattigo-test-revision"
-		payload.Runtime = "lattigo-v6"
-		payload.Compiler = "go1.25.0"
-		payload.BuildProfile = "go-build"
+		payload.Runtime = "go1.25.0"
+		payload.Compiler = "gc"
+		payload.BuildProfile = benchcmp.LattigoAcceptanceBuildProfile
 	}
 	encoded, err := json.Marshal(payload)
 	if err != nil {

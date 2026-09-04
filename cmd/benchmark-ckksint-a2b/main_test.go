@@ -16,11 +16,83 @@ import (
 func testExecutionMetadata() benchmarkExecutionMetadata {
 	return benchmarkExecutionMetadata{
 		SourceRevision: "0123456789abcdef0123456789abcdef01234567",
-		Runtime:        "go-test",
+		Runtime:        "go1.25.0",
 		Compiler:       "gc",
-		BuildProfile:   "GOOS=linux;GOARCH=amd64;GOAMD64=v1;GOMAXPROCS=1",
+		BuildProfile:   benchcmp.LattigoAcceptanceBuildProfile,
 		OS:             "linux",
 		Arch:           "amd64",
+	}
+}
+
+func canonicalAcceptanceRuntime() lattigoAcceptanceRuntime {
+	return lattigoAcceptanceRuntime{
+		BuildGOAMD64:       "v4",
+		EnvironmentGOAMD64: "v4",
+		GOMAXPROCSValue:    "1",
+		GOGCValue:          "100",
+		GOMEMLIMITValue:    "20GiB",
+		PostWarmupGCValue:  "on",
+		CPUProfileValue:    "",
+		RuntimeGOMAXPROCS:  1,
+		RuntimeGOGC:        100,
+		RuntimeMemoryLimit: 20 * 1024 * 1024 * 1024,
+		GOOS:               "linux",
+		GOARCH:             "amd64",
+	}
+}
+
+func TestLattigoAcceptanceRuntimeRequiresExactFairBuild(t *testing.T) {
+	canonical := canonicalAcceptanceRuntime()
+	if err := validateLattigoAcceptanceRuntime(canonical); err != nil {
+		t.Fatalf("canonical runtime rejected: %v", err)
+	}
+	if got := canonical.lattigoBuildProfile(); got != benchcmp.LattigoAcceptanceBuildProfile {
+		t.Fatalf("build profile=%q, want %q", got, benchcmp.LattigoAcceptanceBuildProfile)
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*lattigoAcceptanceRuntime)
+		want   string
+	}{
+		{name: "embedded GOAMD64", mutate: func(state *lattigoAcceptanceRuntime) { state.BuildGOAMD64 = "v3" }, want: "embedded GOAMD64"},
+		{name: "environment GOAMD64", mutate: func(state *lattigoAcceptanceRuntime) { state.EnvironmentGOAMD64 = "v3" }, want: "GOAMD64"},
+		{name: "GOMAXPROCS environment", mutate: func(state *lattigoAcceptanceRuntime) { state.GOMAXPROCSValue = "2" }, want: "GOMAXPROCS"},
+		{name: "GOMAXPROCS runtime", mutate: func(state *lattigoAcceptanceRuntime) { state.RuntimeGOMAXPROCS = 2 }, want: "GOMAXPROCS"},
+		{name: "GOGC environment", mutate: func(state *lattigoAcceptanceRuntime) { state.GOGCValue = "off" }, want: "GOGC"},
+		{name: "GOGC runtime", mutate: func(state *lattigoAcceptanceRuntime) { state.RuntimeGOGC = 99 }, want: "GOGC"},
+		{name: "GOMEMLIMIT environment", mutate: func(state *lattigoAcceptanceRuntime) { state.GOMEMLIMITValue = "24GiB" }, want: "GOMEMLIMIT"},
+		{name: "GOMEMLIMIT runtime", mutate: func(state *lattigoAcceptanceRuntime) { state.RuntimeMemoryLimit-- }, want: "GOMEMLIMIT"},
+		{name: "post warmup GC", mutate: func(state *lattigoAcceptanceRuntime) { state.PostWarmupGCValue = "off" }, want: "POST_WARMUP_GC"},
+		{name: "CPU profile", mutate: func(state *lattigoAcceptanceRuntime) { state.CPUProfileValue = "cpu.pprof" }, want: "LCPDTE_GAO_CPU_PROFILE"},
+		{name: "operating system", mutate: func(state *lattigoAcceptanceRuntime) { state.GOOS = "windows" }, want: "GOOS"},
+		{name: "architecture", mutate: func(state *lattigoAcceptanceRuntime) { state.GOARCH = "arm64" }, want: "GOARCH"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			state := canonical
+			test.mutate(&state)
+			if err := validateLattigoAcceptanceRuntime(state); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("error=%v, want substring %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestBenchmarkRejectsNonAcceptanceBuildBeforeSessionConstruction(t *testing.T) {
+	metadata := testExecutionMetadata()
+	metadata.BuildProfile = "GOOS=linux;GOARCH=amd64;GOAMD64=v3;GOMAXPROCS=1"
+	constructed := false
+	_, err := runCanonicalBenchmarkWithFactory(
+		"same-host",
+		func() (sessionOps, ckksint.GaoFullPackedA2BSetupInfo, error) {
+			constructed = true
+			return sessionOps{}, ckksint.GaoFullPackedA2BSetupInfo{}, nil
+		},
+		func() (benchmarkExecutionMetadata, error) { return metadata, nil },
+	)
+	if err == nil || !strings.Contains(err.Error(), "build_profile") || constructed {
+		t.Fatalf("error=%v session_constructed=%t", err, constructed)
 	}
 }
 
@@ -87,9 +159,10 @@ func TestCanonicalArtifactRecordsPreparedOnlineProtocol(t *testing.T) {
 	}
 	if got.EncryptionMode != "public-key" || got.FactorStorageMode != "resident-prevalidated" ||
 		got.ScaleSchedule != "lattigo-explicit-level-scale-native" ||
-		got.BackendBSGSPlan != "lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-optimized" ||
+		got.BackendBSGSPlan != benchcmp.LattigoBackendBSGSPlan ||
 		got.SourceRevision != testExecutionMetadata().SourceRevision || got.SourceModified ||
-		got.Runtime != "go-test" || got.Compiler != "gc" || got.OS != "linux" || got.Arch != "amd64" {
+		got.Runtime != "go1.25.0" || got.Compiler != "gc" || got.BuildProfile != benchcmp.LattigoAcceptanceBuildProfile ||
+		got.OS != "linux" || got.Arch != "amd64" {
 		t.Fatalf("execution metadata=%+v", got)
 	}
 	if got.WarmupCount != 1 || !got.WarmupVerified || got.RepeatCount != 5 || got.VerifiedEvaluations != 5 {

@@ -9,6 +9,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
+	"runtime/metrics"
 	"runtime/pprof"
 	"strings"
 	"time"
@@ -30,6 +31,21 @@ type benchmarkExecutionMetadata struct {
 	BuildProfile   string
 	OS             string
 	Arch           string
+}
+
+type lattigoAcceptanceRuntime struct {
+	BuildGOAMD64       string
+	EnvironmentGOAMD64 string
+	GOMAXPROCSValue    string
+	GOGCValue          string
+	GOMEMLIMITValue    string
+	PostWarmupGCValue  string
+	CPUProfileValue    string
+	RuntimeGOMAXPROCS  int
+	RuntimeGOGC        uint64
+	RuntimeMemoryLimit uint64
+	GOOS               string
+	GOARCH             string
 }
 
 type sessionOps struct {
@@ -107,20 +123,8 @@ func canonicalArtifact(
 	if err != nil {
 		return benchcmp.CanonicalArtifact{}, err
 	}
-	if execution.SourceModified {
-		return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark requires a clean Lattigo source revision")
-	}
-	for field, value := range map[string]string{
-		"source_revision": execution.SourceRevision,
-		"runtime":         execution.Runtime,
-		"compiler":        execution.Compiler,
-		"build_profile":   execution.BuildProfile,
-		"os":              execution.OS,
-		"arch":            execution.Arch,
-	} {
-		if strings.TrimSpace(value) == "" {
-			return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark execution metadata %s is required", field)
-		}
+	if err = validateLattigoExecutionMetadata(execution); err != nil {
+		return benchcmp.CanonicalArtifact{}, err
 	}
 	return benchcmp.CanonicalArtifact{
 		Schema:                  benchcmp.CanonicalBenchmarkSchema,
@@ -212,28 +216,135 @@ func currentExecutionMetadata() (benchmarkExecutionMetadata, error) {
 	}
 	revision := strings.TrimSpace(settings["vcs.revision"])
 	if revision == "" {
-		return benchmarkExecutionMetadata{}, fmt.Errorf("Go build is missing vcs.revision")
+		return benchmarkExecutionMetadata{}, fmt.Errorf("Go build is missing vcs.revision; build the acceptance executable with go build (go run is not admitted)")
 	}
 	modified, err := parseBuildBool(settings["vcs.modified"])
 	if err != nil {
 		return benchmarkExecutionMetadata{}, err
 	}
-	goamd64 := strings.TrimSpace(settings["GOAMD64"])
-	if goamd64 == "" {
-		goamd64 = "unspecified"
+	runtimeGOGC, runtimeMemoryLimit, err := currentRuntimeGCLimits()
+	if err != nil {
+		return benchmarkExecutionMetadata{}, err
+	}
+	acceptance := lattigoAcceptanceRuntime{
+		BuildGOAMD64:       strings.TrimSpace(settings["GOAMD64"]),
+		EnvironmentGOAMD64: strings.TrimSpace(os.Getenv("GOAMD64")),
+		GOMAXPROCSValue:    strings.TrimSpace(os.Getenv("GOMAXPROCS")),
+		GOGCValue:          strings.TrimSpace(os.Getenv("GOGC")),
+		GOMEMLIMITValue:    strings.TrimSpace(os.Getenv("GOMEMLIMIT")),
+		PostWarmupGCValue:  strings.TrimSpace(os.Getenv("POST_WARMUP_GC")),
+		CPUProfileValue:    strings.TrimSpace(os.Getenv("LCPDTE_GAO_CPU_PROFILE")),
+		RuntimeGOMAXPROCS:  runtime.GOMAXPROCS(0),
+		RuntimeGOGC:        runtimeGOGC,
+		RuntimeMemoryLimit: runtimeMemoryLimit,
+		GOOS:               runtime.GOOS,
+		GOARCH:             runtime.GOARCH,
+	}
+	if err = validateLattigoAcceptanceRuntime(acceptance); err != nil {
+		return benchmarkExecutionMetadata{}, err
 	}
 	return benchmarkExecutionMetadata{
 		SourceRevision: revision,
 		SourceModified: modified,
 		Runtime:        build.GoVersion,
 		Compiler:       runtime.Compiler,
-		BuildProfile: fmt.Sprintf(
-			"GOOS=%s;GOARCH=%s;GOAMD64=%s;GOMAXPROCS=1",
-			runtime.GOOS, runtime.GOARCH, goamd64,
-		),
-		OS:   runtime.GOOS,
-		Arch: runtime.GOARCH,
+		BuildProfile:   acceptance.lattigoBuildProfile(),
+		OS:             runtime.GOOS,
+		Arch:           runtime.GOARCH,
 	}, nil
+}
+
+func currentRuntimeGCLimits() (gogc, memoryLimit uint64, err error) {
+	samples := []metrics.Sample{
+		{Name: "/gc/gogc:percent"},
+		{Name: "/gc/gomemlimit:bytes"},
+	}
+	metrics.Read(samples)
+	for index := range samples {
+		if samples[index].Value.Kind() != metrics.KindUint64 {
+			return 0, 0, fmt.Errorf("Go runtime metric %s is unavailable", samples[index].Name)
+		}
+	}
+	return samples[0].Value.Uint64(), samples[1].Value.Uint64(), nil
+}
+
+func (state lattigoAcceptanceRuntime) lattigoBuildProfile() string {
+	cpuProfile := "off"
+	if state.CPUProfileValue != "" {
+		cpuProfile = "on"
+	}
+	return fmt.Sprintf(
+		"GOOS=%s;GOARCH=%s;GOAMD64=%s;GOMAXPROCS=%s;GOGC=%s;GOMEMLIMIT=%s;POST_WARMUP_GC=%s;CPU_PROFILE=%s",
+		state.GOOS, state.GOARCH, state.BuildGOAMD64, state.GOMAXPROCSValue,
+		state.GOGCValue, state.GOMEMLIMITValue, state.PostWarmupGCValue, cpuProfile,
+	)
+}
+
+func validateLattigoAcceptanceRuntime(state lattigoAcceptanceRuntime) error {
+	if state.BuildGOAMD64 != "v4" {
+		return fmt.Errorf("embedded GOAMD64=%q, want v4", state.BuildGOAMD64)
+	}
+	if state.EnvironmentGOAMD64 != "v4" {
+		return fmt.Errorf("GOAMD64=%q, want v4", state.EnvironmentGOAMD64)
+	}
+	if state.GOMAXPROCSValue != "1" || state.RuntimeGOMAXPROCS != 1 {
+		return fmt.Errorf("GOMAXPROCS environment/runtime=%q/%d, want 1/1", state.GOMAXPROCSValue, state.RuntimeGOMAXPROCS)
+	}
+	if state.GOGCValue != "100" || state.RuntimeGOGC != 100 {
+		return fmt.Errorf("GOGC environment/runtime=%q/%d, want 100/100", state.GOGCValue, state.RuntimeGOGC)
+	}
+	const memoryLimit = uint64(20 * 1024 * 1024 * 1024)
+	if state.GOMEMLIMITValue != "20GiB" || state.RuntimeMemoryLimit != memoryLimit {
+		return fmt.Errorf(
+			"GOMEMLIMIT environment/runtime=%q/%d, want 20GiB/%d",
+			state.GOMEMLIMITValue, state.RuntimeMemoryLimit, memoryLimit,
+		)
+	}
+	if state.PostWarmupGCValue != "on" {
+		return fmt.Errorf("POST_WARMUP_GC=%q, want on", state.PostWarmupGCValue)
+	}
+	if state.CPUProfileValue != "" {
+		return fmt.Errorf("LCPDTE_GAO_CPU_PROFILE must be empty for CPU_PROFILE=off")
+	}
+	if state.GOOS != "linux" {
+		return fmt.Errorf("GOOS=%q, want linux", state.GOOS)
+	}
+	if state.GOARCH != "amd64" {
+		return fmt.Errorf("GOARCH=%q, want amd64", state.GOARCH)
+	}
+	if got := state.lattigoBuildProfile(); got != benchcmp.LattigoAcceptanceBuildProfile {
+		return fmt.Errorf("build_profile=%q, want %q", got, benchcmp.LattigoAcceptanceBuildProfile)
+	}
+	return nil
+}
+
+func validateLattigoExecutionMetadata(execution benchmarkExecutionMetadata) error {
+	if execution.SourceModified {
+		return fmt.Errorf("benchmark requires a clean Lattigo source revision")
+	}
+	for field, value := range map[string]string{
+		"source_revision": execution.SourceRevision,
+		"runtime":         execution.Runtime,
+		"compiler":        execution.Compiler,
+		"build_profile":   execution.BuildProfile,
+		"os":              execution.OS,
+		"arch":            execution.Arch,
+	} {
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf("benchmark execution metadata %s is required", field)
+		}
+	}
+	if execution.BuildProfile != benchcmp.LattigoAcceptanceBuildProfile {
+		return fmt.Errorf("benchmark execution metadata build_profile=%q, want %q", execution.BuildProfile, benchcmp.LattigoAcceptanceBuildProfile)
+	}
+	if execution.Compiler != "gc" || !strings.HasPrefix(execution.Runtime, "go1.") ||
+		execution.OS != "linux" || execution.Arch != "amd64" {
+		return fmt.Errorf(
+			"benchmark execution metadata runtime/compiler/target=%q/%q/%s/%s is not the admitted Go linux/amd64 build",
+			execution.Runtime, execution.Compiler, execution.OS, execution.Arch,
+		)
+	}
+	return nil
 }
 
 func parseBuildBool(value string) (bool, error) {
@@ -248,8 +359,6 @@ func parseBuildBool(value string) (bool, error) {
 }
 
 func runCanonicalBenchmark(hostID string) (benchcmp.CanonicalArtifact, error) {
-	previousProcs := runtime.GOMAXPROCS(1)
-	defer runtime.GOMAXPROCS(previousProcs)
 	return runCanonicalBenchmarkWithFactory(hostID, newSession, currentExecutionMetadata)
 }
 
@@ -262,8 +371,8 @@ func runCanonicalBenchmarkWithFactory(
 	if err != nil {
 		return benchcmp.CanonicalArtifact{}, fmt.Errorf("read benchmark execution metadata: %w", err)
 	}
-	if execution.SourceModified {
-		return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark requires a clean Lattigo source revision")
+	if err = validateLattigoExecutionMetadata(execution); err != nil {
+		return benchcmp.CanonicalArtifact{}, err
 	}
 	session, setup, err := factory()
 	if err != nil {

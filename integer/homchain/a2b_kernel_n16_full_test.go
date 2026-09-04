@@ -1,6 +1,9 @@
 package homchain
 
 import (
+	"math"
+	"math/big"
+	"math/cmplx"
 	"testing"
 
 	"github.com/nc26676027/LCPDTE/integer/securityparams"
@@ -33,18 +36,21 @@ func TestGaoA2BKernelN16FullPackedProfileMatchesGaoPacking(t *testing.T) {
 		fullProfile.OperandPlan().LUTMappedSlots() != [2]int{32768, 32768} {
 		t.Fatalf("unexpected N16 full-packed Gao operand plan: %+v", fullProfile.OperandPlan())
 	}
-	if got, want := fullProfile.RuntimePath(), "n16-l15-full-packed-normalized-y;exp46-chebyshev-scalar/evaluate;mulrelin-rescale^2;id-msb-degree15-scalars/evaluate-multi-poly/shared-power-basis/target-S43;conjugate-add^2"; got != want {
+	if got, want := fullProfile.RuntimePath(), "n16-l15-full-packed-normalized-y;exp46-chebyshev-scalar/evaluate;mulrelin-rescale^2;root16-real-id-plus-i-msb-degree15-scalar/evaluate-once/target-S43;conjugate-split-real-imag"; got != want {
 		t.Fatalf("full-packed runtime path=%q, want %q", got, want)
 	}
 	fullExponential, fullLUTs := full.polynomialEvaluationOperands()
 	if _, ok := fullExponential.(ckkspolynomial.Polynomial); !ok {
 		t.Fatalf("full-packed exponential operand type=%T, want scalar polynomial", fullExponential)
 	}
-	for i, operand := range fullLUTs {
-		if _, ok := operand.(ckkspolynomial.Polynomial); !ok {
-			t.Fatalf("full-packed LUT operand %d type=%T, want scalar polynomial", i, operand)
-		}
+	if len(fullLUTs) != 1 {
+		t.Fatalf("full-packed LUT operands=%d, want one complex-packed ID+i*MSB polynomial", len(fullLUTs))
 	}
+	packedLUT, ok := fullLUTs[0].(ckkspolynomial.Polynomial)
+	if !ok {
+		t.Fatalf("full-packed LUT operand type=%T, want scalar polynomial", fullLUTs[0])
+	}
+	assertGaoA2BKernelN16PackedLUTAtAllRoots(t, packedLUT)
 
 	sparseParams, err := securityparams.GaoCompatibleN16Parameters()
 	if err != nil {
@@ -74,6 +80,55 @@ func TestGaoA2BKernelN16FullPackedProfileMatchesGaoPacking(t *testing.T) {
 		t.Fatalf("full-packed key profile digest is not distinct: %s", fullProfile.KeyProfile().Digest())
 	}
 	t.Logf("full-packed profile=%s key-profile=%s", fullProfile.Digest(), fullProfile.KeyProfile().Digest())
+}
+
+func TestGaoA2BKernelN16FullPackedDerivedLUTTamperIsRejected(t *testing.T) {
+	params, err := securityparams.GaoOpenFHEFullN16Parameters()
+	if err != nil {
+		t.Fatal(err)
+	}
+	circuit, err := NewGaoA2BKernelN16FullPackedCircuit(params, ckks.NewEncoder(params, 256))
+	if err != nil {
+		t.Fatal(err)
+	}
+	coefficient := circuit.packedLUTOperand.Coeffs[0]
+	original := new(big.Float).SetPrec(coefficient.Prec()).Set(coefficient.Real())
+	coefficient.Real().Add(coefficient.Real(), new(big.Float).SetPrec(coefficient.Prec()).SetInt64(1))
+	if err = circuit.validate(); err == nil {
+		t.Fatal("mutated N16 full-packed derived LUT passed circuit validation")
+	}
+	coefficient.Real().Set(original)
+	if err = circuit.validate(); err != nil {
+		t.Fatalf("restored N16 full-packed derived LUT did not validate: %v", err)
+	}
+}
+
+func assertGaoA2BKernelN16PackedLUTAtAllRoots(t *testing.T, polynomial ckkspolynomial.Polynomial) {
+	t.Helper()
+	for point := 0; point < 16; point++ {
+		root := cmplx.Exp(complex(0, 2*math.Pi*float64(point)/16))
+		power := complex(1, 0)
+		packed := complex(0, 0)
+		for _, coefficient := range polynomial.Coeffs {
+			packed += coefficient.Complex128() * power
+			power *= root
+		}
+		conjugate := cmplx.Conj(packed)
+		gotIdentity := packed + conjugate
+		gotMSB := complex(0, -1) * (packed - conjugate)
+		wantIdentity := 0.0
+		if point != 0 {
+			wantIdentity = float64(point-16) / 16
+		}
+		wantMSB := 0.0
+		if point >= 1 && point <= 8 {
+			wantMSB = 1
+		}
+		if math.Abs(real(gotIdentity)-wantIdentity) > 1e-13 || math.Abs(imag(gotIdentity)) > 1e-13 ||
+			math.Abs(real(gotMSB)-wantMSB) > 1e-13 || math.Abs(imag(gotMSB)) > 1e-13 {
+			t.Fatalf("root %d split: ID=%v want=%g MSB=%v want=%g", point, gotIdentity, wantIdentity, gotMSB, wantMSB)
+		}
+	}
 }
 
 func TestGaoA2BKernelN16PreparedEntryRejectsNilEvaluator(t *testing.T) {

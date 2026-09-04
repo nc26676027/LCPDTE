@@ -45,9 +45,6 @@ type gaoFullPackedA2BEvaluator struct {
 	ctsFactors *gaoFullPackedFactorStore
 	stcFactors *gaoFullPackedFactorStore
 
-	lowMask   *rlwe.Plaintext
-	iter1Mask *rlwe.Plaintext
-
 	kernel0 *homchain.GaoA2BKernelN16FullPackedEvaluator
 	kernel1 *homchain.GaoA2BKernelN16FullPackedEvaluator
 	closed  bool
@@ -147,14 +144,6 @@ func newGaoFullPackedA2BEvaluator(secretKey *rlwe.SecretKey) (result *gaoFullPac
 		}
 	}
 
-	lowMask, err := encodeGaoFullPackedConstant(params, encoder, gaoFullPackedCoreLevel, 1)
-	if err != nil {
-		return nil, fmt.Errorf("secureeval: encode Gao full-packed A2B iter0 mask: %w", err)
-	}
-	iter1Mask, err := encodeGaoFullPackedConstant(params, encoder, gaoFullPackedCoreLevel, 1)
-	if err != nil {
-		return nil, fmt.Errorf("secureeval: encode Gao full-packed A2B iter1 mask: %w", err)
-	}
 	kernelEncoder := ckks.NewEncoder(params, z2n.DefaultPrecision)
 	kernelCircuit, err := homchain.NewGaoA2BKernelN16FullPackedCircuit(params, kernelEncoder)
 	if err != nil {
@@ -195,7 +184,6 @@ func newGaoFullPackedA2BEvaluator(secretKey *rlwe.SecretKey) (result *gaoFullPac
 		params: params, source: source,
 		triangle: homchain.NewEvaluator(source.Evaluator), specialB0: specialB0,
 		ctsFactors: ctsFactors, stcFactors: stcFactors,
-		lowMask: lowMask, iter1Mask: iter1Mask,
 		kernel0: kernel0, kernel1: kernel1,
 	}
 	return result, nil
@@ -271,28 +259,6 @@ func addGaoFullPackedSpecialB0Keys(
 	return nil
 }
 
-func encodeGaoFullPackedConstant(
-	params ckks.Parameters,
-	encoder *ckks.Encoder,
-	level int,
-	value float64,
-) (*rlwe.Plaintext, error) {
-	if encoder == nil || level < 0 || level > params.MaxLevel() || math.IsNaN(value) || math.IsInf(value, 0) {
-		return nil, fmt.Errorf("invalid full-packed constant encoding request")
-	}
-	plaintext := ckks.NewPlaintext(params, level)
-	plaintext.LogDimensions = ring.Dimensions{Rows: 0, Cols: gaoFullPackedLogSlots}
-	plaintext.Scale = rlwe.NewScale(params.Q()[level])
-	values := make([]float64, gaoFullPackedSlots)
-	for index := range values {
-		values[index] = value
-	}
-	if err := encoder.Encode(values, plaintext); err != nil {
-		return nil, err
-	}
-	return plaintext, nil
-}
-
 // Parameters returns the canonical full-packed CKKS parameters used by the
 // evaluator. The value is suitable for session-side encoding and encryption.
 func (e *gaoFullPackedA2BEvaluator) Parameters() ckks.Parameters {
@@ -360,6 +326,24 @@ func adjustGaoFullPackedScaledToLevel(
 	return adjusted, nil
 }
 
+// dropGaoFullPackedIdentityMaskLevel implements the level transition caused
+// by Gao/OpenFHE's full-packed A2B mask. For zN=8 and w=4, each of the two
+// masks selects all 32,768 complex slots and is therefore the constant one.
+// Dropping the unused top modulus preserves the value and scale while avoiding
+// an identity plaintext multiplication and rescale.
+func dropGaoFullPackedIdentityMaskLevel(
+	evaluator *ckks.Evaluator,
+	input *rlwe.Ciphertext,
+) (*rlwe.Ciphertext, error) {
+	if evaluator == nil || evaluator.GetParameters() == nil || input == nil || input.MetaData == nil ||
+		input.Level() != gaoFullPackedCoreLevel || input.Degree() != 1 ||
+		input.LogDimensions != (ring.Dimensions{Rows: 0, Cols: gaoFullPackedLogSlots}) {
+		return nil, fmt.Errorf("secureeval: Gao full-packed identity-mask input state changed")
+	}
+	evaluator.DropLevel(input, gaoFullPackedCoreLevel-gaoFullPackedMaskedLevel)
+	return input, nil
+}
+
 // EvaluateNew executes Gao's complete two-round 8-bit A2B graph. Preparation,
 // encryption, decryption, verification, and evidence generation are outside
 // the returned duration; it measures only the online homomorphic operations.
@@ -401,12 +385,9 @@ func (e *gaoFullPackedA2BEvaluator) EvaluateNew(
 		return nil, nil, 0, err
 	}
 
-	iter0Masked, err := e.source.Evaluator.MulNew(halves[0], e.lowMask)
+	iter0Masked, err := dropGaoFullPackedIdentityMaskLevel(e.source.Evaluator, halves[0])
 	if err != nil {
-		return nil, nil, 0, fmt.Errorf("secureeval: Gao full-packed A2B iter0 mask: %w", err)
-	}
-	if err = e.source.Evaluator.Rescale(iter0Masked, iter0Masked); err != nil {
-		return nil, nil, 0, fmt.Errorf("secureeval: Gao full-packed A2B iter0 mask rescale: %w", err)
+		return nil, nil, 0, fmt.Errorf("secureeval: Gao full-packed A2B iter0 identity mask: %w", err)
 	}
 	if err = requireGaoFullPackedCiphertext("iter0 mask", iter0Masked, gaoFullPackedMaskedLevel, defaultScale); err != nil {
 		return nil, nil, 0, err
@@ -453,12 +434,9 @@ func (e *gaoFullPackedA2BEvaluator) EvaluateNew(
 		return nil, nil, 0, err
 	}
 
-	iter1Masked, err := e.source.Evaluator.MulNew(highUpdated, e.iter1Mask)
+	iter1Masked, err := dropGaoFullPackedIdentityMaskLevel(e.source.Evaluator, highUpdated)
 	if err != nil {
-		return nil, nil, 0, fmt.Errorf("secureeval: Gao full-packed A2B iter1 mask: %w", err)
-	}
-	if err = e.source.Evaluator.Rescale(iter1Masked, iter1Masked); err != nil {
-		return nil, nil, 0, fmt.Errorf("secureeval: Gao full-packed A2B iter1 mask rescale: %w", err)
+		return nil, nil, 0, fmt.Errorf("secureeval: Gao full-packed A2B iter1 identity mask: %w", err)
 	}
 	if err = requireGaoFullPackedCiphertext("iter1 mask", iter1Masked, gaoFullPackedMaskedLevel, defaultScale); err != nil {
 		return nil, nil, 0, err
@@ -543,8 +521,6 @@ func (e *gaoFullPackedA2BEvaluator) Close() error {
 	e.source = nil
 	e.triangle = nil
 	e.specialB0 = homchain.CompiledPair{}
-	e.lowMask = nil
-	e.iter1Mask = nil
 	e.kernel0 = nil
 	e.kernel1 = nil
 	return err

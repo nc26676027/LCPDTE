@@ -211,7 +211,7 @@ func TestParseCanonicalDerivesStatisticsFromVerifiedSamples(t *testing.T) {
 	if got.EncryptionMode != "public-key" || got.FactorStorageMode != "resident-precomputed" ||
 		got.ScaleSchedule != "openfhe-flexiblemanual-native" || got.BackendBSGSPlan != "openfhe-auto-dim1-0" ||
 		got.SourceRevision != "08f1eb87434e7be072cba889270a8400bbffc08e" || got.SourceModified ||
-		got.Runtime != "openfhe-fhe-simd-alu" || got.Compiler == "" || got.BuildProfile == "" ||
+		got.Runtime != benchcmp.OpenFHERuntime || got.Compiler == "" || got.BuildProfile != benchcmp.OpenFHEBuildProfile ||
 		got.OS != "linux" || got.Arch != "amd64" {
 		t.Fatalf("execution metadata=%+v", got)
 	}
@@ -223,6 +223,35 @@ func TestParseCanonicalDerivesStatisticsFromVerifiedSamples(t *testing.T) {
 	}
 	if got.Repeats != 5 || got.VerifiedEvaluations != 5 || len(got.TimedSamplesNanoseconds) != 5 {
 		t.Fatalf("sample protocol=%+v", got)
+	}
+}
+
+func TestParseCanonicalRequiresAcceptanceBuildProfiles(t *testing.T) {
+	tests := []struct {
+		name           string
+		implementation string
+		profile        string
+		want           string
+	}{
+		{name: "OpenFHE incomplete release profile", implementation: benchcmp.FocusedOpenFHESource, profile: "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON", want: "build_profile"},
+		{name: "Lattigo non-v4 profile", implementation: benchcmp.FocusedLattigoSource, profile: strings.Replace(benchcmp.LattigoAcceptanceBuildProfile, "GOAMD64=v4", "GOAMD64=v3", 1), want: "build_profile"},
+		{name: "Lattigo profiled run", implementation: benchcmp.FocusedLattigoSource, profile: strings.Replace(benchcmp.LattigoAcceptanceBuildProfile, "CPU_PROFILE=off", "CPU_PROFILE=on", 1), want: "build_profile"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var document map[string]any
+			if err := json.Unmarshal([]byte(canonicalArtifactJSON(test.implementation, canonicalSamples())), &document); err != nil {
+				t.Fatal(err)
+			}
+			document["build_profile"] = test.profile
+			payload, err := json.Marshal(document)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = benchcmp.ParseCanonical(bytes.NewReader(payload), "wrong-build.json"); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("error=%v, want substring %q", err, test.want)
+			}
+		})
 	}
 }
 
@@ -285,9 +314,9 @@ func TestParseCanonicalRejectsUnreproducibleExecutionMetadata(t *testing.T) {
 		{name: "OpenFHE BSGS plan", old: `"backend_bsgs_plan":"openfhe-auto-dim1-0"`, replacement: `"backend_bsgs_plan":"openfhe-explicit-dim1-1"`, want: "backend_bsgs_plan"},
 		{name: "OpenFHE pinned revision", old: `"source_revision":"08f1eb87434e7be072cba889270a8400bbffc08e"`, replacement: `"source_revision":"other"`, want: "source_revision"},
 		{name: "modified source", old: `"source_modified":false`, replacement: `"source_modified":true`, want: "source_modified"},
-		{name: "runtime", old: `"runtime":"openfhe-fhe-simd-alu"`, replacement: `"runtime":"other-openfhe-runtime"`, want: "runtime"},
-		{name: "compiler", old: `"compiler":"clang version 14.0.0"`, replacement: `"compiler":""`, want: "compiler"},
-		{name: "build profile", old: `"build_profile":"CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON"`, replacement: `"build_profile":"Release"`, want: "build_profile"},
+		{name: "runtime", old: `"runtime":"` + benchcmp.OpenFHERuntime + `"`, replacement: `"runtime":"other-openfhe-runtime"`, want: "runtime"},
+		{name: "compiler", old: `"compiler":"/usr/bin/clang++ :: Ubuntu clang version 14.0.0-1ubuntu1.1"`, replacement: `"compiler":""`, want: "compiler"},
+		{name: "build profile", old: `"build_profile":"` + benchcmp.OpenFHEBuildProfile + `"`, replacement: `"build_profile":"Release"`, want: "build_profile"},
 		{name: "os", old: `"os":"linux"`, replacement: `"os":""`, want: "os"},
 		{name: "arch", old: `"arch":"amd64"`, replacement: `"arch":""`, want: "arch"},
 	}
@@ -313,7 +342,7 @@ func TestParseCanonicalRejectsUnreproducibleExecutionMetadata(t *testing.T) {
 	lattigo = canonicalArtifactJSON("lattigo-gao-a2b-full", canonicalSamples())
 	lattigo = strings.Replace(
 		lattigo,
-		`"backend_bsgs_plan":"lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-optimized"`,
+		`"backend_bsgs_plan":"`+benchcmp.LattigoBackendBSGSPlan+`"`,
 		`"backend_bsgs_plan":"lattigo-dft-unverified"`,
 		1,
 	)
@@ -678,8 +707,8 @@ func canonicalArtifactJSON(implementation string, samples []uint64) string {
 		HostID: "ryzen-7-h-255", EncryptionMode: "public-key",
 		FactorStorageMode: "resident-precomputed", ScaleSchedule: "openfhe-flexiblemanual-native",
 		BackendBSGSPlan: "openfhe-auto-dim1-0", SourceRevision: "08f1eb87434e7be072cba889270a8400bbffc08e",
-		Runtime: "openfhe-fhe-simd-alu", Compiler: "clang version 14.0.0",
-		BuildProfile: "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON", OS: "linux", Arch: "amd64",
+		Runtime: benchcmp.OpenFHERuntime, Compiler: "/usr/bin/clang++ :: Ubuntu clang version 14.0.0-1ubuntu1.1",
+		BuildProfile: benchcmp.OpenFHEBuildProfile, OS: "linux", Arch: "amd64",
 		Protocol: "gao-a2b-full-z8-w4-v1", WorkloadID: "uint8-0to255-x32",
 		PackingID: "n65536-cslots32768-zslots8192-w4", OutputContainer: "two-ciphertexts-low4-high4",
 		WordBits: 8, RingDimension: 65_536, PackingSlots: 32_768, UsefulWords: 8_192,
@@ -690,11 +719,11 @@ func canonicalArtifactJSON(implementation string, samples []uint64) string {
 	if implementation == "lattigo-gao-a2b-full" {
 		payload.FactorStorageMode = "resident-prevalidated"
 		payload.ScaleSchedule = "lattigo-explicit-level-scale-native"
-		payload.BackendBSGSPlan = "lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-optimized"
+		payload.BackendBSGSPlan = benchcmp.LattigoBackendBSGSPlan
 		payload.SourceRevision = "lattigo-test-revision"
-		payload.Runtime = "lattigo-v6"
-		payload.Compiler = "go1.25.0"
-		payload.BuildProfile = "go-build"
+		payload.Runtime = "go1.25.0"
+		payload.Compiler = "gc"
+		payload.BuildProfile = benchcmp.LattigoAcceptanceBuildProfile
 	}
 	encoded, err := json.Marshal(payload)
 	if err != nil {

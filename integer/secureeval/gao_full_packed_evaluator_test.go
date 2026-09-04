@@ -158,3 +158,47 @@ func TestAdjustGaoFullPackedScaledToLevelFusesOneSixteenth(t *testing.T) {
 		}
 	}
 }
+
+func TestDropGaoFullPackedIdentityMaskLevelPreservesEncryptedValues(t *testing.T) {
+	parameters, err := newGaoN16FullPackedTransportParameters()
+	if err != nil {
+		t.Fatal(err)
+	}
+	params := parameters.BootstrappingParameters
+	secretKey := ckks.NewKeyGenerator(params).GenSecretKeyNew()
+	encoder := ckks.NewEncoder(params)
+	values := make([]complex128, gaoFullPackedSlots)
+	for index := range values {
+		values[index] = complex(float64((index%31)-15)/64, 0)
+	}
+	plaintext := ckks.NewPlaintext(params, gaoFullPackedCoreLevel)
+	plaintext.LogDimensions = ring.Dimensions{Rows: 0, Cols: gaoFullPackedLogSlots}
+	plaintext.Scale = params.DefaultScale()
+	if err = encoder.Encode(values, plaintext); err != nil {
+		t.Fatal(err)
+	}
+	input, err := ckks.NewEncryptor(params, secretKey).EncryptNew(plaintext)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := dropGaoFullPackedIdentityMaskLevel(ckks.NewEvaluator(params, nil), input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != input || got.Level() != gaoFullPackedMaskedLevel || !got.Scale.Equal(params.DefaultScale()) {
+		t.Fatalf("identity-mask state: aliases=%t level=%d scale=%v", got == input, got.Level(), got.Scale)
+	}
+	decoded := make([]complex128, len(values))
+	if err = encoder.Decode(ckks.NewDecryptor(params, secretKey).DecryptNew(got), decoded); err != nil {
+		t.Fatal(err)
+	}
+	for index := range values {
+		if delta := math.Abs(real(decoded[index]) - real(values[index])); delta > 1e-6 {
+			t.Fatalf("slot %d changed by %.3g: got %.12g want %.12g", index, delta, real(decoded[index]), real(values[index]))
+		}
+		if imaginary := math.Abs(imag(decoded[index])); imaginary > 1e-6 {
+			t.Fatalf("slot %d imaginary residual %.3g", index, imaginary)
+		}
+	}
+}

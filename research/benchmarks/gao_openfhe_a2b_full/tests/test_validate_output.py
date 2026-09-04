@@ -21,9 +21,9 @@ def canonical_artifact() -> dict:
         "backend_bsgs_plan": "openfhe-auto-dim1-0",
         "source_revision": "08f1eb87434e7be072cba889270a8400bbffc08e",
         "source_modified": False,
-        "runtime": "openfhe-fhe-simd-alu",
+        "runtime": "OpenFHE-1.4.0;HEXL-1.2.6",
         "compiler": "/usr/bin/clang++ :: Ubuntu clang version 14.0.0-1ubuntu1.1",
-        "build_profile": "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON",
+        "build_profile": "CMAKE_BUILD_TYPE=Release;CXX_FLAGS=-march=native,-O3,-DNDEBUG,-fopenmp=libomp;MATHBACKEND=6;OPENFHE_VERSION=1.4.0;HEXL_VERSION=1.2.6;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_NTL=ON;WITH_TCM=ON;WITH_OPENMP=ON;OMP_NUM_THREADS=1",
         "os": "linux",
         "arch": "amd64",
         "protocol": "gao-a2b-full-z8-w4-v1",
@@ -132,10 +132,10 @@ class ValidateOutputTest(unittest.TestCase):
             ("source_modified", True),
             ("source_modified", 0),
             ("runtime", ""),
-            ("compiler", ""),
+            ("compiler", "/usr/bin/g++ :: g++ 11"),
             ("build_profile", "Release"),
-            ("os", ""),
-            ("arch", ""),
+            ("os", "windows"),
+            ("arch", "arm64"),
         )
         for field, invalid in invalid_values:
             with self.subTest(field=field, invalid=invalid):
@@ -146,6 +146,32 @@ class ValidateOutputTest(unittest.TestCase):
 
                 self.assertNotEqual(completed.returncode, 0)
                 self.assertIn(field, completed.stderr)
+
+    def test_scripts_driver_and_validator_share_complete_build_profile(self) -> None:
+        profile = canonical_artifact()["build_profile"]
+        for relative in (
+            "build_wsl.sh",
+            "run_wsl.sh",
+            "gao-openfhe-a2b-full.cpp",
+            "validate_output.py",
+        ):
+            with self.subTest(relative=relative):
+                self.assertIn(profile, (ROOT / relative).read_text(encoding="utf-8"))
+
+        build_script = (ROOT / "build_wsl.sh").read_text(encoding="utf-8")
+        for required in (
+            "CMAKE_CXX_FLAGS_RELEASE",
+            "MATHBACKEND",
+            "WITH_INTEL_HEXL",
+            "WITH_NATIVEOPT",
+            "WITH_NTL",
+            "WITH_TCM",
+            "WITH_OPENMP",
+            "flags.make",
+            "HEXLConfigVersion.cmake",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, build_script)
 
     def test_rejects_missing_parameter_contract(self) -> None:
         document = canonical_artifact()

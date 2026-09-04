@@ -38,8 +38,8 @@ constexpr uint32_t kEphemeralSecretHammingWeight = 32;
 constexpr uint32_t kChunkWidth = 4;
 constexpr int32_t kCutoffBits = -24;
 constexpr char kSourceRevision[] = "08f1eb87434e7be072cba889270a8400bbffc08e";
-constexpr char kBuildProfile[] =
-    "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON";
+constexpr char kRuntime[] = "OpenFHE-1.4.0;HEXL-1.2.6";
+constexpr char kBuildProfile[] = "CMAKE_BUILD_TYPE=Release;CXX_FLAGS=-march=native,-O3,-DNDEBUG,-fopenmp=libomp;MATHBACKEND=6;OPENFHE_VERSION=1.4.0;HEXL_VERSION=1.2.6;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_NTL=ON;WITH_TCM=ON;WITH_OPENMP=ON;OMP_NUM_THREADS=1";
 
 struct Options {
     std::string hostId;
@@ -138,6 +138,13 @@ ExecutionMetadata RequireExecutionMetadata() {
     }
     if (metadata.buildProfile != kBuildProfile) {
         throw std::runtime_error("execution metadata build profile differs from the acceptance configuration");
+    }
+    if (RequireEnvironment("OMP_NUM_THREADS") != "1") {
+        throw std::runtime_error("OMP_NUM_THREADS must be exactly 1");
+    }
+    if (metadata.compiler.find("/usr/bin/clang++ :: ") != 0 ||
+        metadata.compiler.find("clang version 14.") == std::string::npos) {
+        throw std::runtime_error("execution metadata requires cached /usr/bin/clang++ Clang 14");
     }
     if (metadata.os != "linux" || metadata.arch != "amd64") {
         throw std::runtime_error("execution metadata requires the admitted linux/amd64 build target");
@@ -251,7 +258,7 @@ std::string BuildArtifact(const Options& options, const ExecutionMetadata& metad
            << "  \"backend_bsgs_plan\": \"openfhe-auto-dim1-0\",\n"
            << "  \"source_revision\": \"" << JsonEscape(metadata.sourceRevision) << "\",\n"
            << "  \"source_modified\": " << (metadata.sourceModified ? "true" : "false") << ",\n"
-           << "  \"runtime\": \"openfhe-fhe-simd-alu\",\n"
+           << "  \"runtime\": \"" << kRuntime << "\",\n"
            << "  \"compiler\": \"" << JsonEscape(metadata.compiler) << "\",\n"
            << "  \"build_profile\": \"" << JsonEscape(metadata.buildProfile) << "\",\n"
            << "  \"os\": \"" << JsonEscape(metadata.os) << "\",\n"

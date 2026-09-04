@@ -17,40 +17,41 @@ import (
 )
 
 const (
-	GaoOpenFHESource            = "gao-openfhe-benchmark-full"
-	LattigoRouteBSource         = "lattigo-route-b-l11-a2b-full"
-	CanonicalBenchmarkSchema    = "lcpdte-ckksint-a2b-benchmark-v2"
-	ComparisonSchema            = "lcpdte-ckksint-a2b-comparison-v2"
-	TimingScopePreparedOnline   = "prepared-online"
-	GaoParameterComparisonScope = "gao-algorithm-and-aggregate-modulus-bits"
-	GaoFullProtocol             = "gao-a2b-full-z8-w4-v1"
-	GaoFullWorkloadID           = "uint8-0to255-x32"
-	GaoFullPackingID            = "n65536-cslots32768-zslots8192-w4"
-	GaoFullOutputContainer      = "two-ciphertexts-low4-high4"
-	FocusedOpenFHESource        = "gao-openfhe-a2b-full"
-	FocusedLattigoSource        = "lattigo-gao-a2b-full"
-	EncryptionModePublicKey     = "public-key"
-	OpenFHEFactorStorageMode    = "resident-precomputed"
-	LattigoFactorStorageMode    = "resident-prevalidated"
-	OpenFHEScaleSchedule        = "openfhe-flexiblemanual-native"
-	LattigoScaleSchedule        = "lattigo-explicit-level-scale-native"
-	OpenFHEBackendBSGSPlan      = "openfhe-auto-dim1-0"
-	LattigoBackendBSGSPlan      = "lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-optimized"
-	OpenFHEPinnedSourceRevision = "08f1eb87434e7be072cba889270a8400bbffc08e"
-	OpenFHERuntime              = "openfhe-fhe-simd-alu"
-	OpenFHEBuildProfile         = "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON"
-	lattigoRouteBSchema         = "lcpdte-route-b-l11-a2b-full-result-v1"
-	gaoWarmupCount              = 1
-	gaoRepeatCount              = 5
-	lattigoWarmupCount          = 0
-	lattigoRepeatCount          = 1
-	canonicalLogN               = 16
-	canonicalWordBits           = 8
-	canonicalRingDimension      = 1 << canonicalLogN
-	canonicalPackingSlots       = 32768
-	canonicalUsefulWords        = 8192
-	legacyRouteBSlots           = 2048
-	legacyRouteBWords           = 512
+	GaoOpenFHESource              = "gao-openfhe-benchmark-full"
+	LattigoRouteBSource           = "lattigo-route-b-l11-a2b-full"
+	CanonicalBenchmarkSchema      = "lcpdte-ckksint-a2b-benchmark-v2"
+	ComparisonSchema              = "lcpdte-ckksint-a2b-comparison-v2"
+	TimingScopePreparedOnline     = "prepared-online"
+	GaoParameterComparisonScope   = "gao-algorithm-and-aggregate-modulus-bits"
+	GaoFullProtocol               = "gao-a2b-full-z8-w4-v1"
+	GaoFullWorkloadID             = "uint8-0to255-x32"
+	GaoFullPackingID              = "n65536-cslots32768-zslots8192-w4"
+	GaoFullOutputContainer        = "two-ciphertexts-low4-high4"
+	FocusedOpenFHESource          = "gao-openfhe-a2b-full"
+	FocusedLattigoSource          = "lattigo-gao-a2b-full"
+	EncryptionModePublicKey       = "public-key"
+	OpenFHEFactorStorageMode      = "resident-precomputed"
+	LattigoFactorStorageMode      = "resident-prevalidated"
+	OpenFHEScaleSchedule          = "openfhe-flexiblemanual-native"
+	LattigoScaleSchedule          = "lattigo-explicit-level-scale-native"
+	OpenFHEBackendBSGSPlan        = "openfhe-auto-dim1-0"
+	LattigoBackendBSGSPlan        = "lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-identity-mask-drop-complex-lut-optimized"
+	OpenFHEPinnedSourceRevision   = "08f1eb87434e7be072cba889270a8400bbffc08e"
+	OpenFHERuntime                = "OpenFHE-1.4.0;HEXL-1.2.6"
+	OpenFHEBuildProfile           = "CMAKE_BUILD_TYPE=Release;CXX_FLAGS=-march=native,-O3,-DNDEBUG,-fopenmp=libomp;MATHBACKEND=6;OPENFHE_VERSION=1.4.0;HEXL_VERSION=1.2.6;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_NTL=ON;WITH_TCM=ON;WITH_OPENMP=ON;OMP_NUM_THREADS=1"
+	LattigoAcceptanceBuildProfile = "GOOS=linux;GOARCH=amd64;GOAMD64=v4;GOMAXPROCS=1;GOGC=100;GOMEMLIMIT=20GiB;POST_WARMUP_GC=on;CPU_PROFILE=off"
+	lattigoRouteBSchema           = "lcpdte-route-b-l11-a2b-full-result-v1"
+	gaoWarmupCount                = 1
+	gaoRepeatCount                = 5
+	lattigoWarmupCount            = 0
+	lattigoRepeatCount            = 1
+	canonicalLogN                 = 16
+	canonicalWordBits             = 8
+	canonicalRingDimension        = 1 << canonicalLogN
+	canonicalPackingSlots         = 32768
+	canonicalUsefulWords          = 8192
+	legacyRouteBSlots             = 2048
+	legacyRouteBWords             = 512
 )
 
 var (
@@ -548,6 +549,13 @@ func validateExecutionMetadata(measurement Measurement) error {
 		if measurement.BuildProfile != OpenFHEBuildProfile {
 			return fmt.Errorf("build_profile=%q, want %q for %s", measurement.BuildProfile, OpenFHEBuildProfile, FocusedOpenFHESource)
 		}
+		if !strings.Contains(measurement.Compiler, "/usr/bin/clang++") ||
+			!strings.Contains(measurement.Compiler, "clang version 14.") {
+			return fmt.Errorf("compiler=%q, want the cached /usr/bin/clang++ Clang 14 toolchain", measurement.Compiler)
+		}
+		if measurement.OS != "linux" || measurement.Arch != "amd64" {
+			return fmt.Errorf("OpenFHE target=%s/%s, want linux/amd64", measurement.OS, measurement.Arch)
+		}
 	case FocusedLattigoSource:
 		if measurement.FactorStorageMode != LattigoFactorStorageMode {
 			return fmt.Errorf("factor_storage_mode=%q, want %q for %s", measurement.FactorStorageMode, LattigoFactorStorageMode, FocusedLattigoSource)
@@ -557,6 +565,18 @@ func validateExecutionMetadata(measurement Measurement) error {
 		}
 		if measurement.BackendBSGSPlan != LattigoBackendBSGSPlan {
 			return fmt.Errorf("backend_bsgs_plan=%q, want %q for %s", measurement.BackendBSGSPlan, LattigoBackendBSGSPlan, FocusedLattigoSource)
+		}
+		if measurement.BuildProfile != LattigoAcceptanceBuildProfile {
+			return fmt.Errorf("build_profile=%q, want %q for %s", measurement.BuildProfile, LattigoAcceptanceBuildProfile, FocusedLattigoSource)
+		}
+		if measurement.Compiler != "gc" {
+			return fmt.Errorf("compiler=%q, want gc for %s", measurement.Compiler, FocusedLattigoSource)
+		}
+		if !strings.HasPrefix(measurement.Runtime, "go1.") {
+			return fmt.Errorf("runtime=%q, want a recorded Go 1.x runtime", measurement.Runtime)
+		}
+		if measurement.OS != "linux" || measurement.Arch != "amd64" {
+			return fmt.Errorf("Lattigo target=%s/%s, want linux/amd64", measurement.OS, measurement.Arch)
 		}
 	}
 	return nil

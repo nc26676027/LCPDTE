@@ -20,8 +20,8 @@ const (
 	// capacity for one N=65536, logSlots=15 ciphertext.
 	GaoFullPackedA2BMaxWords = gaoFullPackedWords
 
-	gaoFullPackedA2BTraceSchema = "gao-full-packed-a2b-v2|public-key|8192-words|adjust-l20-l4|special-b0|mask0|stc|modup|cts-real-only|exp46-r2-id-msb|fused-id0-over16-adjust|mask1|stc|modup|cts-real-only|exp46-r2-msb-only|outputs-low4-high4|resident-prevalidated|bsgs-ratio2"
-	gaoFullPackedA2BTraceDigest = "3640dc3e5a7c6e61b8a941476898d0d52dad42630f0f7aeef0489cdaf9bd3ebf"
+	gaoFullPackedA2BTraceSchema = "gao-full-packed-a2b-v2|public-key|8192-words|adjust-l20-l4|special-b0|identity-mask0-drop-l3-l2|stc|modup|cts-real-only|exp46-r2-root16-hermitian-id-plus-i-msb|fused-id0-over16-adjust|identity-mask1-drop-l3-l2|stc|modup|cts-real-only|exp46-r2-msb-only|outputs-low4-high4|resident-prevalidated|bsgs-ratio2"
+	gaoFullPackedA2BTraceDigest = "f50d1e3ec45d10d38acfa2e89b24cf47760a505f5495733ff339c5b64fa20d82"
 )
 
 // GaoFullPackedA2BSetupReport records construction that is excluded from the
@@ -162,6 +162,7 @@ func NewGaoFullPackedA2BSession() (
 	}
 	evaluatorParams := evaluator.Parameters()
 	if !params.Equal(&evaluatorParams) {
+		_ = evaluator.Close()
 		return nil, nil, report, fmt.Errorf("secureeval: Gao full-packed A2B client/server parameters differ")
 	}
 	report.ServerConstructionWallTime = gaoFullPackedPositiveDuration(serverStarted)

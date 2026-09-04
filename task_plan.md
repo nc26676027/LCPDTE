@@ -332,3 +332,16 @@ delivery remain later gates.
 - **Evidence gate:** structure, related work, problem statement, method design, and proof obligations may be drafted now. Quantitative superiority, security, correctness, and complexity claims enter the manuscript only after the corresponding code, test, benchmark, or primary-source evidence exists.
 - **Review gate:** do not auto-advance past ARS mandatory integrity, review-decision, or finalization checkpoints.
 - **Artifacts:** `research/manuscript/{technical_report_zh.md,manuscript_en.md,claim_evidence_matrix.md,terminology_ledger.md,writing_state.md,monitor_state.json}`.
+
+## 2026-09-04 Phase-11 full-packed parity closure
+
+- [x] Match Gao/OpenFHE's complete workload: `N=65536`, `zN=8`, `w=4`, 32,768 complex slots, 8,192 bytes, and low4/high4 ciphertext outputs.
+- [x] Bind comparable execution policies: one warmup, five verified prepared-online samples, one execution thread, native CPU code generation, fixed Go GC/memory policy, and profiling disabled.
+- [x] Remove two all-slot identity plaintext multiplies by applying the equivalent level drop.
+- [x] Pack the first-round ID/MSB LUTs into Hermitian real/imaginary channels, reducing the live graph to one polynomial evaluation and one conjugation.
+- [x] Pass the encrypted 8,192-word/65,536-bit end-to-end correctness gate after both optimizations.
+- [x] Pass affected full package tests, repository-wide vet, compile-only traversal, Python validator tests, shell syntax checks, and whitespace checks.
+- [ ] Commit the clean implementation revision used by both benchmark builds.
+- [ ] Rebuild and rerun pinned OpenFHE locally, then run Lattigo without concurrent workload.
+- [ ] Admit both artifacts through the strict comparator and check both mean and median ratios are at most 1.
+- [ ] Check in the local reproduction bundle, independent reviews, and final manual-test instructions.

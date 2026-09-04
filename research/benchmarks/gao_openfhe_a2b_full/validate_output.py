@@ -19,8 +19,10 @@ EXPECTED = {
     "backend_bsgs_plan": "openfhe-auto-dim1-0",
     "source_revision": "08f1eb87434e7be072cba889270a8400bbffc08e",
     "source_modified": False,
-    "runtime": "openfhe-fhe-simd-alu",
-    "build_profile": "CMAKE_BUILD_TYPE=Release;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_OPENMP=ON",
+    "runtime": "OpenFHE-1.4.0;HEXL-1.2.6",
+    "build_profile": "CMAKE_BUILD_TYPE=Release;CXX_FLAGS=-march=native,-O3,-DNDEBUG,-fopenmp=libomp;MATHBACKEND=6;OPENFHE_VERSION=1.4.0;HEXL_VERSION=1.2.6;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_NTL=ON;WITH_TCM=ON;WITH_OPENMP=ON;OMP_NUM_THREADS=1",
+    "os": "linux",
+    "arch": "amd64",
     "protocol": "gao-a2b-full-z8-w4-v1",
     "workload_id": "uint8-0to255-x32",
     "packing_id": "n65536-cslots32768-zslots8192-w4",
@@ -82,10 +84,13 @@ def validate(document: Any) -> None:
         if not correctly_typed or actual != expected:
             raise ValueError(f"parameters.{field}={actual!r}, want {expected!r}")
 
-    for field in ("host_id", "compiler", "os", "arch"):
+    for field in ("host_id", "compiler"):
         value = document.get(field)
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{field} must be a non-empty string")
+    compiler = document["compiler"]
+    if not compiler.startswith("/usr/bin/clang++ :: ") or "clang version 14." not in compiler:
+        raise ValueError(f"compiler={compiler!r}, want cached /usr/bin/clang++ Clang 14")
 
     setup_ns = document.get("setup_nanoseconds")
     if not isinstance(setup_ns, int) or isinstance(setup_ns, bool) or setup_ns <= 0:

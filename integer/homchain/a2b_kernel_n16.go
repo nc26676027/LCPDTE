@@ -2,6 +2,7 @@ package homchain
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/nc26676027/LCPDTE/integer/securityparams"
 	ckkspolynomial "github.com/nc26676027/LCPDTE/lattigo/circuits/ckks/polynomial"
@@ -64,7 +65,7 @@ func gaoA2BKernelN16FullPacking() gaoA2BKernelN16Packing {
 		slots:               gaoA2BKernelN16FullSlots,
 		keyDigestSchema:     "n16-l15-full-packed-kernel-keys-v1",
 		profileDigestSchema: "gao-a2b-kernel-n16-l15-full-packed-v1",
-		runtimePath:         "n16-l15-full-packed-normalized-y;exp46-chebyshev-scalar/evaluate;mulrelin-rescale^2;id-msb-degree15-scalars/evaluate-multi-poly/shared-power-basis/target-S43;conjugate-add^2",
+		runtimePath:         "n16-l15-full-packed-normalized-y;exp46-chebyshev-scalar/evaluate;mulrelin-rescale^2;root16-real-id-plus-i-msb-degree15-scalar/evaluate-once/target-S43;conjugate-split-real-imag",
 	}
 }
 
@@ -176,6 +177,7 @@ type GaoA2BKernelN16L11Circuit struct {
 	exponentialOperand ckkspolynomial.PolynomialVector
 	identityOperand    ckkspolynomial.PolynomialVector
 	msbOperand         ckkspolynomial.PolynomialVector
+	packedLUTOperand   ckkspolynomial.Polynomial
 }
 
 // GaoA2BKernelN16FullPackedCircuit uses the same sealed Gao polynomial graph
@@ -245,6 +247,12 @@ func newGaoA2BKernelN16Circuit(
 	if err != nil {
 		return nil, fmt.Errorf("homchain: construct N16/L11 Gao MSB operand: %w", err)
 	}
+	var packedLUTOperand ckkspolynomial.Polynomial
+	if packing.claim == GaoA2BKernelN16FullPackedKernelOnlyUnverified {
+		if packedLUTOperand, err = newGaoA2BKernelN16PackedLUT(identityPolynomial, msbPolynomial); err != nil {
+			return nil, err
+		}
+	}
 	operandPlan, err := inspectA2BKernelOperands(exponentialOperand, identityOperand, msbOperand, packing.slots)
 	if err != nil {
 		return nil, err
@@ -286,6 +294,7 @@ func newGaoA2BKernelN16Circuit(
 	circuit := &GaoA2BKernelN16L11Circuit{
 		params: params, encoder: encoder.ShallowCopy(), profile: profile,
 		exponentialOperand: exponentialOperand, identityOperand: identityOperand, msbOperand: msbOperand,
+		packedLUTOperand: packedLUTOperand,
 	}
 	if err = circuit.validate(); err != nil {
 		return nil, err
@@ -313,11 +322,74 @@ func (c *GaoA2BKernelN16L11Circuit) polynomialEvaluationOperands() (exponential 
 	}
 	if c.profile.claim == GaoA2BKernelN16FullPackedKernelOnlyUnverified {
 		return ckkspolynomial.Polynomial(c.exponentialOperand.Value[0]), []interface{}{
-			ckkspolynomial.Polynomial(c.identityOperand.Value[0]),
-			ckkspolynomial.Polynomial(c.msbOperand.Value[0]),
+			c.packedLUTOperand,
 		}
 	}
 	return c.exponentialOperand, []interface{}{c.identityOperand, c.msbOperand}
+}
+
+// newGaoA2BKernelN16PackedLUT first replaces each source LUT with its
+// Hermitian degree-15 representative on z^16=1. The representatives evaluate
+// to the source LUTs' real parts at every sixteenth root, so one complex
+// polynomial can carry ID in its real channel and MSB in its imaginary channel.
+func newGaoA2BKernelN16PackedLUT(
+	identity, msb bignum.Polynomial,
+) (ckkspolynomial.Polynomial, error) {
+	if identity.Basis != bignum.Monomial || msb.Basis != bignum.Monomial ||
+		identity.Degree() != gaoA2BLUTDegree || msb.Degree() != gaoA2BLUTDegree {
+		return ckkspolynomial.Polynomial{}, fmt.Errorf("homchain: N16 full-packed Gao LUT operands have incompatible shapes")
+	}
+	coefficients := make([]*bignum.Complex, gaoA2BLUTDegree+1)
+	for index := range coefficients {
+		pairedIndex := (-index) & gaoA2BLUTDegree
+		identityCoefficient, identityPaired := identity.Coeffs[index], identity.Coeffs[pairedIndex]
+		msbCoefficient, msbPaired := msb.Coeffs[index], msb.Coeffs[pairedIndex]
+		components := []*bignum.Complex{identityCoefficient, identityPaired, msbCoefficient, msbPaired}
+		for _, candidate := range components {
+			if candidate == nil || candidate.Real() == nil || candidate.Imag() == nil {
+				return ckkspolynomial.Polynomial{}, fmt.Errorf("homchain: N16 full-packed Gao LUT coefficient %d is incomplete", index)
+			}
+		}
+		precision := identityCoefficient.Prec()
+		for _, candidate := range components[1:] {
+			if candidate.Prec() > precision {
+				precision = candidate.Prec()
+			}
+		}
+		two := new(big.Float).SetPrec(precision).SetInt64(2)
+		identityReal := new(big.Float).SetPrec(precision).Quo(
+			new(big.Float).SetPrec(precision).Add(identityCoefficient.Real(), identityPaired.Real()), two,
+		)
+		identityImaginary := new(big.Float).SetPrec(precision).Quo(
+			new(big.Float).SetPrec(precision).Sub(identityCoefficient.Imag(), identityPaired.Imag()), two,
+		)
+		msbReal := new(big.Float).SetPrec(precision).Quo(
+			new(big.Float).SetPrec(precision).Add(msbCoefficient.Real(), msbPaired.Real()), two,
+		)
+		msbImaginary := new(big.Float).SetPrec(precision).Quo(
+			new(big.Float).SetPrec(precision).Sub(msbCoefficient.Imag(), msbPaired.Imag()), two,
+		)
+		coefficients[index] = &bignum.Complex{
+			new(big.Float).SetPrec(precision).Sub(identityReal, msbImaginary),
+			new(big.Float).SetPrec(precision).Add(identityImaginary, msbReal),
+		}
+	}
+	return ckkspolynomial.NewPolynomial(bignum.NewPolynomial(bignum.Monomial, coefficients, nil)), nil
+}
+
+func equalGaoA2BKernelN16PackedLUT(left, right ckkspolynomial.Polynomial) bool {
+	if left.Basis != right.Basis || left.Degree() != right.Degree() || len(left.Coeffs) != len(right.Coeffs) {
+		return false
+	}
+	for index := range left.Coeffs {
+		if left.Coeffs[index] == nil || left.Coeffs[index].Real() == nil || left.Coeffs[index].Imag() == nil ||
+			right.Coeffs[index] == nil || right.Coeffs[index].Real() == nil || right.Coeffs[index].Imag() == nil ||
+			left.Coeffs[index].Real().Cmp(right.Coeffs[index].Real()) != 0 ||
+			left.Coeffs[index].Imag().Cmp(right.Coeffs[index].Imag()) != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 type gaoA2BKernelN16L11SparseCoefficientGetter struct {
@@ -447,10 +519,11 @@ func (e *GaoA2BKernelN16L11Evaluator) EvaluatePreparedMSBNew(input *rlwe.Ciphert
 	if err := e.validateInput(input); err != nil {
 		return nil, err
 	}
-	evaluationExponential, evaluationLUTs := e.circuit.polynomialEvaluationOperands()
-	if len(evaluationLUTs) != 2 {
+	if len(e.circuit.exponentialOperand.Value) != 1 || len(e.circuit.msbOperand.Value) != 1 {
 		return nil, fmt.Errorf("homchain: N16 full-packed Gao MSB operand is unavailable")
 	}
+	evaluationExponential := ckkspolynomial.Polynomial(e.circuit.exponentialOperand.Value[0])
+	evaluationMSB := ckkspolynomial.Polynomial(e.circuit.msbOperand.Value[0])
 	exponential, err := e.polynomial.Evaluate(input, evaluationExponential, e.circuit.params.DefaultScale())
 	if err != nil {
 		return nil, fmt.Errorf("homchain: evaluate N16 full-packed Gao MSB exponential polynomial: %w", err)
@@ -468,7 +541,7 @@ func (e *GaoA2BKernelN16L11Evaluator) EvaluatePreparedMSBNew(input *rlwe.Ciphert
 			return nil, fmt.Errorf("homchain: N16 full-packed Gao MSB square %d rescale: %w", round, err)
 		}
 	}
-	msb, err := e.polynomial.Evaluate(root, evaluationLUTs[1], e.circuit.params.DefaultScale())
+	msb, err := e.polynomial.Evaluate(root, evaluationMSB, e.circuit.params.DefaultScale())
 	if err != nil {
 		return nil, fmt.Errorf("homchain: evaluate N16 full-packed Gao MSB LUT: %w", err)
 	}
@@ -536,10 +609,15 @@ func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verify
 	evaluationExponential, evaluationLUTs := e.circuit.polynomialEvaluationOperands()
 	if verifySealedGraph {
 		if e.circuit.profile.claim == GaoA2BKernelN16FullPackedKernelOnlyUnverified {
+			packedLUT, packedErr := newGaoA2BKernelN16PackedLUT(
+				identityOperand.Value[0].Polynomial, msbOperand.Value[0].Polynomial,
+			)
+			if packedErr != nil {
+				return GaoA2BKernelResult{}, packedErr
+			}
 			evaluationExponential = ckkspolynomial.Polynomial(exponentialOperand.Value[0])
 			evaluationLUTs = []interface{}{
-				ckkspolynomial.Polynomial(identityOperand.Value[0]),
-				ckkspolynomial.Polynomial(msbOperand.Value[0]),
+				packedLUT,
 			}
 		} else {
 			evaluationExponential = exponentialOperand
@@ -586,16 +664,31 @@ func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verify
 	}
 	rootOfUnity := root.CopyNew()
 
-	lutOutputs, err := e.polynomial.EvaluateMultiPoly(
-		root, evaluationLUTs, e.circuit.params.DefaultScale(),
-	)
-	counts.MultiPolynomialEvaluations++
-	counts.SharedPowerBases++
-	if err != nil {
-		return GaoA2BKernelResult{}, fmt.Errorf("homchain: evaluate N16/L11 Gao shared ID/MSB LUT: %w", err)
+	var lutOutputs []*rlwe.Ciphertext
+	if e.circuit.profile.claim == GaoA2BKernelN16FullPackedKernelOnlyUnverified {
+		if len(evaluationLUTs) != 1 {
+			return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16 full-packed Gao complex-packed LUT operand is unavailable")
+		}
+		packedLUT, evaluationErr := e.polynomial.Evaluate(
+			root, evaluationLUTs[0], e.circuit.params.DefaultScale(),
+		)
+		counts.GenericLUTEvaluations++
+		if evaluationErr != nil {
+			return GaoA2BKernelResult{}, fmt.Errorf("homchain: evaluate N16 full-packed Gao complex-packed ID+i*MSB LUT: %w", evaluationErr)
+		}
+		lutOutputs = []*rlwe.Ciphertext{packedLUT, packedLUT}
+	} else {
+		lutOutputs, err = e.polynomial.EvaluateMultiPoly(
+			root, evaluationLUTs, e.circuit.params.DefaultScale(),
+		)
+		counts.MultiPolynomialEvaluations++
+		counts.SharedPowerBases++
+		if err != nil {
+			return GaoA2BKernelResult{}, fmt.Errorf("homchain: evaluate N16/L11 Gao shared ID/MSB LUT: %w", err)
+		}
 	}
 	if len(lutOutputs) != 2 || lutOutputs[0] == nil || lutOutputs[1] == nil {
-		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao shared LUT output shape changed")
+		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao LUT output shape changed")
 	}
 	wantLUTLevel := root.Level() - identityOperand.Depth()
 	for index, output := range lutOutputs {
@@ -611,17 +704,40 @@ func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verify
 		states = append(states, state)
 	}
 
-	for index, stage := range [...]GaoA2BKernelStage{GaoA2BKernelStageIdentityOutput, GaoA2BKernelStageMSBOutput} {
-		outputScale := lutOutputs[index].Scale
-		conjugate, conjugateErr := e.ckks.ConjugateNew(lutOutputs[index])
+	if e.circuit.profile.claim == GaoA2BKernelN16FullPackedKernelOnlyUnverified {
+		packedLUT := lutOutputs[0]
+		conjugate, conjugateErr := e.ckks.ConjugateNew(packedLUT)
 		if conjugateErr != nil {
-			return GaoA2BKernelResult{}, fmt.Errorf("homchain: conjugate N16/L11 Gao LUT %d: %w", index, conjugateErr)
+			return GaoA2BKernelResult{}, fmt.Errorf("homchain: conjugate N16 full-packed Gao complex-packed LUT: %w", conjugateErr)
 		}
 		counts.Conjugations++
-		if err = e.ckks.Add(lutOutputs[index], conjugate, lutOutputs[index]); err != nil {
-			return GaoA2BKernelResult{}, fmt.Errorf("homchain: recover N16/L11 Gao LUT %d real part: %w", index, err)
+		identity := packedLUT.CopyNew()
+		if err = e.ckks.Add(packedLUT, conjugate, identity); err != nil {
+			return GaoA2BKernelResult{}, fmt.Errorf("homchain: split N16 full-packed Gao identity channel: %w", err)
 		}
-		counts.RealRecoveries++
+		if err = e.ckks.Sub(packedLUT, conjugate, packedLUT); err != nil {
+			return GaoA2BKernelResult{}, fmt.Errorf("homchain: split N16 full-packed Gao MSB channel: %w", err)
+		}
+		if err = e.ckks.Mul(packedLUT, -1i, packedLUT); err != nil {
+			return GaoA2BKernelResult{}, fmt.Errorf("homchain: normalize N16 full-packed Gao MSB channel: %w", err)
+		}
+		counts.RealRecoveries += 2
+		lutOutputs = []*rlwe.Ciphertext{identity, packedLUT}
+	} else {
+		for index := range lutOutputs {
+			conjugate, conjugateErr := e.ckks.ConjugateNew(lutOutputs[index])
+			if conjugateErr != nil {
+				return GaoA2BKernelResult{}, fmt.Errorf("homchain: conjugate N16/L11 Gao LUT %d: %w", index, conjugateErr)
+			}
+			counts.Conjugations++
+			if err = e.ckks.Add(lutOutputs[index], conjugate, lutOutputs[index]); err != nil {
+				return GaoA2BKernelResult{}, fmt.Errorf("homchain: recover N16/L11 Gao LUT %d real part: %w", index, err)
+			}
+			counts.RealRecoveries++
+		}
+	}
+	for index, stage := range [...]GaoA2BKernelStage{GaoA2BKernelStageIdentityOutput, GaoA2BKernelStageMSBOutput} {
+		outputScale := lutOutputs[index].Scale
 		state, err = snapshotA2BKernelState(stage, lutOutputs[index], outputScale)
 		if err != nil || !state.ScaleExact {
 			return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao real output %d scale changed: %w", index, err)
@@ -754,6 +870,16 @@ func (c *GaoA2BKernelN16L11Circuit) validate() error {
 	if err != nil || plan != c.profile.operandPlan ||
 		digestA2BKernelOperands(c.exponentialOperand, c.identityOperand, c.msbOperand, plan) != c.profile.operandGraphDigest {
 		return fmt.Errorf("homchain: N16/L11 Gao sealed operand graph changed")
+	}
+	if c.profile.claim == GaoA2BKernelN16FullPackedKernelOnlyUnverified {
+		expectedPackedLUT, packedErr := newGaoA2BKernelN16PackedLUT(
+			c.identityOperand.Value[0].Polynomial, c.msbOperand.Value[0].Polynomial,
+		)
+		if packedErr != nil || !equalGaoA2BKernelN16PackedLUT(c.packedLUTOperand, expectedPackedLUT) {
+			return fmt.Errorf("homchain: N16 full-packed Gao derived packed LUT changed")
+		}
+	} else if len(c.packedLUTOperand.Coeffs) != 0 {
+		return fmt.Errorf("homchain: N16/L11 sparse Gao kernel contains a full-packed LUT")
 	}
 	if c.profile.claim != packing.claim ||
 		c.profile.inputLevel != gaoA2BKernelN16L11InputLevel ||
