@@ -343,7 +343,7 @@ delivery remain later gates.
 - [x] Pass affected full package tests, repository-wide vet, compile-only traversal, Python validator tests, shell syntax checks, and whitespace checks.
 - [x] Upgrade both producers and the comparator to canonical v3 artifacts that bind the shared Gao contract plus complete backend-native Q/P chains, secret/error/key-switch settings, and profile-specific security evidence.
 - [x] Close the independent pre-benchmark audit: require all zero/null fields, bind the OpenFHE driver and executable hashes, enforce a fully clean pinned checkout, and include client construction in setup timing.
-- [ ] Commit the clean implementation revision used by both benchmark builds.
-- [ ] Rebuild and rerun pinned OpenFHE locally, then run Lattigo without concurrent workload.
-- [ ] Admit both artifacts through the strict comparator and check both mean and median ratios are at most 1.
+- [x] Commit the clean implementation revision used by both benchmark builds (`1a35425`).
+- [x] Rebuild and rerun pinned OpenFHE locally, then run Lattigo without concurrent workload.
+- [x] Admit both artifacts through the strict comparator and check both mean and median ratios are at most 1.
 - [ ] Check in the local reproduction bundle, independent reviews, and final manual-test instructions.

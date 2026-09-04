@@ -192,6 +192,11 @@ The Lattigo full-packed artifact reports `full-packed-profile-not-assessed`;
 the separate C75 `CONDITIONAL-PASS` remains bound to its selected-child circuit
 and is not reused as evidence for this benchmark profile.
 
+The accepted 2026-09-05 same-host run is preserved in
+[`research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05`](../research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05):
+Lattigo/OpenFHE mean and median latency ratios are `0.973112` and `0.950047`,
+and all five evaluations on both backends have zero bit mismatches.
+
 ## Profiles and interoperation
 
 `NewDemo` and `NewDemoFunctional8` use small profiles intended for examples and

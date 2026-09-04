@@ -1,0 +1,14 @@
+-- demoData folder already exists
+[  0%] Built target third-party
+[  6%] Built target ext_intel_hexl
+[ 37%] Built target coreobj
+[ 37%] Built target OPENFHEcore
+[ 43%] Built target binfheobj
+[ 43%] Built target OPENFHEbinfhe
+[ 96%] Built target pkeobj
+[100%] Built target OPENFHEpke
+Consolidate compiler generated dependencies of target gao-openfhe-a2b-full
+[100%] Building CXX object src/pke/CMakeFiles/gao-openfhe-a2b-full.dir/examples/gao-openfhe-a2b-full.cpp.o
+[100%] Linking CXX executable ../../bin/examples/pke/gao-openfhe-a2b-full
+[100%] Built target gao-openfhe-a2b-full
+/mnt/d/WorkSpace/LCPDTE/research/upstream/fhe-simd-alu/build-acceptance/clean-build/bin/examples/pke/gao-openfhe-a2b-full

@@ -22,13 +22,15 @@ go test -count=1 ./ckksint
 go run ./examples/ckksint/basic
 go run ./examples/ckksint/conversion
 go run ./examples/ckksint/depth2
+go run ./examples/ckksint/gao_full_a2b
 go run ./examples/ckksint/routeb_a2b
 go run ./examples/ckksint/routeb_depth2
 ```
 
-`routeb_a2b` and `routeb_depth2` are full N=2^16 workflows: setup and key
-generation, client encryption, reusable server evaluation, client decryption,
-and an independent plaintext check. The other three examples use the small
+`gao_full_a2b`, `routeb_a2b`, and `routeb_depth2` are N=2^16 workflows: setup
+and key generation, client encryption, reusable server evaluation, client
+decryption, and an independent plaintext check. `gao_full_a2b` uses all 32,768
+complex slots for 8,192 8-bit words. The other three examples use the small
 `DemoOnly` profile for fast API experiments.
 
 Produce a correctness-checked prepared-online Lattigo benchmark artifact:
@@ -37,11 +39,13 @@ Produce a correctness-checked prepared-online Lattigo benchmark artifact:
 go run ./cmd/benchmark-ckksint-a2b -host-id <host-id> -out lattigo-a2b.json
 ```
 
-The current same-host raw-sample results and the Gao/OpenFHE reproduction
-commands are under
-[`research/reproduction/benchmarks/gao_openfhe_vs_lattigo_prepared_2026-09-04`](research/reproduction/benchmarks/gao_openfhe_vs_lattigo_prepared_2026-09-04).
-`compare-ckksint` emits a ratio only for two canonical-v2 artifacts with the
+The accepted same-host raw samples, complete native parameters, resource logs,
+and Gao/OpenFHE reproduction commands are under
+[`research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05`](research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05).
+`compare-ckksint` emits a ratio only for two canonical-v3 artifacts with the
 same protocol, workload, packing, host, thread count, and repetition policy.
+On the recorded Ryzen 7 H 255 run, Lattigo/OpenFHE mean and median latency
+ratios are `0.973112` and `0.950047`, with zero mismatches.
 
 ---
 

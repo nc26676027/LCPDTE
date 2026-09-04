@@ -1,0 +1,10 @@
+using_prebuilt_binary=/mnt/d/WorkSpace/LCPDTE/research/upstream/fhe-simd-alu/build-acceptance/clean-build/bin/examples/pke/gao-openfhe-a2b-full
+driver_sha256=b2d9240dda138f040eaf76ee7afe55499474f1f9c6ec3184468b125bde23f87f
+binary_sha256=9df7dffb381ab4202f69bf58f89f00a4df036915c75f6c3f41bfc93912eac79d
+setup complete in 145572023807 ns
+warmup verified: 65536 bits, 0 mismatches
+sample 1: 26309255459 ns; verified 65536 bits, 0 mismatches
+sample 2: 24602206521 ns; verified 65536 bits, 0 mismatches
+sample 3: 24941294921 ns; verified 65536 bits, 0 mismatches
+sample 4: 23132755381 ns; verified 65536 bits, 0 mismatches
+sample 5: 22342342028 ns; verified 65536 bits, 0 mismatches
