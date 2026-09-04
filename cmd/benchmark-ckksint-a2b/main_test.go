@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -98,15 +99,26 @@ func TestBenchmarkRejectsNonAcceptanceBuildBeforeSessionConstruction(t *testing.
 }
 
 func testSetupInfo() ckksint.GaoFullPackedA2BSetupInfo {
+	qBits := []int{43, 43, 43, 43, 44, 43, 44, 43, 43, 43, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 43}
+	pBits := []int{51, 50, 51, 50, 51, 51, 49}
 	return ckksint.GaoFullPackedA2BSetupInfo{
 		ParameterWallTime:          2 * time.Second,
 		KeyGenerationWallTime:      3 * time.Second,
 		ServerConstructionWallTime: 4 * time.Second,
+		ClientConstructionWallTime: 5 * time.Second,
 		Parameters: ckksint.GaoFullPackedA2BParameterInfo{
 			RingDimension: 65_536, PackingSlots: 32_768, UsefulWords: 8_192,
 			QModuliCount: 21, QLog2Aggregate: 904, PModuliCount: 7, PLog2Aggregate: 350,
 			ScalingModulusBits: 43, FirstModulusBits: 43, MultiplicativeDepth: 20,
-			LargeDigits: 3, EphemeralSecretHammingWeight: 32,
+			ActualFirstQModulusBits: 43,
+			QModuli:                 syntheticSetupModuli(qBits, 43, 1_000), PModuli: syntheticSetupModuli(pBits, 50, 1_000),
+			QModuliBitLengths: qBits, PModuliBitLengths: pBits,
+			LargeDigits: 3, MainSecretDistribution: "balanced-sparse-ternary", MainSecretHammingWeight: 192,
+			EphemeralSecretDistribution: "balanced-sparse-ternary", EphemeralSecretHammingWeight: 32,
+			ErrorSampler: "lattigo-bounded-discrete-gaussian", ErrorSigma: 3.2,
+			ErrorConfiguredBound: 19.2, ErrorEffectiveIntegerBound: 19,
+			KeySwitchTechnique: "lattigo-rns-qp-gadget", RNSDecompositionComponents: 3,
+			BaseTwoDecomposition: 0, SecuritySelector: "external-estimator", SecurityEvidence: "full-packed-profile-not-assessed",
 			LevelBudget: [2]int{3, 2}, OpenFHERequestedBSGSDimensions: [2]int{0, 0},
 			ChunkWidth: 4, CutoffBits: -24,
 			STCLogBSGSRatio: 2, CTSLogBSGSRatio: 2, SpecialB0LogBSGSRatio: 2,
@@ -114,6 +126,21 @@ func testSetupInfo() ckksint.GaoFullPackedA2BSetupInfo {
 			ScaleSchedule: "lattigo-explicit-level-scale-native",
 		},
 	}
+}
+
+func syntheticSetupModuli(profile []int, target int, positiveDelta uint64) []string {
+	result := make([]string, len(profile))
+	pivot := uint64(1) << target
+	for index, bitLength := range profile {
+		value := pivot - 1
+		if bitLength == target+1 {
+			value = pivot + positiveDelta + uint64(index)
+		} else if bitLength == target-1 {
+			value = (pivot >> 1) - 1
+		}
+		result[index] = strconv.FormatUint(value, 10)
+	}
+	return result
 }
 
 func TestCanonicalInputContainsThirtyTwoByteCycles(t *testing.T) {
@@ -141,7 +168,7 @@ func TestCanonicalArtifactRecordsPreparedOnlineProtocol(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got.Schema != "lcpdte-ckksint-a2b-benchmark-v2" || got.Implementation != "lattigo-gao-a2b-full" {
+	if got.Schema != "lcpdte-ckksint-a2b-benchmark-v3" || got.Implementation != "lattigo-gao-a2b-full" {
 		t.Fatalf("identity=%+v", got)
 	}
 	if got.HostID != "same-host" || got.Protocol != "gao-a2b-full-z8-w4-v1" ||
@@ -152,11 +179,21 @@ func TestCanonicalArtifactRecordsPreparedOnlineProtocol(t *testing.T) {
 	if got.WordBits != 8 || got.RingDimension != 65_536 || got.PackingSlots != 32_768 || got.UsefulWords != 8_192 {
 		t.Fatalf("shape=%+v", got)
 	}
-	if got.Threads != 1 || got.TimingScope != "prepared-online" || got.SetupNanoseconds != 15_000_000_000 {
+	if got.Threads != 1 || got.TimingScope != "prepared-online" || got.SetupNanoseconds != 20_000_000_000 {
 		t.Fatalf("scope=%+v", got)
 	}
 	if got.Parameters == nil || *got.Parameters != *benchcmp.CanonicalGaoParameters() {
 		t.Fatalf("parameters=%+v", got.Parameters)
+	}
+	if got.NativeParameters == nil || got.NativeParameters.ActualFirstQModulusBits != 43 ||
+		got.NativeParameters.MainSecretDistribution != "balanced-sparse-ternary" ||
+		got.NativeParameters.MainSecretHammingWeight != 192 ||
+		got.NativeParameters.ErrorSampler != "lattigo-bounded-discrete-gaussian" ||
+		got.NativeParameters.ErrorConfiguredBound == nil || *got.NativeParameters.ErrorConfiguredBound != 19.2 ||
+		got.NativeParameters.KeySwitchTechnique != "lattigo-rns-qp-gadget" ||
+		!reflect.DeepEqual(got.NativeParameters.QModuli, setup.Parameters.QModuli) ||
+		!reflect.DeepEqual(got.NativeParameters.PModuli, setup.Parameters.PModuli) {
+		t.Fatalf("native parameters=%+v", got.NativeParameters)
 	}
 	if got.EncryptionMode != "public-key" || got.FactorStorageMode != "resident-prevalidated" ||
 		got.ScaleSchedule != "lattigo-explicit-level-scale-native" ||
@@ -281,6 +318,7 @@ func TestBenchmarkRecordsOnlyPreparedOnlineSamples(t *testing.T) {
 				setup.ParameterWallTime = 2 * time.Nanosecond
 				setup.KeyGenerationWallTime = 3 * time.Nanosecond
 				setup.ServerConstructionWallTime = 4 * time.Nanosecond
+				setup.ClientConstructionWallTime = 5 * time.Nanosecond
 				return setup
 			}(), nil
 	}
@@ -312,8 +350,8 @@ func TestBenchmarkRecordsOnlyPreparedOnlineSamples(t *testing.T) {
 	if encryptions != 1 || encryptedWords != 8_192 || evaluations != 6 || decryptions != 6 {
 		t.Fatalf("encryptions=%d encrypted_words=%d evaluations=%d decryptions=%d", encryptions, encryptedWords, evaluations, decryptions)
 	}
-	if got.SetupNanoseconds != 15 {
-		t.Fatalf("setup_ns=%d, want 15", got.SetupNanoseconds)
+	if got.SetupNanoseconds != 20 {
+		t.Fatalf("setup_ns=%d, want 20", got.SetupNanoseconds)
 	}
 	// The canonical samples wrap the complete prepared public Evaluate call,
 	// matching the OpenFHE driver's call-boundary timer. The narrower internal
@@ -334,7 +372,7 @@ func expectedBits(words []uint8) [][8]uint8 {
 	return bits
 }
 
-func TestWriteCanonicalArtifactProducesParseableV2JSON(t *testing.T) {
+func TestWriteCanonicalArtifactProducesParseableV3JSON(t *testing.T) {
 	artifact, err := canonicalArtifact(
 		"same-host",
 		func() ckksint.GaoFullPackedA2BSetupInfo {

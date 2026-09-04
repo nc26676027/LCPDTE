@@ -168,7 +168,7 @@ same 8,192-word input (`0..255` repeated 32 times), use all 32,768 complex
 slots at `N=65536`, return low4/high4 ciphertexts, and verify all 65,536 bits
 after one warmup and each of five timed calls.
 
-`compare-ckksint` accepts only two verified canonical-v2 artifacts with
+`compare-ckksint` accepts only two verified canonical-v3 artifacts with
 identical protocol, workload, packing, host, single-thread setting, and
 warmup/repeat policy:
 
@@ -181,11 +181,16 @@ go run ./cmd/compare-ckksint `
 
 Run both producers serially on the same physical machine and in the same WSL
 environment, with the OpenFHE run immediately before the final Lattigo run.
-The artifacts bind live aggregate modulus parameters, public-key encryption,
-resident transform factors, backend-native scale/BSGS plans, clean source
-revisions, compiler/runtime/build profile, OS and architecture. The comparator
-passes only when both the Lattigo/OpenFHE mean and median latency ratios are at
-most 1.
+The artifacts bind both the shared Gao algorithm contract and each backend's
+native parameters: complete Q/P modulus chains, actual first-Q width, main and
+ephemeral secret distributions, error sampler, key-switch decomposition and
+security selector/evidence. They also bind public-key encryption, resident
+transform factors, backend-native scale/BSGS plans, clean source revisions,
+compiler/runtime/build profile, OS and architecture. The comparator passes only
+when both the Lattigo/OpenFHE mean and median latency ratios are at most 1.
+The Lattigo full-packed artifact reports `full-packed-profile-not-assessed`;
+the separate C75 `CONDITIONAL-PASS` remains bound to its selected-child circuit
+and is not reused as evidence for this benchmark profile.
 
 ## Profiles and interoperation
 

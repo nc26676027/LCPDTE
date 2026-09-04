@@ -13,29 +13,50 @@ const GaoFullPackedA2BMaxWords = secureeval.GaoFullPackedA2BMaxWords
 
 // GaoFullPackedA2BSetupInfo reports work completed before prepared-online
 // evaluation begins. ServerConstructionWallTime includes DFT/polynomial
-// preparation and evaluation-key generation.
+// preparation and evaluation-key generation. ClientConstructionWallTime
+// includes encoder and final session-object assembly.
 type GaoFullPackedA2BSetupInfo struct {
 	ParameterWallTime          time.Duration
 	KeyGenerationWallTime      time.Duration
 	ServerConstructionWallTime time.Duration
+	ClientConstructionWallTime time.Duration
 	Parameters                 GaoFullPackedA2BParameterInfo
 }
 
 // GaoFullPackedA2BParameterInfo reports the live full-packing, modulus-chain,
 // encryption, DFT residency, scale, and BSGS settings used by a session.
 type GaoFullPackedA2BParameterInfo struct {
-	RingDimension                  int
-	PackingSlots                   int
-	UsefulWords                    int
-	QModuliCount                   int
-	QLog2Aggregate                 int
-	PModuliCount                   int
-	PLog2Aggregate                 int
-	ScalingModulusBits             int
+	RingDimension      int
+	PackingSlots       int
+	UsefulWords        int
+	QModuliCount       int
+	QLog2Aggregate     int
+	PModuliCount       int
+	PLog2Aggregate     int
+	ScalingModulusBits int
+	// FirstModulusBits is the canonical requested first-Q target. The generated
+	// prime's actual size is reported separately by ActualFirstQModulusBits.
 	FirstModulusBits               int
+	ActualFirstQModulusBits        int
+	QModuli                        []string
+	PModuli                        []string
+	QModuliBitLengths              []int
+	PModuliBitLengths              []int
 	MultiplicativeDepth            int
 	LargeDigits                    int
+	MainSecretDistribution         string
+	MainSecretHammingWeight        int
+	EphemeralSecretDistribution    string
 	EphemeralSecretHammingWeight   int
+	ErrorSampler                   string
+	ErrorSigma                     float64
+	ErrorConfiguredBound           float64
+	ErrorEffectiveIntegerBound     int
+	KeySwitchTechnique             string
+	RNSDecompositionComponents     int
+	BaseTwoDecomposition           int
+	SecuritySelector               string
+	SecurityEvidence               string
 	LevelBudget                    [2]int
 	OpenFHERequestedBSGSDimensions [2]int
 	ChunkWidth                     int
@@ -93,35 +114,61 @@ func NewGaoFullPackedA2B() (
 	if err != nil {
 		return nil, nil, GaoFullPackedA2BSetupInfo{}, fmt.Errorf("ckksint: create Gao full-packed A2B session: %w", err)
 	}
-	return &GaoFullPackedA2BClient{inner: client}, &GaoFullPackedA2BServer{inner: server}, GaoFullPackedA2BSetupInfo{
+	return &GaoFullPackedA2BClient{inner: client}, &GaoFullPackedA2BServer{inner: server}, gaoFullPackedA2BSetupInfo(report), nil
+}
+
+func gaoFullPackedA2BSetupInfo(report secureeval.GaoFullPackedA2BSetupReport) GaoFullPackedA2BSetupInfo {
+	return GaoFullPackedA2BSetupInfo{
 		ParameterWallTime:          report.ParameterWallTime,
 		KeyGenerationWallTime:      report.KeyGenerationWallTime,
 		ServerConstructionWallTime: report.ServerConstructionWallTime,
-		Parameters: GaoFullPackedA2BParameterInfo{
-			RingDimension:                  report.Parameters.RingDimension,
-			PackingSlots:                   report.Parameters.PackingSlots,
-			UsefulWords:                    report.Parameters.UsefulWords,
-			QModuliCount:                   report.Parameters.QModuliCount,
-			QLog2Aggregate:                 report.Parameters.QLog2Aggregate,
-			PModuliCount:                   report.Parameters.PModuliCount,
-			PLog2Aggregate:                 report.Parameters.PLog2Aggregate,
-			ScalingModulusBits:             report.Parameters.ScalingModulusBits,
-			FirstModulusBits:               report.Parameters.FirstModulusBits,
-			MultiplicativeDepth:            report.Parameters.MultiplicativeDepth,
-			LargeDigits:                    report.Parameters.LargeDigits,
-			EphemeralSecretHammingWeight:   report.Parameters.EphemeralSecretHammingWeight,
-			LevelBudget:                    report.Parameters.LevelBudget,
-			OpenFHERequestedBSGSDimensions: report.Parameters.OpenFHERequestedBSGSDimensions,
-			ChunkWidth:                     report.Parameters.ChunkWidth,
-			CutoffBits:                     report.Parameters.CutoffBits,
-			STCLogBSGSRatio:                report.Parameters.STCLogBSGSRatio,
-			CTSLogBSGSRatio:                report.Parameters.CTSLogBSGSRatio,
-			SpecialB0LogBSGSRatio:          report.Parameters.SpecialB0LogBSGSRatio,
-			EncryptionMode:                 report.Parameters.EncryptionMode,
-			FactorStorageMode:              report.Parameters.FactorStorageMode,
-			ScaleSchedule:                  report.Parameters.ScaleSchedule,
-		},
-	}, nil
+		ClientConstructionWallTime: report.ClientConstructionWallTime,
+		Parameters:                 gaoFullPackedA2BParameterInfo(report.Parameters),
+	}
+}
+
+func gaoFullPackedA2BParameterInfo(report secureeval.GaoFullPackedA2BParameterReport) GaoFullPackedA2BParameterInfo {
+	return GaoFullPackedA2BParameterInfo{
+		RingDimension:                  report.RingDimension,
+		PackingSlots:                   report.PackingSlots,
+		UsefulWords:                    report.UsefulWords,
+		QModuliCount:                   report.QModuliCount,
+		QLog2Aggregate:                 report.QLog2Aggregate,
+		PModuliCount:                   report.PModuliCount,
+		PLog2Aggregate:                 report.PLog2Aggregate,
+		ScalingModulusBits:             report.ScalingModulusBits,
+		FirstModulusBits:               report.FirstModulusBits,
+		ActualFirstQModulusBits:        report.ActualFirstQModulusBits,
+		QModuli:                        append([]string(nil), report.QModuli...),
+		PModuli:                        append([]string(nil), report.PModuli...),
+		QModuliBitLengths:              append([]int(nil), report.QModuliBitLengths...),
+		PModuliBitLengths:              append([]int(nil), report.PModuliBitLengths...),
+		MultiplicativeDepth:            report.MultiplicativeDepth,
+		LargeDigits:                    report.LargeDigits,
+		MainSecretDistribution:         report.MainSecretDistribution,
+		MainSecretHammingWeight:        report.MainSecretHammingWeight,
+		EphemeralSecretDistribution:    report.EphemeralSecretDistribution,
+		EphemeralSecretHammingWeight:   report.EphemeralSecretHammingWeight,
+		ErrorSampler:                   report.ErrorSampler,
+		ErrorSigma:                     report.ErrorSigma,
+		ErrorConfiguredBound:           report.ErrorConfiguredBound,
+		ErrorEffectiveIntegerBound:     report.ErrorEffectiveIntegerBound,
+		KeySwitchTechnique:             report.KeySwitchTechnique,
+		RNSDecompositionComponents:     report.RNSDecompositionComponents,
+		BaseTwoDecomposition:           report.BaseTwoDecomposition,
+		SecuritySelector:               report.SecuritySelector,
+		SecurityEvidence:               report.SecurityEvidence,
+		LevelBudget:                    report.LevelBudget,
+		OpenFHERequestedBSGSDimensions: report.OpenFHERequestedBSGSDimensions,
+		ChunkWidth:                     report.ChunkWidth,
+		CutoffBits:                     report.CutoffBits,
+		STCLogBSGSRatio:                report.STCLogBSGSRatio,
+		CTSLogBSGSRatio:                report.CTSLogBSGSRatio,
+		SpecialB0LogBSGSRatio:          report.SpecialB0LogBSGSRatio,
+		EncryptionMode:                 report.EncryptionMode,
+		FactorStorageMode:              report.FactorStorageMode,
+		ScaleSchedule:                  report.ScaleSchedule,
+	}
 }
 
 // EncryptA2B encrypts 1..8192 uint8 words. Short batches are zero-padded in

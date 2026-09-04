@@ -29,12 +29,26 @@ does not embed the required `vcs.revision` and is rejected before setup.
 
 `setup_nanoseconds` is the complete untimed envelope before the warmup:
 parameters, public/secret keys, reusable server construction, resident factor
-preparation, and encryption. The warmup is excluded from that field.
+preparation, client encoder/session construction, and encryption. The warmup
+is excluded from that field.
 
-The artifact derives packing and modulus-chain fields from the live session and
-records the Go VCS revision, clean/modified flag, runtime, compiler, build
-profile, OS, architecture, scale schedule, factor-storage mode, and the actual
-Lattigo BSGS plan. The command refuses to benchmark a dirty build.
+The v3 artifact derives packing and the complete ordered Q/P modulus chains
+from the live session. Its shared `parameters` object records constructor
+targets and matched semantics (including main/ephemeral secret weights and
+key-switch decomposition settings). Its required `native_parameters` object
+records the actual first-Q width, every decimal modulus and recomputed bit
+length, the bounded Gaussian sampler, secret distributions, key-switch
+technique, and the profile-specific security selector/evidence status. The
+full-packed Lattigo path reports `full-packed-profile-not-assessed`; it does not
+reuse the circuit-specific C75 `CONDITIONAL-PASS`. The comparison parser
+recomputes chain counts and product bit lengths rather than trusting emitted
+aggregates. Backend-native differences remain explicit instead of being
+presented as prime-for-prime equality.
+
+The artifact also records the Go VCS revision, clean/modified flag, runtime,
+compiler, build profile, OS, architecture, scale schedule, factor-storage
+mode, and the actual Lattigo BSGS plan. The command refuses to benchmark a
+dirty build.
 
 For comparison, build and run this command inside the same WSL/Linux environment
 used by the OpenFHE driver, immediately after the local OpenFHE run, and use the

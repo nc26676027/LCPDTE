@@ -50,11 +50,13 @@ func run() error {
 		}
 	}
 
-	setupWall := setup.ParameterWallTime + setup.KeyGenerationWallTime + setup.ServerConstructionWallTime
+	setupWall := setup.ParameterWallTime + setup.KeyGenerationWallTime +
+		setup.ServerConstructionWallTime + setup.ClientConstructionWallTime
 	throughput := float64(len(words)) / evaluation.OnlineWallTime.Seconds()
-	fmt.Printf("setup=%s (parameters=%s keygen=%s server=%s)\n",
+	fmt.Printf("setup=%s (parameters=%s keygen=%s server=%s client=%s)\n",
 		setupWall.Round(time.Millisecond), setup.ParameterWallTime.Round(time.Millisecond),
-		setup.KeyGenerationWallTime.Round(time.Millisecond), setup.ServerConstructionWallTime.Round(time.Millisecond))
+		setup.KeyGenerationWallTime.Round(time.Millisecond), setup.ServerConstructionWallTime.Round(time.Millisecond),
+		setup.ClientConstructionWallTime.Round(time.Millisecond))
 	fmt.Printf("encrypt=%s online=%s server_call=%s decrypt=%s throughput=%.2f words/s\n",
 		encryption.WallTime.Round(time.Millisecond), evaluation.OnlineWallTime.Round(time.Millisecond),
 		evaluation.WallTime.Round(time.Millisecond), decryption.WallTime.Round(time.Millisecond), throughput)

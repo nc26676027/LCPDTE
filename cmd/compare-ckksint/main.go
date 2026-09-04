@@ -25,7 +25,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if *legacyOpenFHEPath != "" {
-		fmt.Fprintln(stderr, "compare-ckksint: legacy artifacts are descriptive-only and cannot produce v2 performance ratios; use -openfhe-json with matched canonical artifacts")
+		fmt.Fprintln(stderr, "compare-ckksint: legacy artifacts are descriptive-only and cannot produce v3 performance ratios; use -openfhe-json with matched canonical artifacts")
 		return 2
 	}
 	if *openFHEPath == "" || *lattigoPath == "" {

@@ -110,7 +110,7 @@ func canonicalArtifact(
 		return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark requires complete encryption and warmup timing")
 	}
 	setupWallTime := setup.ParameterWallTime + setup.KeyGenerationWallTime +
-		setup.ServerConstructionWallTime + encryption.WallTime
+		setup.ServerConstructionWallTime + setup.ClientConstructionWallTime + encryption.WallTime
 	if setupWallTime <= 0 || len(samples) != benchmarkRepeats {
 		return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark requires positive setup time and five nonzero samples")
 	}
@@ -123,10 +123,14 @@ func canonicalArtifact(
 	if err != nil {
 		return benchcmp.CanonicalArtifact{}, err
 	}
+	nativeParameters, err := nativeParametersFromSetup(setup.Parameters)
+	if err != nil {
+		return benchcmp.CanonicalArtifact{}, err
+	}
 	if err = validateLattigoExecutionMetadata(execution); err != nil {
 		return benchcmp.CanonicalArtifact{}, err
 	}
-	return benchcmp.CanonicalArtifact{
+	artifact := benchcmp.CanonicalArtifact{
 		Schema:                  benchcmp.CanonicalBenchmarkSchema,
 		Implementation:          "lattigo-gao-a2b-full",
 		HostID:                  strings.TrimSpace(hostID),
@@ -150,6 +154,7 @@ func canonicalArtifact(
 		PackingSlots:            uint32(setup.Parameters.PackingSlots),
 		UsefulWords:             uint32(setup.Parameters.UsefulWords),
 		Parameters:              parameters,
+		NativeParameters:        nativeParameters,
 		Threads:                 1,
 		TimingScope:             benchcmp.TimingScopePreparedOnline,
 		SetupNanoseconds:        uint64(setupWallTime / time.Nanosecond),
@@ -159,7 +164,15 @@ func canonicalArtifact(
 		TimedSamplesNanoseconds: append([]uint64(nil), samples...),
 		MismatchCount:           0,
 		VerifiedEvaluations:     benchmarkRepeats,
-	}, nil
+	}
+	payload, err := json.Marshal(artifact)
+	if err != nil {
+		return benchcmp.CanonicalArtifact{}, fmt.Errorf("marshal generated benchmark artifact: %w", err)
+	}
+	if _, err = benchcmp.ParseCanonical(bytes.NewReader(payload), "generated-lattigo-artifact"); err != nil {
+		return benchcmp.CanonicalArtifact{}, fmt.Errorf("validate generated benchmark artifact: %w", err)
+	}
+	return artifact, nil
 }
 
 func canonicalParametersFromSetup(info ckksint.GaoFullPackedA2BParameterInfo) (*benchcmp.GaoParameterSemantics, error) {
@@ -179,7 +192,10 @@ func canonicalParametersFromSetup(info ckksint.GaoFullPackedA2BParameterInfo) (*
 		FirstModulusBits:               uint32(info.FirstModulusBits),
 		MultiplicativeDepth:            uint32(info.MultiplicativeDepth),
 		LargeDigits:                    uint32(info.LargeDigits),
+		MainSecretHammingWeight:        uint32(info.MainSecretHammingWeight),
 		EphemeralSecretHammingWeight:   uint32(info.EphemeralSecretHammingWeight),
+		KeySwitchRNSComponents:         uint32(info.RNSDecompositionComponents),
+		KeySwitchBaseTwoDecomposition:  uint32(info.BaseTwoDecomposition),
 		LevelBudget:                    [2]uint32{uint32(info.LevelBudget[0]), uint32(info.LevelBudget[1])},
 		OpenFHERequestedBSGSDimensions: [2]uint32{uint32(info.OpenFHERequestedBSGSDimensions[0]), uint32(info.OpenFHERequestedBSGSDimensions[1])},
 		ChunkWidth:                     uint32(info.ChunkWidth),
@@ -203,6 +219,81 @@ func canonicalParametersFromSetup(info ckksint.GaoFullPackedA2BParameterInfo) (*
 		)
 	}
 	return parameters, nil
+}
+
+func nativeParametersFromSetup(info ckksint.GaoFullPackedA2BParameterInfo) (*benchcmp.NativeParameters, error) {
+	qBits, err := uint32SliceFromInts("QModuliBitLengths", info.QModuliBitLengths)
+	if err != nil {
+		return nil, err
+	}
+	pBits, err := uint32SliceFromInts("PModuliBitLengths", info.PModuliBitLengths)
+	if err != nil {
+		return nil, err
+	}
+	actualFirst, err := uint32FromInt("ActualFirstQModulusBits", info.ActualFirstQModulusBits)
+	if err != nil {
+		return nil, err
+	}
+	mainWeight, err := uint32FromInt("MainSecretHammingWeight", info.MainSecretHammingWeight)
+	if err != nil {
+		return nil, err
+	}
+	ephemeralWeight, err := uint32FromInt("EphemeralSecretHammingWeight", info.EphemeralSecretHammingWeight)
+	if err != nil {
+		return nil, err
+	}
+	effectiveBound, err := uint32FromInt("ErrorEffectiveIntegerBound", info.ErrorEffectiveIntegerBound)
+	if err != nil {
+		return nil, err
+	}
+	rnsComponents, err := uint32FromInt("RNSDecompositionComponents", info.RNSDecompositionComponents)
+	if err != nil {
+		return nil, err
+	}
+	baseTwo, err := uint32FromInt("BaseTwoDecomposition", info.BaseTwoDecomposition)
+	if err != nil {
+		return nil, err
+	}
+	configuredBound := info.ErrorConfiguredBound
+	return &benchcmp.NativeParameters{
+		ActualFirstQModulusBits:       actualFirst,
+		MainSecretDistribution:        info.MainSecretDistribution,
+		MainSecretHammingWeight:       mainWeight,
+		EphemeralSecretDistribution:   info.EphemeralSecretDistribution,
+		EphemeralSecretHammingWeight:  ephemeralWeight,
+		ErrorSampler:                  info.ErrorSampler,
+		ErrorSigma:                    info.ErrorSigma,
+		ErrorConfiguredBound:          &configuredBound,
+		ErrorEffectiveIntegerBound:    effectiveBound,
+		KeySwitchTechnique:            info.KeySwitchTechnique,
+		KeySwitchRNSComponents:        rnsComponents,
+		KeySwitchBaseTwoDecomposition: baseTwo,
+		SecuritySelector:              info.SecuritySelector,
+		SecurityEvidence:              info.SecurityEvidence,
+		QModuli:                       append([]string(nil), info.QModuli...),
+		QModuliBitLengths:             qBits,
+		PModuli:                       append([]string(nil), info.PModuli...),
+		PModuliBitLengths:             pBits,
+	}, nil
+}
+
+func uint32SliceFromInts(name string, values []int) ([]uint32, error) {
+	result := make([]uint32, len(values))
+	for index, value := range values {
+		converted, err := uint32FromInt(fmt.Sprintf("%s[%d]", name, index), value)
+		if err != nil {
+			return nil, err
+		}
+		result[index] = converted
+	}
+	return result, nil
+}
+
+func uint32FromInt(name string, value int) (uint32, error) {
+	if value < 0 || uint64(value) > uint64(^uint32(0)) {
+		return 0, fmt.Errorf("benchmark live %s=%d cannot be represented as uint32", name, value)
+	}
+	return uint32(value), nil
 }
 
 func currentExecutionMetadata() (benchmarkExecutionMetadata, error) {

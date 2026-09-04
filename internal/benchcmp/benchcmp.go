@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/big"
+	"math/bits"
 	"regexp"
 	"sort"
 	"strconv"
@@ -19,8 +21,8 @@ import (
 const (
 	GaoOpenFHESource              = "gao-openfhe-benchmark-full"
 	LattigoRouteBSource           = "lattigo-route-b-l11-a2b-full"
-	CanonicalBenchmarkSchema      = "lcpdte-ckksint-a2b-benchmark-v2"
-	ComparisonSchema              = "lcpdte-ckksint-a2b-comparison-v2"
+	CanonicalBenchmarkSchema      = "lcpdte-ckksint-a2b-benchmark-v3"
+	ComparisonSchema              = "lcpdte-ckksint-a2b-comparison-v3"
 	TimingScopePreparedOnline     = "prepared-online"
 	GaoParameterComparisonScope   = "gao-algorithm-and-aggregate-modulus-bits"
 	GaoFullProtocol               = "gao-a2b-full-z8-w4-v1"
@@ -60,6 +62,22 @@ var (
 	openFHEA2BWarmupPattern     = regexp.MustCompile(`Finished Warmup for A2B(?:\s+[0-9]+(?:\.[0-9]*)?(?:[eE][+-]?\d+)?\s*s)?`)
 	openFHEA2BTimePattern       = regexp.MustCompile(`Time for A2B\s*:\s*([0-9]+(?:\.[0-9]*)?(?:[eE][+-]?\d+)?)\s*s`)
 	openFHEErrorPattern         = regexp.MustCompile(`Error in[^\r\n]*`)
+	gaoParameterFieldNames      = []string{
+		"comparison_scope", "q_moduli_count", "q_log2_aggregate", "p_moduli_count", "p_log2_aggregate",
+		"scaling_modulus_bits", "first_modulus_bits", "multiplicative_depth", "large_digits",
+		"main_secret_hamming_weight", "ephemeral_secret_hamming_weight",
+		"rns_decomposition_components", "base_two_decomposition", "level_budget",
+		"openfhe_requested_bsgs_dimensions", "chunk_width", "cutoff_bits",
+	}
+	nativeParameterFieldNames = []string{
+		"actual_first_q_modulus_bits",
+		"main_secret_distribution", "main_secret_hamming_weight",
+		"ephemeral_secret_distribution", "ephemeral_secret_hamming_weight",
+		"error_sampler", "error_sigma", "error_configured_bound", "error_effective_integer_bound",
+		"key_switch_technique", "key_switch_rns_decomposition_components", "key_switch_base_two_decomposition",
+		"security_selector", "security_evidence",
+		"q_moduli", "q_moduli_bit_lengths", "p_moduli", "p_moduli_bit_lengths",
+	}
 )
 
 // Measurement is one whole-call A2B timing and its effective packed workload.
@@ -87,6 +105,7 @@ type Measurement struct {
 	PackingSlots            uint32                 `json:"packing_slots"`
 	UsefulWords             uint32                 `json:"useful_words"`
 	Parameters              *GaoParameterSemantics `json:"parameters"`
+	NativeParameters        *NativeParameters      `json:"native_parameters"`
 	Threads                 uint32                 `json:"threads"`
 	TimingScope             string                 `json:"timing_scope"`
 	SetupNanoseconds        uint64                 `json:"setup_nanoseconds"`
@@ -103,9 +122,10 @@ type Measurement struct {
 	Lanes                   uint32                 `json:"lanes,omitempty"`
 }
 
-// GaoParameterSemantics records the algorithm parameters and aggregate
-// modulus sizes that must match across backends. It deliberately does not
-// claim that the generated RNS primes are identical.
+// GaoParameterSemantics records the algorithm targets and aggregate modulus
+// sizes that must match across backends. ScalingModulusBits and
+// FirstModulusBits are constructor targets; NativeParameters records the
+// resulting first-prime width and complete backend-native RNS chains.
 type GaoParameterSemantics struct {
 	ComparisonScope                string    `json:"comparison_scope"`
 	QModuliCount                   uint32    `json:"q_moduli_count"`
@@ -116,11 +136,38 @@ type GaoParameterSemantics struct {
 	FirstModulusBits               uint32    `json:"first_modulus_bits"`
 	MultiplicativeDepth            uint32    `json:"multiplicative_depth"`
 	LargeDigits                    uint32    `json:"large_digits"`
+	MainSecretHammingWeight        uint32    `json:"main_secret_hamming_weight"`
 	EphemeralSecretHammingWeight   uint32    `json:"ephemeral_secret_hamming_weight"`
+	KeySwitchRNSComponents         uint32    `json:"rns_decomposition_components"`
+	KeySwitchBaseTwoDecomposition  uint32    `json:"base_two_decomposition"`
 	LevelBudget                    [2]uint32 `json:"level_budget"`
 	OpenFHERequestedBSGSDimensions [2]uint32 `json:"openfhe_requested_bsgs_dimensions"`
 	ChunkWidth                     uint32    `json:"chunk_width"`
 	CutoffBits                     int32     `json:"cutoff_bits"`
+}
+
+// NativeParameters is lossless backend-specific evidence for the parameters
+// that produced a focused benchmark measurement. Native values are validated
+// per backend and are intentionally not required to be identical across them.
+type NativeParameters struct {
+	ActualFirstQModulusBits       uint32   `json:"actual_first_q_modulus_bits"`
+	MainSecretDistribution        string   `json:"main_secret_distribution"`
+	MainSecretHammingWeight       uint32   `json:"main_secret_hamming_weight"`
+	EphemeralSecretDistribution   string   `json:"ephemeral_secret_distribution"`
+	EphemeralSecretHammingWeight  uint32   `json:"ephemeral_secret_hamming_weight"`
+	ErrorSampler                  string   `json:"error_sampler"`
+	ErrorSigma                    float64  `json:"error_sigma"`
+	ErrorConfiguredBound          *float64 `json:"error_configured_bound"`
+	ErrorEffectiveIntegerBound    uint32   `json:"error_effective_integer_bound"`
+	KeySwitchTechnique            string   `json:"key_switch_technique"`
+	KeySwitchRNSComponents        uint32   `json:"key_switch_rns_decomposition_components"`
+	KeySwitchBaseTwoDecomposition uint32   `json:"key_switch_base_two_decomposition"`
+	SecuritySelector              string   `json:"security_selector"`
+	SecurityEvidence              string   `json:"security_evidence"`
+	QModuli                       []string `json:"q_moduli"`
+	QModuliBitLengths             []uint32 `json:"q_moduli_bit_lengths"`
+	PModuli                       []string `json:"p_moduli"`
+	PModuliBitLengths             []uint32 `json:"p_moduli_bit_lengths"`
 }
 
 // CanonicalGaoParameters returns the parameter contract shared by the focused
@@ -136,7 +183,10 @@ func CanonicalGaoParameters() *GaoParameterSemantics {
 		FirstModulusBits:               43,
 		MultiplicativeDepth:            20,
 		LargeDigits:                    3,
+		MainSecretHammingWeight:        192,
 		EphemeralSecretHammingWeight:   32,
+		KeySwitchRNSComponents:         3,
+		KeySwitchBaseTwoDecomposition:  0,
 		LevelBudget:                    [2]uint32{3, 2},
 		OpenFHERequestedBSGSDimensions: [2]uint32{0, 0},
 		ChunkWidth:                     4,
@@ -328,6 +378,7 @@ type CanonicalArtifact struct {
 	PackingSlots            uint32                 `json:"packing_slots"`
 	UsefulWords             uint32                 `json:"useful_words"`
 	Parameters              *GaoParameterSemantics `json:"parameters"`
+	NativeParameters        *NativeParameters      `json:"native_parameters"`
 	Threads                 uint32                 `json:"threads"`
 	TimingScope             string                 `json:"timing_scope"`
 	SetupNanoseconds        uint64                 `json:"setup_nanoseconds"`
@@ -339,7 +390,7 @@ type CanonicalArtifact struct {
 	VerifiedEvaluations     uint32                 `json:"verified_evaluations"`
 }
 
-// ParseCanonical parses and validates a v2 focused A2B benchmark artifact.
+// ParseCanonical parses and validates a v3 focused A2B benchmark artifact.
 func ParseCanonical(input io.Reader, provenance string) (Measurement, error) {
 	payload, err := io.ReadAll(input)
 	if err != nil {
@@ -368,6 +419,7 @@ func ParseCanonical(input io.Reader, provenance string) (Measurement, error) {
 	for _, field := range []string{
 		"encryption_mode", "factor_storage_mode", "scale_schedule", "backend_bsgs_plan",
 		"source_revision", "source_modified", "runtime", "compiler", "build_profile", "os", "arch",
+		"parameters", "native_parameters", "mismatch_count",
 	} {
 		if _, ok := present[field]; !ok {
 			return Measurement{}, fmt.Errorf("parse canonical A2B benchmark JSON: %s is required", field)
@@ -375,6 +427,27 @@ func ParseCanonical(input io.Reader, provenance string) (Measurement, error) {
 	}
 	if !bytes.Equal(bytes.TrimSpace(present["source_modified"]), []byte("false")) {
 		return Measurement{}, fmt.Errorf("parse canonical A2B benchmark JSON: source_modified must be boolean false")
+	}
+	var parameterFields map[string]json.RawMessage
+	if err := json.Unmarshal(present["parameters"], &parameterFields); err != nil || parameterFields == nil {
+		return Measurement{}, fmt.Errorf("parse canonical A2B benchmark JSON: parameters must be an object")
+	}
+	for _, field := range gaoParameterFieldNames {
+		if _, ok := parameterFields[field]; !ok {
+			return Measurement{}, fmt.Errorf("parse canonical A2B benchmark JSON: parameters.%s is required", field)
+		}
+	}
+	if bytes.Equal(bytes.TrimSpace(present["native_parameters"]), []byte("null")) {
+		return Measurement{}, fmt.Errorf("parse canonical A2B benchmark JSON: native_parameters must be an object")
+	}
+	var nativeFields map[string]json.RawMessage
+	if err := json.Unmarshal(present["native_parameters"], &nativeFields); err != nil || nativeFields == nil {
+		return Measurement{}, fmt.Errorf("parse canonical A2B benchmark JSON: native_parameters must be an object")
+	}
+	for _, field := range nativeParameterFieldNames {
+		if _, ok := nativeFields[field]; !ok {
+			return Measurement{}, fmt.Errorf("parse canonical A2B benchmark JSON: native_parameters.%s is required", field)
+		}
 	}
 
 	measurement, err := normalizeMeasurement(Measurement{
@@ -388,7 +461,8 @@ func ParseCanonical(input io.Reader, provenance string) (Measurement, error) {
 		OutputContainer: artifact.OutputContainer, WordBits: artifact.WordBits,
 		RingDimension: artifact.RingDimension, PackingSlots: artifact.PackingSlots,
 		UsefulWords: artifact.UsefulWords, Parameters: artifact.Parameters,
-		Threads: artifact.Threads, TimingScope: artifact.TimingScope,
+		NativeParameters: artifact.NativeParameters,
+		Threads:          artifact.Threads, TimingScope: artifact.TimingScope,
 		SetupNanoseconds: artifact.SetupNanoseconds, Warmup: artifact.WarmupCount,
 		WarmupVerified: artifact.WarmupVerified, Repeats: artifact.RepeatCount,
 		TimedSamplesNanoseconds: artifact.TimedSamplesNanoseconds,
@@ -450,6 +524,12 @@ func normalizeMeasurement(measurement Measurement) (Measurement, error) {
 		return Measurement{}, fmt.Errorf("parameters are required")
 	}
 	if err := validateGaoParameters(*measurement.Parameters); err != nil {
+		return Measurement{}, err
+	}
+	if measurement.NativeParameters == nil {
+		return Measurement{}, fmt.Errorf("native_parameters are required")
+	}
+	if err := validateNativeParameters(measurement.Source, *measurement.NativeParameters, *measurement.Parameters); err != nil {
 		return Measurement{}, err
 	}
 	if measurement.Threads != 1 {
@@ -578,6 +658,11 @@ func validateExecutionMetadata(measurement Measurement) error {
 		if measurement.OS != "linux" || measurement.Arch != "amd64" {
 			return fmt.Errorf("Lattigo target=%s/%s, want linux/amd64", measurement.OS, measurement.Arch)
 		}
+	default:
+		return fmt.Errorf(
+			"implementation=%q, want %q or %q",
+			measurement.Source, FocusedOpenFHESource, FocusedLattigoSource,
+		)
 	}
 	return nil
 }
@@ -611,8 +696,17 @@ func validateGaoParameters(actual GaoParameterSemantics) error {
 	if actual.LargeDigits != expected.LargeDigits {
 		return fmt.Errorf("parameters.large_digits=%d, want %d", actual.LargeDigits, expected.LargeDigits)
 	}
+	if actual.MainSecretHammingWeight != expected.MainSecretHammingWeight {
+		return fmt.Errorf("parameters.main_secret_hamming_weight=%d, want %d", actual.MainSecretHammingWeight, expected.MainSecretHammingWeight)
+	}
 	if actual.EphemeralSecretHammingWeight != expected.EphemeralSecretHammingWeight {
 		return fmt.Errorf("parameters.ephemeral_secret_hamming_weight=%d, want %d", actual.EphemeralSecretHammingWeight, expected.EphemeralSecretHammingWeight)
+	}
+	if actual.KeySwitchRNSComponents != expected.KeySwitchRNSComponents {
+		return fmt.Errorf("parameters.rns_decomposition_components=%d, want %d", actual.KeySwitchRNSComponents, expected.KeySwitchRNSComponents)
+	}
+	if actual.KeySwitchBaseTwoDecomposition != expected.KeySwitchBaseTwoDecomposition {
+		return fmt.Errorf("parameters.base_two_decomposition=%d, want %d", actual.KeySwitchBaseTwoDecomposition, expected.KeySwitchBaseTwoDecomposition)
 	}
 	if actual.LevelBudget != expected.LevelBudget {
 		return fmt.Errorf("parameters.level_budget=%v, want %v", actual.LevelBudget, expected.LevelBudget)
@@ -627,6 +721,169 @@ func validateGaoParameters(actual GaoParameterSemantics) error {
 		return fmt.Errorf("parameters.cutoff_bits=%d, want %d", actual.CutoffBits, expected.CutoffBits)
 	}
 	return nil
+}
+
+type expectedNativeParameters struct {
+	mainSecretDistribution      string
+	ephemeralSecretDistribution string
+	errorSampler                string
+	errorSigma                  float64
+	errorConfiguredBound        *float64
+	errorEffectiveIntegerBound  uint32
+	keySwitchTechnique          string
+	securitySelector            string
+	securityEvidence            string
+	qModuliBitLengths           []uint32
+	pModuliBitLengths           []uint32
+}
+
+func validateNativeParameters(source string, actual NativeParameters, shared GaoParameterSemantics) error {
+	expected, err := nativeProfileFor(source)
+	if err != nil {
+		return err
+	}
+	if actual.MainSecretDistribution != expected.mainSecretDistribution {
+		return fmt.Errorf("native_parameters.main_secret_distribution=%q, want %q for %s", actual.MainSecretDistribution, expected.mainSecretDistribution, source)
+	}
+	if actual.MainSecretHammingWeight != shared.MainSecretHammingWeight {
+		return fmt.Errorf("native_parameters.main_secret_hamming_weight=%d, want shared value %d", actual.MainSecretHammingWeight, shared.MainSecretHammingWeight)
+	}
+	if actual.EphemeralSecretDistribution != expected.ephemeralSecretDistribution {
+		return fmt.Errorf("native_parameters.ephemeral_secret_distribution=%q, want %q for %s", actual.EphemeralSecretDistribution, expected.ephemeralSecretDistribution, source)
+	}
+	if actual.EphemeralSecretHammingWeight != shared.EphemeralSecretHammingWeight {
+		return fmt.Errorf("native_parameters.ephemeral_secret_hamming_weight=%d, want shared value %d", actual.EphemeralSecretHammingWeight, shared.EphemeralSecretHammingWeight)
+	}
+	if actual.ErrorSampler != expected.errorSampler {
+		return fmt.Errorf("native_parameters.error_sampler=%q, want %q for %s", actual.ErrorSampler, expected.errorSampler, source)
+	}
+	if actual.ErrorSigma != expected.errorSigma {
+		return fmt.Errorf("native_parameters.error_sigma=%g, want %g for %s", actual.ErrorSigma, expected.errorSigma, source)
+	}
+	if err := validateConfiguredBound(actual.ErrorConfiguredBound, expected.errorConfiguredBound, source); err != nil {
+		return err
+	}
+	if actual.ErrorEffectiveIntegerBound != expected.errorEffectiveIntegerBound {
+		return fmt.Errorf("native_parameters.error_effective_integer_bound=%d, want %d for %s", actual.ErrorEffectiveIntegerBound, expected.errorEffectiveIntegerBound, source)
+	}
+	if actual.KeySwitchTechnique != expected.keySwitchTechnique {
+		return fmt.Errorf("native_parameters.key_switch_technique=%q, want %q for %s", actual.KeySwitchTechnique, expected.keySwitchTechnique, source)
+	}
+	if actual.KeySwitchRNSComponents != shared.KeySwitchRNSComponents {
+		return fmt.Errorf("native_parameters.key_switch_rns_decomposition_components=%d, want shared value %d", actual.KeySwitchRNSComponents, shared.KeySwitchRNSComponents)
+	}
+	if actual.KeySwitchBaseTwoDecomposition != shared.KeySwitchBaseTwoDecomposition {
+		return fmt.Errorf("native_parameters.key_switch_base_two_decomposition=%d, want shared value %d", actual.KeySwitchBaseTwoDecomposition, shared.KeySwitchBaseTwoDecomposition)
+	}
+	if actual.SecuritySelector != expected.securitySelector {
+		return fmt.Errorf("native_parameters.security_selector=%q, want %q for %s", actual.SecuritySelector, expected.securitySelector, source)
+	}
+	if actual.SecurityEvidence != expected.securityEvidence {
+		return fmt.Errorf("native_parameters.security_evidence=%q, want %q for %s", actual.SecurityEvidence, expected.securityEvidence, source)
+	}
+
+	qBits, err := validateModulusChain("q", actual.QModuli, actual.QModuliBitLengths, expected.qModuliBitLengths, shared.QModuliCount, shared.QLog2Aggregate)
+	if err != nil {
+		return err
+	}
+	if actual.ActualFirstQModulusBits != qBits[0] {
+		return fmt.Errorf("native_parameters.actual_first_q_modulus_bits=%d, want recomputed q_moduli[0] bit length %d", actual.ActualFirstQModulusBits, qBits[0])
+	}
+	if _, err = validateModulusChain("p", actual.PModuli, actual.PModuliBitLengths, expected.pModuliBitLengths, shared.PModuliCount, shared.PLog2Aggregate); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateConfiguredBound(actual, expected *float64, source string) error {
+	if expected == nil {
+		if actual != nil {
+			return fmt.Errorf("native_parameters.error_configured_bound=%g, want null for %s", *actual, source)
+		}
+		return nil
+	}
+	if actual == nil || *actual != *expected {
+		if actual == nil {
+			return fmt.Errorf("native_parameters.error_configured_bound=null, want %g for %s", *expected, source)
+		}
+		return fmt.Errorf("native_parameters.error_configured_bound=%g, want %g for %s", *actual, *expected, source)
+	}
+	return nil
+}
+
+func validateModulusChain(
+	name string,
+	decimal []string,
+	declared, expected []uint32,
+	wantCount, wantAggregate uint32,
+) ([]uint32, error) {
+	if uint32(len(decimal)) != wantCount {
+		return nil, fmt.Errorf("native_parameters.%s_moduli count=%d, want parameters.%s_moduli_count=%d", name, len(decimal), name, wantCount)
+	}
+	if len(declared) != len(decimal) {
+		return nil, fmt.Errorf("native_parameters.%s_moduli_bit_lengths count=%d, want %d", name, len(declared), len(decimal))
+	}
+	if len(expected) != len(decimal) {
+		return nil, fmt.Errorf("native_parameters.%s_moduli backend profile count=%d, want %d", name, len(decimal), len(expected))
+	}
+
+	product := big.NewInt(1)
+	recomputed := make([]uint32, len(decimal))
+	for index, encoded := range decimal {
+		value, err := strconv.ParseUint(encoded, 10, 64)
+		if err != nil || value < 2 || strconv.FormatUint(value, 10) != encoded {
+			return nil, fmt.Errorf("native_parameters.%s_moduli[%d]=%q is not a canonical decimal uint64 modulus", name, index, encoded)
+		}
+		bitLength := uint32(bits.Len64(value))
+		recomputed[index] = bitLength
+		if declared[index] != bitLength {
+			return nil, fmt.Errorf("native_parameters.%s_moduli_bit_lengths[%d]=%d, recomputed %d", name, index, declared[index], bitLength)
+		}
+		if expected[index] != bitLength {
+			return nil, fmt.Errorf("native_parameters.%s_moduli_bit_lengths[%d]=%d, want backend profile %d", name, index, bitLength, expected[index])
+		}
+		product.Mul(product, new(big.Int).SetUint64(value))
+	}
+	if got := uint32(product.BitLen()); got != wantAggregate {
+		return nil, fmt.Errorf("native_parameters.%s_moduli product bit length=%d, want parameters.%s_log2_aggregate=%d", name, got, name, wantAggregate)
+	}
+	return recomputed, nil
+}
+
+func nativeProfileFor(source string) (expectedNativeParameters, error) {
+	common := expectedNativeParameters{
+		mainSecretDistribution:      "balanced-sparse-ternary",
+		ephemeralSecretDistribution: "balanced-sparse-ternary",
+	}
+	switch source {
+	case FocusedOpenFHESource:
+		common.errorSampler = "openfhe-dgg"
+		common.errorSigma = 3.19
+		common.errorEffectiveIntegerBound = 39
+		common.keySwitchTechnique = "openfhe-hybrid"
+		common.securitySelector = "HEStd_128_classic"
+		common.securityEvidence = "openfhe-he-standard-ternary-table"
+		common.qModuliBitLengths = []uint32{44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 44, 44, 43, 44}
+		common.pModuliBitLengths = []uint32{50, 50, 50, 50, 50, 50, 50}
+		return common, nil
+	case FocusedLattigoSource:
+		bound := 19.2
+		common.errorSampler = "lattigo-bounded-discrete-gaussian"
+		common.errorSigma = 3.2
+		common.errorConfiguredBound = &bound
+		common.errorEffectiveIntegerBound = 19
+		common.keySwitchTechnique = "lattigo-rns-qp-gadget"
+		common.securitySelector = "external-estimator"
+		common.securityEvidence = "full-packed-profile-not-assessed"
+		common.qModuliBitLengths = []uint32{43, 43, 43, 43, 44, 43, 44, 43, 43, 43, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 43}
+		common.pModuliBitLengths = []uint32{51, 50, 51, 50, 51, 51, 49}
+		return common, nil
+	default:
+		return expectedNativeParameters{}, fmt.Errorf(
+			"native_parameters cannot validate implementation=%q; want %q or %q",
+			source, FocusedOpenFHESource, FocusedLattigoSource,
+		)
+	}
 }
 
 // ParseGaoOpenFHE parses the output of Gao et al.'s benchmark-full in bench mode.

@@ -341,6 +341,8 @@ delivery remain later gates.
 - [x] Pack the first-round ID/MSB LUTs into Hermitian real/imaginary channels, reducing the live graph to one polynomial evaluation and one conjugation.
 - [x] Pass the encrypted 8,192-word/65,536-bit end-to-end correctness gate after both optimizations.
 - [x] Pass affected full package tests, repository-wide vet, compile-only traversal, Python validator tests, shell syntax checks, and whitespace checks.
+- [x] Upgrade both producers and the comparator to canonical v3 artifacts that bind the shared Gao contract plus complete backend-native Q/P chains, secret/error/key-switch settings, and profile-specific security evidence.
+- [x] Close the independent pre-benchmark audit: require all zero/null fields, bind the OpenFHE driver and executable hashes, enforce a fully clean pinned checkout, and include client construction in setup timing.
 - [ ] Commit the clean implementation revision used by both benchmark builds.
 - [ ] Rebuild and rerun pinned OpenFHE locally, then run Lattigo without concurrent workload.
 - [ ] Admit both artifacts through the strict comparator and check both mean and median ratios are at most 1.

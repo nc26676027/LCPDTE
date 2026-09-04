@@ -32,8 +32,21 @@ func TestGaoFullPackedA2BEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer server.Close()
-	if setup.ParameterWallTime <= 0 || setup.KeyGenerationWallTime <= 0 || setup.ServerConstructionWallTime <= 0 {
+	if setup.ParameterWallTime <= 0 || setup.KeyGenerationWallTime <= 0 || setup.ServerConstructionWallTime <= 0 ||
+		setup.ClientConstructionWallTime <= 0 {
 		t.Fatalf("incomplete setup timings: %+v", setup)
+	}
+	profile := setup.Parameters
+	if profile.MainSecretDistribution != "balanced-sparse-ternary" || profile.MainSecretHammingWeight != 192 ||
+		profile.EphemeralSecretDistribution != "balanced-sparse-ternary" || profile.EphemeralSecretHammingWeight != 32 ||
+		profile.ErrorSampler != "lattigo-bounded-discrete-gaussian" || profile.ErrorSigma != 3.2 ||
+		profile.ErrorConfiguredBound != 19.2 || profile.ErrorEffectiveIntegerBound != 19 ||
+		profile.KeySwitchTechnique != "lattigo-rns-qp-gadget" || profile.RNSDecompositionComponents != 3 ||
+		profile.BaseTwoDecomposition != 0 || profile.SecuritySelector != "external-estimator" ||
+		profile.SecurityEvidence != "full-packed-profile-not-assessed" || profile.ActualFirstQModulusBits == 0 ||
+		len(profile.QModuli) != profile.QModuliCount || len(profile.QModuliBitLengths) != profile.QModuliCount ||
+		len(profile.PModuli) != profile.PModuliCount || len(profile.PModuliBitLengths) != profile.PModuliCount {
+		t.Fatalf("incomplete native parameter profile: %+v", profile)
 	}
 
 	input, encryption, err := client.EncryptA2B(words)

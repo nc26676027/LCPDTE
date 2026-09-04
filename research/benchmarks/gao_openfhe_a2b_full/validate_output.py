@@ -11,7 +11,7 @@ from typing import Any
 
 
 EXPECTED = {
-    "schema": "lcpdte-ckksint-a2b-benchmark-v2",
+    "schema": "lcpdte-ckksint-a2b-benchmark-v3",
     "implementation": "gao-openfhe-a2b-full",
     "encryption_mode": "public-key",
     "factor_storage_mode": "resident-precomputed",
@@ -50,39 +50,145 @@ EXPECTED_PARAMETERS = {
     "first_modulus_bits": 43,
     "multiplicative_depth": 20,
     "large_digits": 3,
+    "main_secret_hamming_weight": 192,
     "ephemeral_secret_hamming_weight": 32,
+    "rns_decomposition_components": 3,
+    "base_two_decomposition": 0,
     "level_budget": [3, 2],
     "openfhe_requested_bsgs_dimensions": [0, 0],
     "chunk_width": 4,
     "cutoff_bits": -24,
 }
 
+EXPECTED_NATIVE_PARAMETERS = {
+    "actual_first_q_modulus_bits": 44,
+    "main_secret_distribution": "balanced-sparse-ternary",
+    "main_secret_hamming_weight": 192,
+    "ephemeral_secret_distribution": "balanced-sparse-ternary",
+    "ephemeral_secret_hamming_weight": 32,
+    "error_sampler": "openfhe-dgg",
+    "error_sigma": 3.19,
+    "error_configured_bound": None,
+    "error_effective_integer_bound": 39,
+    "key_switch_technique": "openfhe-hybrid",
+    "key_switch_rns_decomposition_components": 3,
+    "key_switch_base_two_decomposition": 0,
+    "security_selector": "HEStd_128_classic",
+    "security_evidence": "openfhe-he-standard-ternary-table",
+    "q_moduli": [
+        "8796103114753",
+        "8796120416257",
+        "8796142305281",
+        "8796131819521",
+        "8796137586689",
+        "8796135227393",
+        "8796142043137",
+        "8796136144897",
+        "8796141649921",
+        "8796137717761",
+        "8796139159553",
+        "8796122644481",
+        "8796134178817",
+        "8796123824129",
+        "8796130508801",
+        "8796087386113",
+        "8796114124801",
+        "8796110192641",
+        "8796112814081",
+        "8796090007553",
+        "8796105342977",
+    ],
+    "q_moduli_bit_lengths": [
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        43,
+        44,
+        44,
+        44,
+        43,
+        44,
+    ],
+    "p_moduli": [
+        "1125899903827969",
+        "1125899902124033",
+        "1125899887312897",
+        "1125899886395393",
+        "1125899885740033",
+        "1125899884167169",
+        "1125899884036097",
+    ],
+    "p_moduli_bit_lengths": [50, 50, 50, 50, 50, 50, 50],
+}
+
+
+def exactly_typed_equal(actual: Any, expected: Any) -> bool:
+    if type(actual) is not type(expected):
+        return False
+    if isinstance(expected, list):
+        return len(actual) == len(expected) and all(
+            exactly_typed_equal(actual_value, expected_value)
+            for actual_value, expected_value in zip(actual, expected)
+        )
+    return actual == expected
+
+
+def validate_exact_object(name: str, actual: Any, expected: dict[str, Any]) -> None:
+    if not isinstance(actual, dict):
+        raise ValueError(f"{name} must be a JSON object")
+    actual_fields = set(actual)
+    expected_fields = set(expected)
+    missing = sorted(expected_fields - actual_fields)
+    if missing:
+        raise ValueError(f"{name} is missing fields: {missing!r}")
+    unexpected = sorted(actual_fields - expected_fields)
+    if unexpected:
+        raise ValueError(f"{name} contains unexpected fields: {unexpected!r}")
+    for field, expected_value in expected.items():
+        actual_value = actual.get(field)
+        if not exactly_typed_equal(actual_value, expected_value):
+            raise ValueError(
+                f"{name}.{field}={actual_value!r}, want {expected_value!r}"
+            )
+
 
 def validate(document: Any) -> None:
     if not isinstance(document, dict):
         raise ValueError("artifact must be a JSON object")
+    expected_fields = set(EXPECTED) | {
+        "host_id",
+        "compiler",
+        "parameters",
+        "native_parameters",
+        "setup_nanoseconds",
+        "timed_samples_nanoseconds",
+    }
+    unexpected = sorted(set(document) - expected_fields)
+    if unexpected:
+        raise ValueError(f"artifact contains unexpected fields: {unexpected!r}")
     for field, expected in EXPECTED.items():
         actual = document.get(field)
         if type(actual) is not type(expected) or actual != expected:
             raise ValueError(f"{field}={actual!r}, want {expected!r}")
 
-    parameters = document.get("parameters")
-    if not isinstance(parameters, dict):
-        raise ValueError("parameters must be a JSON object")
-    unexpected = sorted(set(parameters) - set(EXPECTED_PARAMETERS))
-    if unexpected:
-        raise ValueError(f"parameters contains unexpected fields: {unexpected!r}")
-    for field, expected in EXPECTED_PARAMETERS.items():
-        actual = parameters.get(field)
-        if isinstance(expected, list):
-            correctly_typed = (
-                isinstance(actual, list)
-                and all(isinstance(value, int) and not isinstance(value, bool) for value in actual)
-            )
-        else:
-            correctly_typed = type(actual) is type(expected)
-        if not correctly_typed or actual != expected:
-            raise ValueError(f"parameters.{field}={actual!r}, want {expected!r}")
+    validate_exact_object("parameters", document.get("parameters"), EXPECTED_PARAMETERS)
+    validate_exact_object(
+        "native_parameters",
+        document.get("native_parameters"),
+        EXPECTED_NATIVE_PARAMETERS,
+    )
 
     for field in ("host_id", "compiler"):
         value = document.get(field)

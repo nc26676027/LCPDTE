@@ -5,6 +5,7 @@
 #include "scheme/ckksrns/z-user.h"
 
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
@@ -34,7 +35,12 @@ constexpr uint32_t kScalingModulusBits = 43;
 constexpr uint32_t kFirstModulusBits = 43;
 constexpr uint32_t kMultiplicativeDepth = 20;
 constexpr uint32_t kLargeDigits = 3;
+constexpr uint32_t kMainSecretHammingWeight = 192;
 constexpr uint32_t kEphemeralSecretHammingWeight = 32;
+constexpr uint32_t kRNSDecompositionComponents = 3;
+constexpr uint32_t kBaseTwoDecomposition = 0;
+constexpr double kErrorSigma = 3.19;
+constexpr uint32_t kErrorEffectiveIntegerBound = 39;
 constexpr uint32_t kChunkWidth = 4;
 constexpr int32_t kCutoffBits = -24;
 constexpr char kSourceRevision[] = "08f1eb87434e7be072cba889270a8400bbffc08e";
@@ -52,6 +58,13 @@ struct RuntimeModulusProfile {
     uint32_t qBits;
     uint32_t pCount;
     uint32_t pBits;
+    uint32_t actualFirstQModulusBits;
+    double errorSigma;
+    uint32_t rnsDecompositionComponents;
+    std::vector<std::string> qModuli;
+    std::vector<uint32_t> qModuliBitLengths;
+    std::vector<std::string> pModuli;
+    std::vector<uint32_t> pModuliBitLengths;
 };
 
 struct ExecutionMetadata {
@@ -109,6 +122,32 @@ std::string JsonEscape(const std::string& value) {
                 }
         }
     }
+    return output.str();
+}
+
+std::string JsonStringArray(const std::vector<std::string>& values) {
+    std::ostringstream output;
+    output << '[';
+    for (size_t index = 0; index < values.size(); ++index) {
+        if (index != 0) {
+            output << ", ";
+        }
+        output << '"' << JsonEscape(values[index]) << '"';
+    }
+    output << ']';
+    return output.str();
+}
+
+std::string JsonUIntArray(const std::vector<uint32_t>& values) {
+    std::ostringstream output;
+    output << '[';
+    for (size_t index = 0; index < values.size(); ++index) {
+        if (index != 0) {
+            output << ", ";
+        }
+        output << values[index];
+    }
+    output << ']';
     return output.str();
 }
 
@@ -223,6 +262,9 @@ RuntimeModulusProfile RequireCanonicalRuntimeParameters(
     }
     const auto paramsQ = cryptoParameters->GetElementParams();
     const auto paramsP = cryptoParameters->GetParamsP();
+    if (!paramsQ || !paramsP) {
+        throw std::runtime_error("CKKS Q/P parameters are unavailable");
+    }
     const auto qCount = static_cast<uint32_t>(paramsQ->GetParams().size());
     const auto pCount = static_cast<uint32_t>(paramsP->GetParams().size());
     const auto qBits = static_cast<uint32_t>(paramsQ->GetModulus().GetMSB());
@@ -240,16 +282,54 @@ RuntimeModulusProfile RequireCanonicalRuntimeParameters(
         throw std::runtime_error(
             "SPARSE_ENCAPSULATED is required for the weight-32 bootstrap key");
     }
-    return {qCount, qBits, pCount, pBits};
+    const auto errorSigma = static_cast<double>(cryptoParameters->GetDistributionParameter());
+    if (std::abs(errorSigma - kErrorSigma) > 1e-6) {
+        throw std::runtime_error("OpenFHE runtime error sigma differs from 3.19");
+    }
+    if (cryptoParameters->GetKeySwitchTechnique() != HYBRID) {
+        throw std::runtime_error("OpenFHE runtime key switching is not HYBRID");
+    }
+    if (cryptoParameters->GetDigitSize() != kBaseTwoDecomposition) {
+        throw std::runtime_error("OpenFHE runtime base-two decomposition is not zero");
+    }
+    const auto rnsDecompositionComponents = cryptoParameters->GetNumPartQ();
+    if (rnsDecompositionComponents != kRNSDecompositionComponents) {
+        throw std::runtime_error("OpenFHE runtime HYBRID decomposition does not have three components");
+    }
+    if (cryptoParameters->GetStdLevel() != HEStd_128_classic) {
+        throw std::runtime_error("OpenFHE runtime security selector is not HEStd_128_classic");
+    }
+
+    RuntimeModulusProfile profile{qCount, qBits, pCount, pBits};
+    profile.actualFirstQModulusBits =
+        static_cast<uint32_t>(paramsQ->GetParams().front()->GetModulus().GetMSB());
+    profile.errorSigma = errorSigma;
+    profile.rnsDecompositionComponents = rnsDecompositionComponents;
+    profile.qModuli.reserve(qCount);
+    profile.qModuliBitLengths.reserve(qCount);
+    for (const auto& parameter : paramsQ->GetParams()) {
+        const auto& modulus = parameter->GetModulus();
+        profile.qModuli.push_back(modulus.ToString());
+        profile.qModuliBitLengths.push_back(static_cast<uint32_t>(modulus.GetMSB()));
+    }
+    profile.pModuli.reserve(pCount);
+    profile.pModuliBitLengths.reserve(pCount);
+    for (const auto& parameter : paramsP->GetParams()) {
+        const auto& modulus = parameter->GetModulus();
+        profile.pModuli.push_back(modulus.ToString());
+        profile.pModuliBitLengths.push_back(static_cast<uint32_t>(modulus.GetMSB()));
+    }
+    return profile;
 }
 
 std::string BuildArtifact(const Options& options, const ExecutionMetadata& metadata,
+                          const RuntimeModulusProfile& runtimeProfile,
                           uint64_t setupNanoseconds,
                           const std::vector<uint64_t>& samples, bool warmupVerified,
                           uint32_t verifiedEvaluations, uint64_t mismatchCount) {
     std::ostringstream output;
     output << "{\n"
-           << "  \"schema\": \"lcpdte-ckksint-a2b-benchmark-v2\",\n"
+           << "  \"schema\": \"lcpdte-ckksint-a2b-benchmark-v3\",\n"
            << "  \"implementation\": \"gao-openfhe-a2b-full\",\n"
            << "  \"host_id\": \"" << JsonEscape(options.hostId) << "\",\n"
            << "  \"encryption_mode\": \"public-key\",\n"
@@ -281,12 +361,43 @@ std::string BuildArtifact(const Options& options, const ExecutionMetadata& metad
            << "    \"first_modulus_bits\": " << kFirstModulusBits << ",\n"
            << "    \"multiplicative_depth\": " << kMultiplicativeDepth << ",\n"
            << "    \"large_digits\": " << kLargeDigits << ",\n"
+           << "    \"main_secret_hamming_weight\": " << kMainSecretHammingWeight << ",\n"
            << "    \"ephemeral_secret_hamming_weight\": "
            << kEphemeralSecretHammingWeight << ",\n"
+           << "    \"rns_decomposition_components\": "
+           << kRNSDecompositionComponents << ",\n"
+           << "    \"base_two_decomposition\": " << kBaseTwoDecomposition << ",\n"
            << "    \"level_budget\": [3, 2],\n"
            << "    \"openfhe_requested_bsgs_dimensions\": [0, 0],\n"
            << "    \"chunk_width\": " << kChunkWidth << ",\n"
            << "    \"cutoff_bits\": " << kCutoffBits << "\n"
+           << "  },\n"
+           << "  \"native_parameters\": {\n"
+           << "    \"actual_first_q_modulus_bits\": "
+           << runtimeProfile.actualFirstQModulusBits << ",\n"
+           << "    \"main_secret_distribution\": \"balanced-sparse-ternary\",\n"
+           << "    \"main_secret_hamming_weight\": " << kMainSecretHammingWeight << ",\n"
+           << "    \"ephemeral_secret_distribution\": \"balanced-sparse-ternary\",\n"
+           << "    \"ephemeral_secret_hamming_weight\": "
+           << kEphemeralSecretHammingWeight << ",\n"
+           << "    \"error_sampler\": \"openfhe-dgg\",\n"
+           << "    \"error_sigma\": " << runtimeProfile.errorSigma << ",\n"
+           << "    \"error_configured_bound\": null,\n"
+           << "    \"error_effective_integer_bound\": "
+           << kErrorEffectiveIntegerBound << ",\n"
+           << "    \"key_switch_technique\": \"openfhe-hybrid\",\n"
+           << "    \"key_switch_rns_decomposition_components\": "
+           << runtimeProfile.rnsDecompositionComponents << ",\n"
+           << "    \"key_switch_base_two_decomposition\": "
+           << kBaseTwoDecomposition << ",\n"
+           << "    \"security_selector\": \"HEStd_128_classic\",\n"
+           << "    \"security_evidence\": \"openfhe-he-standard-ternary-table\",\n"
+           << "    \"q_moduli\": " << JsonStringArray(runtimeProfile.qModuli) << ",\n"
+           << "    \"q_moduli_bit_lengths\": "
+           << JsonUIntArray(runtimeProfile.qModuliBitLengths) << ",\n"
+           << "    \"p_moduli\": " << JsonStringArray(runtimeProfile.pModuli) << ",\n"
+           << "    \"p_moduli_bit_lengths\": "
+           << JsonUIntArray(runtimeProfile.pModuliBitLengths) << "\n"
            << "  },\n"
            << "  \"threads\": 1,\n"
            << "  \"timing_scope\": \"prepared-online\",\n"
@@ -346,6 +457,7 @@ int main(int argc, char* argv[]) {
         CCParams<CryptoContextCKKSRNS> parameters;
         parameters.SetSecretKeyDist(lbcrypto::SPARSE_ENCAPSULATED);
         parameters.SetSecurityLevel(lbcrypto::HEStd_128_classic);
+        parameters.SetKeySwitchTechnique(HYBRID);
         parameters.SetRingDim(kRingDimension);
         parameters.SetScalingModSize(kScalingModulusBits);
         parameters.SetFirstModSize(kFirstModulusBits);
@@ -365,7 +477,13 @@ int main(int argc, char* argv[]) {
                       << " first=" << kFirstModulusBits
                       << " depth=" << kMultiplicativeDepth
                       << " large_digits=" << kLargeDigits
+                      << " main_weight=" << kMainSecretHammingWeight
                       << " ephemeral_weight=" << kEphemeralSecretHammingWeight
+                      << " actual_first_q=" << runtimeProfile.actualFirstQModulusBits
+                      << " error_sigma=" << kErrorSigma
+                      << " key_switch=openfhe-hybrid"
+                      << " base_two_decomposition=" << kBaseTwoDecomposition
+                      << " security=HEStd_128_classic"
                       << " level_budget=[3,2] openfhe_requested_bsgs=[0,0]"
                       << " backend_bsgs_plan=openfhe-auto-dim1-0 w=" << kChunkWidth
                       << " cutoff=" << kCutoffBits << '\n';
@@ -435,8 +553,9 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        const auto artifact = BuildArtifact(options, executionMetadata, setupNanoseconds, samples,
-                                            warmupVerified, verifiedEvaluations, mismatchCount);
+        const auto artifact = BuildArtifact(options, executionMetadata, runtimeProfile,
+                                            setupNanoseconds, samples, warmupVerified,
+                                            verifiedEvaluations, mismatchCount);
         WriteArtifact(artifact, options.outputPath);
         return 0;
     }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/bits"
+	"strconv"
 	"sync"
 	"time"
 
@@ -18,7 +19,8 @@ import (
 const (
 	// GaoFullPackedA2BMaxWords is Gao et al.'s canonical zSlots=8192
 	// capacity for one N=65536, logSlots=15 ciphertext.
-	GaoFullPackedA2BMaxWords = gaoFullPackedWords
+	GaoFullPackedA2BMaxWords            = gaoFullPackedWords
+	gaoFullPackedTargetFirstModulusBits = 43
 
 	gaoFullPackedA2BTraceSchema = "gao-full-packed-a2b-v2|public-key|8192-words|adjust-l20-l4|special-b0|identity-mask0-drop-l3-l2|stc|modup|cts-real-only|exp46-r2-root16-hermitian-id-plus-i-msb|fused-id0-over16-adjust|identity-mask1-drop-l3-l2|stc|modup|cts-real-only|exp46-r2-msb-only|outputs-low4-high4|resident-prevalidated|bsgs-ratio2"
 	gaoFullPackedA2BTraceDigest = "f50d1e3ec45d10d38acfa2e89b24cf47760a505f5495733ff339c5b64fa20d82"
@@ -27,28 +29,49 @@ const (
 // GaoFullPackedA2BSetupReport records construction that is excluded from the
 // prepared-online interval. ServerConstructionWallTime includes all DFT,
 // polynomial, evaluation-key, and reusable evaluator preparation.
+// ClientConstructionWallTime includes encoder and final session-object assembly.
 type GaoFullPackedA2BSetupReport struct {
 	ParameterWallTime          time.Duration
 	KeyGenerationWallTime      time.Duration
 	ServerConstructionWallTime time.Duration
+	ClientConstructionWallTime time.Duration
 	Parameters                 GaoFullPackedA2BParameterReport
 }
 
 // GaoFullPackedA2BParameterReport is derived from the live session parameters
 // and records the full-packing and backend execution profile.
 type GaoFullPackedA2BParameterReport struct {
-	RingDimension                  int
-	PackingSlots                   int
-	UsefulWords                    int
-	QModuliCount                   int
-	QLog2Aggregate                 int
-	PModuliCount                   int
-	PLog2Aggregate                 int
-	ScalingModulusBits             int
+	RingDimension      int
+	PackingSlots       int
+	UsefulWords        int
+	QModuliCount       int
+	QLog2Aggregate     int
+	PModuliCount       int
+	PLog2Aggregate     int
+	ScalingModulusBits int
+	// FirstModulusBits is the canonical requested first-Q target. The generated
+	// prime's actual size is reported separately by ActualFirstQModulusBits.
 	FirstModulusBits               int
+	ActualFirstQModulusBits        int
+	QModuli                        []string
+	PModuli                        []string
+	QModuliBitLengths              []int
+	PModuliBitLengths              []int
 	MultiplicativeDepth            int
 	LargeDigits                    int
+	MainSecretDistribution         string
+	MainSecretHammingWeight        int
+	EphemeralSecretDistribution    string
 	EphemeralSecretHammingWeight   int
+	ErrorSampler                   string
+	ErrorSigma                     float64
+	ErrorConfiguredBound           float64
+	ErrorEffectiveIntegerBound     int
+	KeySwitchTechnique             string
+	RNSDecompositionComponents     int
+	BaseTwoDecomposition           int
+	SecuritySelector               string
+	SecurityEvidence               string
 	LevelBudget                    [2]int
 	OpenFHERequestedBSGSDimensions [2]int
 	ChunkWidth                     int
@@ -167,6 +190,7 @@ func NewGaoFullPackedA2BSession() (
 	}
 	report.ServerConstructionWallTime = gaoFullPackedPositiveDuration(serverStarted)
 
+	clientStarted := time.Now()
 	session := &gaoFullPackedA2BSessionToken{marker: 1}
 	client = &GaoFullPackedA2BClient{
 		params: params, ringZ: ringZ,
@@ -178,6 +202,7 @@ func NewGaoFullPackedA2BSession() (
 		session:   session,
 	}
 	server = &GaoFullPackedA2BServer{evaluator: evaluator, session: session}
+	report.ClientConstructionWallTime = gaoFullPackedPositiveDuration(clientStarted)
 	return client, server, report, nil
 }
 
@@ -187,19 +212,54 @@ func newGaoFullPackedA2BParameterReport(parameters bootstrapping.Parameters) (Ga
 		len(params.Q()) == 0 || len(params.P()) == 0 {
 		return GaoFullPackedA2BParameterReport{}, fmt.Errorf("secureeval: Gao full-packed A2B live parameter profile is incomplete")
 	}
+	mainSecret, ok := params.Xs().(ring.Ternary)
+	if !ok || mainSecret.H <= 0 || mainSecret.P != 0 {
+		return GaoFullPackedA2BParameterReport{}, fmt.Errorf(
+			"secureeval: Gao full-packed A2B main secret is not balanced sparse ternary: %T", params.Xs(),
+		)
+	}
+	errorDistribution, ok := params.Xe().(ring.DiscreteGaussian)
+	if !ok || errorDistribution.Sigma <= 0 || errorDistribution.Bound <= 0 {
+		return GaoFullPackedA2BParameterReport{}, fmt.Errorf(
+			"secureeval: Gao full-packed A2B error sampler is not bounded discrete Gaussian: %T", params.Xe(),
+		)
+	}
+	if parameters.EphemeralSecretWeight <= 0 {
+		return GaoFullPackedA2BParameterReport{}, fmt.Errorf("secureeval: Gao full-packed A2B ephemeral secret weight is invalid")
+	}
+	q, p := params.Q(), params.P()
+	qDecimal, qBitLengths := gaoFullPackedModuliReport(q)
+	pDecimal, pBitLengths := gaoFullPackedModuliReport(p)
 	return GaoFullPackedA2BParameterReport{
 		RingDimension:                  params.N(),
 		PackingSlots:                   params.MaxSlots(),
 		UsefulWords:                    gaoFullPackedWords,
-		QModuliCount:                   len(params.Q()),
+		QModuliCount:                   len(q),
 		QLog2Aggregate:                 params.QBigInt().BitLen(),
-		PModuliCount:                   len(params.P()),
+		PModuliCount:                   len(p),
 		PLog2Aggregate:                 params.PBigInt().BitLen(),
 		ScalingModulusBits:             params.LogDefaultScale(),
-		FirstModulusBits:               bits.Len64(params.Q()[0]),
+		FirstModulusBits:               gaoFullPackedTargetFirstModulusBits,
+		ActualFirstQModulusBits:        bits.Len64(q[0]),
+		QModuli:                        qDecimal,
+		PModuli:                        pDecimal,
+		QModuliBitLengths:              qBitLengths,
+		PModuliBitLengths:              pBitLengths,
 		MultiplicativeDepth:            params.MaxLevel(),
-		LargeDigits:                    3,
+		LargeDigits:                    params.BaseRNSDecompositionVectorSize(params.MaxLevel(), params.MaxLevelP()),
+		MainSecretDistribution:         "balanced-sparse-ternary",
+		MainSecretHammingWeight:        mainSecret.H,
+		EphemeralSecretDistribution:    "balanced-sparse-ternary",
 		EphemeralSecretHammingWeight:   parameters.EphemeralSecretWeight,
+		ErrorSampler:                   "lattigo-bounded-discrete-gaussian",
+		ErrorSigma:                     errorDistribution.Sigma,
+		ErrorConfiguredBound:           errorDistribution.Bound,
+		ErrorEffectiveIntegerBound:     int(math.Floor(errorDistribution.Bound + 0.5)),
+		KeySwitchTechnique:             "lattigo-rns-qp-gadget",
+		RNSDecompositionComponents:     params.BaseRNSDecompositionVectorSize(params.MaxLevel(), params.MaxLevelP()),
+		BaseTwoDecomposition:           0,
+		SecuritySelector:               "external-estimator",
+		SecurityEvidence:               "full-packed-profile-not-assessed",
 		LevelBudget:                    [2]int{len(parameters.CoeffsToSlotsParameters.Levels), len(parameters.SlotsToCoeffsParameters.Levels)},
 		OpenFHERequestedBSGSDimensions: [2]int{0, 0},
 		ChunkWidth:                     params.MaxSlots() / gaoFullPackedWords,
@@ -211,6 +271,16 @@ func newGaoFullPackedA2BParameterReport(parameters bootstrapping.Parameters) (Ga
 		FactorStorageMode:              "resident-prevalidated",
 		ScaleSchedule:                  "lattigo-explicit-level-scale-native",
 	}, nil
+}
+
+func gaoFullPackedModuliReport(moduli []uint64) (decimal []string, bitLengths []int) {
+	decimal = make([]string, len(moduli))
+	bitLengths = make([]int, len(moduli))
+	for index, modulus := range moduli {
+		decimal[index] = strconv.FormatUint(modulus, 10)
+		bitLengths[index] = bits.Len64(modulus)
+	}
+	return
 }
 
 func newGaoFullPackedClientCryptography(params ckks.Parameters) (

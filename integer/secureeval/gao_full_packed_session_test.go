@@ -3,7 +3,10 @@ package secureeval
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"math/bits"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/nc26676027/LCPDTE/lattigo/core/rlwe"
 )
@@ -60,6 +63,7 @@ func TestGaoFullPackedA2BSessionAPISurface(t *testing.T) {
 	var _ func(*GaoFullPackedA2BServer, *GaoFullPackedA2BEncryptedInput) (*GaoFullPackedA2BEncryptedOutput, GaoFullPackedA2BPhaseReport, error) = (*GaoFullPackedA2BServer).EvaluateA2B
 	var _ func(*GaoFullPackedA2BClient, *GaoFullPackedA2BEncryptedOutput) ([][8]uint8, GaoFullPackedA2BPhaseReport, error) = (*GaoFullPackedA2BClient).DecryptA2B
 	var _ func(*GaoFullPackedA2BServer) = (*GaoFullPackedA2BServer).Close
+	var _ time.Duration = GaoFullPackedA2BSetupReport{}.ClientConstructionWallTime
 }
 
 func TestNewGaoFullPackedClientCryptographyUsesPublicKey(t *testing.T) {
@@ -102,5 +106,47 @@ func TestGaoFullPackedParameterReportDerivesRuntimeModuli(t *testing.T) {
 		got.EncryptionMode != "public-key" || got.FactorStorageMode != "resident-prevalidated" ||
 		got.ScaleSchedule != "lattigo-explicit-level-scale-native" {
 		t.Fatalf("runtime parameter report=%+v", got)
+	}
+	if got.MainSecretDistribution != "balanced-sparse-ternary" || got.MainSecretHammingWeight != 192 ||
+		got.EphemeralSecretDistribution != "balanced-sparse-ternary" || got.EphemeralSecretHammingWeight != 32 ||
+		got.ErrorSampler != "lattigo-bounded-discrete-gaussian" || got.ErrorSigma != 3.2 ||
+		got.ErrorConfiguredBound != 19.2 || got.ErrorEffectiveIntegerBound != 19 ||
+		got.KeySwitchTechnique != "lattigo-rns-qp-gadget" || got.RNSDecompositionComponents != 3 ||
+		got.BaseTwoDecomposition != 0 || got.SecuritySelector != "external-estimator" ||
+		got.SecurityEvidence != "full-packed-profile-not-assessed" {
+		t.Fatalf("runtime native parameter profile=%+v", got)
+	}
+
+	params := parameters.BootstrappingParameters
+	q, p := params.Q(), params.P()
+	if got.ActualFirstQModulusBits != bits.Len64(q[0]) ||
+		len(got.QModuli) != len(q) || len(got.QModuliBitLengths) != len(q) ||
+		len(got.PModuli) != len(p) || len(got.PModuliBitLengths) != len(p) {
+		t.Fatalf("runtime modulus identity shape=%+v", got)
+	}
+	for index, modulus := range q {
+		if got.QModuli[index] != strconv.FormatUint(modulus, 10) ||
+			got.QModuliBitLengths[index] != bits.Len64(modulus) {
+			t.Fatalf("Q[%d]=%q/%d, want %d/%d", index, got.QModuli[index], got.QModuliBitLengths[index], modulus, bits.Len64(modulus))
+		}
+	}
+	for index, modulus := range p {
+		if got.PModuli[index] != strconv.FormatUint(modulus, 10) ||
+			got.PModuliBitLengths[index] != bits.Len64(modulus) {
+			t.Fatalf("P[%d]=%q/%d, want %d/%d", index, got.PModuli[index], got.PModuliBitLengths[index], modulus, bits.Len64(modulus))
+		}
+	}
+
+	second, err := newGaoFullPackedA2BParameterReport(parameters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got.QModuli[0] = "mutated"
+	got.QModuliBitLengths[0] = 0
+	got.PModuli[0] = "mutated"
+	got.PModuliBitLengths[0] = 0
+	if second.QModuli[0] != strconv.FormatUint(q[0], 10) || second.QModuliBitLengths[0] != bits.Len64(q[0]) ||
+		second.PModuli[0] != strconv.FormatUint(p[0], 10) || second.PModuliBitLengths[0] != bits.Len64(p[0]) {
+		t.Fatal("runtime modulus identity slices alias across reports")
 	}
 }

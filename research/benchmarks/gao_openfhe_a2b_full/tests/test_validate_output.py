@@ -9,10 +9,67 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR = ROOT / "validate_output.py"
 
+OPENFHE_Q_MODULI = [
+    "8796103114753",
+    "8796120416257",
+    "8796142305281",
+    "8796131819521",
+    "8796137586689",
+    "8796135227393",
+    "8796142043137",
+    "8796136144897",
+    "8796141649921",
+    "8796137717761",
+    "8796139159553",
+    "8796122644481",
+    "8796134178817",
+    "8796123824129",
+    "8796130508801",
+    "8796087386113",
+    "8796114124801",
+    "8796110192641",
+    "8796112814081",
+    "8796090007553",
+    "8796105342977",
+]
+OPENFHE_Q_MODULI_BIT_LENGTHS = [
+    44,
+    44,
+    44,
+    44,
+    44,
+    44,
+    44,
+    44,
+    44,
+    44,
+    44,
+    44,
+    44,
+    44,
+    44,
+    43,
+    44,
+    44,
+    44,
+    43,
+    44,
+]
+OPENFHE_P_MODULI = [
+    "1125899903827969",
+    "1125899902124033",
+    "1125899887312897",
+    "1125899886395393",
+    "1125899885740033",
+    "1125899884167169",
+    "1125899884036097",
+]
+OPENFHE_P_MODULI_BIT_LENGTHS = [50, 50, 50, 50, 50, 50, 50]
+
 
 def canonical_artifact() -> dict:
     return {
-        "schema": "lcpdte-ckksint-a2b-benchmark-v2",
+        "schema": "lcpdte-ckksint-a2b-benchmark-v3",
         "implementation": "gao-openfhe-a2b-full",
         "host_id": "test-host",
         "encryption_mode": "public-key",
@@ -44,11 +101,34 @@ def canonical_artifact() -> dict:
             "first_modulus_bits": 43,
             "multiplicative_depth": 20,
             "large_digits": 3,
+            "main_secret_hamming_weight": 192,
             "ephemeral_secret_hamming_weight": 32,
+            "rns_decomposition_components": 3,
+            "base_two_decomposition": 0,
             "level_budget": [3, 2],
             "openfhe_requested_bsgs_dimensions": [0, 0],
             "chunk_width": 4,
             "cutoff_bits": -24,
+        },
+        "native_parameters": {
+            "actual_first_q_modulus_bits": 44,
+            "main_secret_distribution": "balanced-sparse-ternary",
+            "main_secret_hamming_weight": 192,
+            "ephemeral_secret_distribution": "balanced-sparse-ternary",
+            "ephemeral_secret_hamming_weight": 32,
+            "error_sampler": "openfhe-dgg",
+            "error_sigma": 3.19,
+            "error_configured_bound": None,
+            "error_effective_integer_bound": 39,
+            "key_switch_technique": "openfhe-hybrid",
+            "key_switch_rns_decomposition_components": 3,
+            "key_switch_base_two_decomposition": 0,
+            "security_selector": "HEStd_128_classic",
+            "security_evidence": "openfhe-he-standard-ternary-table",
+            "q_moduli": OPENFHE_Q_MODULI.copy(),
+            "q_moduli_bit_lengths": OPENFHE_Q_MODULI_BIT_LENGTHS.copy(),
+            "p_moduli": OPENFHE_P_MODULI.copy(),
+            "p_moduli_bit_lengths": OPENFHE_P_MODULI_BIT_LENGTHS.copy(),
         },
         "threads": 1,
         "timing_scope": "prepared-online",
@@ -98,6 +178,15 @@ class ValidateOutputTest(unittest.TestCase):
 
         self.assertNotEqual(completed.returncode, 0)
         self.assertIn("mismatch_count", completed.stderr)
+
+    def test_rejects_unexpected_top_level_field(self) -> None:
+        document = canonical_artifact()
+        document["unverified_claim"] = True
+
+        completed = self.run_validator(document)
+
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("unexpected fields", completed.stderr)
 
     def test_rejects_missing_execution_metadata(self) -> None:
         for field in (
@@ -173,6 +262,67 @@ class ValidateOutputTest(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, build_script)
 
+    def test_driver_emits_the_runtime_native_parameter_contract(self) -> None:
+        source = (ROOT / "gao-openfhe-a2b-full.cpp").read_text(encoding="utf-8")
+        for required in (
+            "lcpdte-ckksint-a2b-benchmark-v3",
+            "SetKeySwitchTechnique(HYBRID)",
+            "GetDistributionParameter()",
+            "GetKeySwitchTechnique()",
+            "GetStdLevel()",
+            "GetNumPartQ()",
+            "GetDigitSize()",
+            "native_parameters",
+            "actual_first_q_modulus_bits",
+            "main_secret_distribution",
+            "main_secret_hamming_weight",
+            "ephemeral_secret_distribution",
+            "ephemeral_secret_hamming_weight",
+            "error_sampler",
+            "error_sigma",
+            "error_configured_bound",
+            "error_effective_integer_bound",
+            "key_switch_technique",
+            "key_switch_rns_decomposition_components",
+            "key_switch_base_two_decomposition",
+            "security_selector",
+            "security_evidence",
+            "q_moduli",
+            "q_moduli_bit_lengths",
+            "p_moduli",
+            "p_moduli_bit_lengths",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, source)
+
+    def test_scripts_support_sha_bound_prebuilt_execution(self) -> None:
+        build_script = (ROOT / "build_wsl.sh").read_text(encoding="utf-8")
+        run_script = (ROOT / "run_wsl.sh").read_text(encoding="utf-8")
+
+        for required in (
+            "driver_sha256_stamp",
+            "driver_sha256_before",
+            "driver_sha256_after",
+            "binary_sha256",
+            "status --porcelain=v1 --untracked-files=all",
+            "sha256sum",
+            "mv --",
+        ):
+            with self.subTest(script="build_wsl.sh", required=required):
+                self.assertIn(required, build_script)
+
+        for required in (
+            "LCPDTE_GAO_SKIP_BUILD",
+            "driver_sha256_stamp",
+            "binary_sha256",
+            "status --porcelain=v1 --untracked-files=all",
+            "prebuilt driver SHA-256 stamp",
+            "prebuilt binary SHA-256",
+            "prebuilt focused-driver binary",
+        ):
+            with self.subTest(script="run_wsl.sh", required=required):
+                self.assertIn(required, run_script)
+
     def test_rejects_missing_parameter_contract(self) -> None:
         document = canonical_artifact()
         del document["parameters"]
@@ -193,7 +343,10 @@ class ValidateOutputTest(unittest.TestCase):
             "first_modulus_bits": 42,
             "multiplicative_depth": 19,
             "large_digits": 2,
+            "main_secret_hamming_weight": 191,
             "ephemeral_secret_hamming_weight": 31,
+            "rns_decomposition_components": 2,
+            "base_two_decomposition": 1,
             "level_budget": [2, 3],
             "openfhe_requested_bsgs_dimensions": [1, 0],
             "chunk_width": 3,
@@ -208,6 +361,66 @@ class ValidateOutputTest(unittest.TestCase):
 
                 self.assertNotEqual(completed.returncode, 0)
                 self.assertIn(field, completed.stderr)
+
+    def test_rejects_missing_native_parameter_contract(self) -> None:
+        document = canonical_artifact()
+        del document["native_parameters"]
+
+        completed = self.run_validator(document)
+
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("native_parameters", completed.stderr)
+
+    def test_rejects_every_unmatched_openfhe_native_parameter(self) -> None:
+        invalid_values = {
+            "actual_first_q_modulus_bits": 43,
+            "main_secret_distribution": "uniform-ternary",
+            "main_secret_hamming_weight": 191,
+            "ephemeral_secret_distribution": "uniform-ternary",
+            "ephemeral_secret_hamming_weight": 31,
+            "error_sampler": "rounded-normal",
+            "error_sigma": 3.2,
+            "error_configured_bound": 39,
+            "error_effective_integer_bound": 38,
+            "key_switch_technique": "bv",
+            "key_switch_rns_decomposition_components": 2,
+            "key_switch_base_two_decomposition": 1,
+            "security_selector": "HEStd_NotSet",
+            "security_evidence": "external-estimator",
+            "q_moduli": list(reversed(OPENFHE_Q_MODULI)),
+            "q_moduli_bit_lengths": [43] * 21,
+            "p_moduli": list(reversed(OPENFHE_P_MODULI)),
+            "p_moduli_bit_lengths": [49] * 7,
+        }
+        for field, invalid in invalid_values.items():
+            with self.subTest(field=field):
+                document = canonical_artifact()
+                document["native_parameters"][field] = invalid
+
+                completed = self.run_validator(document)
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertIn(field, completed.stderr)
+
+    def test_rejects_every_missing_openfhe_native_parameter(self) -> None:
+        for field in canonical_artifact()["native_parameters"]:
+            with self.subTest(field=field):
+                document = canonical_artifact()
+                del document["native_parameters"][field]
+
+                completed = self.run_validator(document)
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertIn(field, completed.stderr)
+
+    def test_rejects_unexpected_openfhe_native_parameter(self) -> None:
+        document = canonical_artifact()
+        document["native_parameters"]["unverified_native_claim"] = True
+
+        completed = self.run_validator(document)
+
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("unexpected fields", completed.stderr)
 
     def test_rejects_legacy_bsgs_dimensions_name(self) -> None:
         document = canonical_artifact()

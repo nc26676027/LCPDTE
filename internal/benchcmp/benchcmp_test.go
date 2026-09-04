@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -198,14 +199,14 @@ func TestParseLattigoRouteBRejectsNonCanonicalShape(t *testing.T) {
 }
 
 func TestParseCanonicalDerivesStatisticsFromVerifiedSamples(t *testing.T) {
-	got, err := benchcmp.ParseCanonical(strings.NewReader(canonicalArtifactJSON("openfhe", []uint64{
+	got, err := benchcmp.ParseCanonical(strings.NewReader(canonicalArtifactJSON(benchcmp.FocusedOpenFHESource, []uint64{
 		9_000_000_000, 11_000_000_000, 10_000_000_000, 12_000_000_000, 8_000_000_000,
 	})), "openfhe.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if got.Source != "openfhe" || got.Provenance != "openfhe.json" {
+	if got.Source != benchcmp.FocusedOpenFHESource || got.Provenance != "openfhe.json" {
 		t.Fatalf("identity=%+v", got)
 	}
 	if got.EncryptionMode != "public-key" || got.FactorStorageMode != "resident-precomputed" ||
@@ -223,6 +224,192 @@ func TestParseCanonicalDerivesStatisticsFromVerifiedSamples(t *testing.T) {
 	}
 	if got.Repeats != 5 || got.VerifiedEvaluations != 5 || len(got.TimedSamplesNanoseconds) != 5 {
 		t.Fatalf("sample protocol=%+v", got)
+	}
+}
+
+func TestCanonicalV3RequiresNativeParameterEvidence(t *testing.T) {
+	if benchcmp.CanonicalBenchmarkSchema != "lcpdte-ckksint-a2b-benchmark-v3" {
+		t.Fatalf("schema=%q", benchcmp.CanonicalBenchmarkSchema)
+	}
+	payload := canonicalArtifactJSON("gao-openfhe-a2b-full", canonicalSamples())
+	var document map[string]any
+	if err := json.Unmarshal([]byte(payload), &document); err != nil {
+		t.Fatal(err)
+	}
+	delete(document, "native_parameters")
+	encoded, err := json.Marshal(document)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = benchcmp.ParseCanonical(bytes.NewReader(encoded), "missing-native.json"); err == nil ||
+		!strings.Contains(err.Error(), "native_parameters") {
+		t.Fatalf("error=%v, want required native_parameters", err)
+	}
+}
+
+func TestCanonicalV3RequiresMismatchCount(t *testing.T) {
+	payload := canonicalArtifactJSON(benchcmp.FocusedOpenFHESource, canonicalSamples())
+	var document map[string]any
+	if err := json.Unmarshal([]byte(payload), &document); err != nil {
+		t.Fatal(err)
+	}
+	delete(document, "mismatch_count")
+	encoded, err := json.Marshal(document)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = benchcmp.ParseCanonical(bytes.NewReader(encoded), "missing-mismatch-count.json"); err == nil ||
+		!strings.Contains(err.Error(), "mismatch_count is required") {
+		t.Fatalf("error=%v, want required mismatch_count", err)
+	}
+}
+
+func TestParseCanonicalRequiresZeroValuedSharedParameterFields(t *testing.T) {
+	var document map[string]any
+	if err := json.Unmarshal([]byte(canonicalArtifactJSON(benchcmp.FocusedOpenFHESource, canonicalSamples())), &document); err != nil {
+		t.Fatal(err)
+	}
+	parameters := document["parameters"].(map[string]any)
+	delete(parameters, "base_two_decomposition")
+	payload, err := json.Marshal(document)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = benchcmp.ParseCanonical(bytes.NewReader(payload), "missing-base-two.json"); err == nil ||
+		!strings.Contains(err.Error(), "parameters.base_two_decomposition is required") {
+		t.Fatalf("error=%v", err)
+	}
+}
+
+func TestParseCanonicalRequiresEveryNativeParameterField(t *testing.T) {
+	fields := []string{
+		"actual_first_q_modulus_bits",
+		"main_secret_distribution", "main_secret_hamming_weight",
+		"ephemeral_secret_distribution", "ephemeral_secret_hamming_weight",
+		"error_sampler", "error_sigma", "error_configured_bound", "error_effective_integer_bound",
+		"key_switch_technique", "key_switch_rns_decomposition_components", "key_switch_base_two_decomposition",
+		"security_selector", "security_evidence",
+		"q_moduli", "q_moduli_bit_lengths", "p_moduli", "p_moduli_bit_lengths",
+	}
+	for _, field := range fields {
+		t.Run(field, func(t *testing.T) {
+			payload := mutateCanonicalNative(t, benchcmp.FocusedOpenFHESource, func(native map[string]any) {
+				delete(native, field)
+			})
+			_, err := benchcmp.ParseCanonical(bytes.NewReader(payload), "missing-native-field.json")
+			if err == nil || !strings.Contains(err.Error(), "native_parameters."+field+" is required") {
+				t.Fatalf("error=%v", err)
+			}
+		})
+	}
+}
+
+func TestParseCanonicalRejectsForgedNativeParameterProfile(t *testing.T) {
+	tests := []struct {
+		name  string
+		field string
+		value any
+		want  string
+	}{
+		{name: "main distribution", field: "main_secret_distribution", value: "uniform-ternary", want: "main_secret_distribution"},
+		{name: "main weight", field: "main_secret_hamming_weight", value: 191, want: "main_secret_hamming_weight"},
+		{name: "ephemeral distribution", field: "ephemeral_secret_distribution", value: "uniform-ternary", want: "ephemeral_secret_distribution"},
+		{name: "ephemeral weight", field: "ephemeral_secret_hamming_weight", value: 31, want: "ephemeral_secret_hamming_weight"},
+		{name: "error sampler", field: "error_sampler", value: "other", want: "error_sampler"},
+		{name: "error sigma", field: "error_sigma", value: 3.2, want: "error_sigma"},
+		{name: "configured bound", field: "error_configured_bound", value: 19.2, want: "error_configured_bound"},
+		{name: "effective bound", field: "error_effective_integer_bound", value: 38, want: "error_effective_integer_bound"},
+		{name: "key switch", field: "key_switch_technique", value: "other", want: "key_switch_technique"},
+		{name: "RNS components", field: "key_switch_rns_decomposition_components", value: 2, want: "key_switch_rns_decomposition_components"},
+		{name: "base two", field: "key_switch_base_two_decomposition", value: 1, want: "key_switch_base_two_decomposition"},
+		{name: "security selector", field: "security_selector", value: "other", want: "security_selector"},
+		{name: "security evidence", field: "security_evidence", value: "other", want: "security_evidence"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			payload := mutateCanonicalNative(t, benchcmp.FocusedOpenFHESource, func(native map[string]any) {
+				native[test.field] = test.value
+			})
+			_, err := benchcmp.ParseCanonical(bytes.NewReader(payload), "forged-native.json")
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("error=%v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestParseCanonicalRecomputesNativeModulusEvidence(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{
+			name: "noncanonical decimal",
+			mutate: func(native map[string]any) {
+				q := native["q_moduli"].([]any)
+				q[0] = "0" + q[0].(string)
+			},
+			want: "canonical decimal uint64",
+		},
+		{
+			name: "uint64 overflow",
+			mutate: func(native map[string]any) {
+				native["q_moduli"].([]any)[0] = "18446744073709551616"
+			},
+			want: "canonical decimal uint64",
+		},
+		{
+			name: "declared bit length",
+			mutate: func(native map[string]any) {
+				native["q_moduli_bit_lengths"].([]any)[0] = float64(43)
+			},
+			want: "recomputed 44",
+		},
+		{
+			name: "backend bit profile",
+			mutate: func(native map[string]any) {
+				native["q_moduli"].([]any)[0] = strconv.FormatUint((uint64(1)<<43)-1, 10)
+				native["q_moduli_bit_lengths"].([]any)[0] = float64(43)
+			},
+			want: "backend profile 44",
+		},
+		{
+			name: "actual first Q width",
+			mutate: func(native map[string]any) {
+				native["actual_first_q_modulus_bits"] = float64(43)
+			},
+			want: "recomputed q_moduli[0] bit length 44",
+		},
+		{
+			name: "Q product aggregate",
+			mutate: func(native map[string]any) {
+				q := native["q_moduli"].([]any)
+				profile := native["q_moduli_bit_lengths"].([]any)
+				for index := range q {
+					bitLength := uint32(profile[index].(float64))
+					q[index] = strconv.FormatUint(uint64(1)<<(bitLength-1), 10)
+				}
+			},
+			want: "q_moduli product bit length",
+		},
+		{
+			name: "P count",
+			mutate: func(native map[string]any) {
+				p := native["p_moduli"].([]any)
+				native["p_moduli"] = p[:len(p)-1]
+			},
+			want: "p_moduli count=6",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			payload := mutateCanonicalNative(t, benchcmp.FocusedOpenFHESource, test.mutate)
+			_, err := benchcmp.ParseCanonical(bytes.NewReader(payload), "forged-modulus.json")
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("error=%v, want %q", err, test.want)
+			}
+		})
 	}
 }
 
@@ -457,7 +644,10 @@ func TestParseCanonicalRejectsUnmatchedGaoParameterSemantics(t *testing.T) {
 		{name: "first modulus", old: `"first_modulus_bits":43`, replacement: `"first_modulus_bits":42`, want: "first_modulus_bits"},
 		{name: "depth", old: `"multiplicative_depth":20`, replacement: `"multiplicative_depth":19`, want: "multiplicative_depth"},
 		{name: "large digits", old: `"large_digits":3`, replacement: `"large_digits":2`, want: "large_digits"},
+		{name: "main weight", old: `"main_secret_hamming_weight":192`, replacement: `"main_secret_hamming_weight":191`, want: "main_secret_hamming_weight"},
 		{name: "ephemeral weight", old: `"ephemeral_secret_hamming_weight":32`, replacement: `"ephemeral_secret_hamming_weight":31`, want: "ephemeral_secret_hamming_weight"},
+		{name: "RNS components", old: `"rns_decomposition_components":3`, replacement: `"rns_decomposition_components":2`, want: "rns_decomposition_components"},
+		{name: "base two", old: `"base_two_decomposition":0`, replacement: `"base_two_decomposition":1`, want: "base_two_decomposition"},
 		{name: "level budget", old: `"level_budget":[3,2]`, replacement: `"level_budget":[2,3]`, want: "level_budget"},
 		{name: "OpenFHE requested BSGS", old: `"openfhe_requested_bsgs_dimensions":[0,0]`, replacement: `"openfhe_requested_bsgs_dimensions":[1,0]`, want: "openfhe_requested_bsgs_dimensions"},
 		{name: "chunk width", old: `"chunk_width":4`, replacement: `"chunk_width":3`, want: "chunk_width"},
@@ -505,7 +695,7 @@ func TestComparisonUsesOnlyMatchedCanonicalMeasurements(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Schema != "lcpdte-ckksint-a2b-comparison-v2" {
+	if got.Schema != "lcpdte-ckksint-a2b-comparison-v3" {
 		t.Fatalf("schema=%q", got.Schema)
 	}
 	if math.Abs(got.Comparison.MeanLatencyRatioLattigoOverOpenFHE-0.8) > 1e-12 ||
@@ -529,7 +719,7 @@ func TestComparisonUsesOnlyMatchedCanonicalMeasurements(t *testing.T) {
 		t.Fatalf("unstable JSON summary:\n%s", first)
 	}
 	if bytes.Contains(first, []byte(`"a2b_latency_nanoseconds"`)) || bytes.Contains(first, []byte(`"lanes"`)) {
-		t.Fatalf("v2 summary leaked legacy aggregate fields:\n%s", first)
+		t.Fatalf("v3 summary leaked legacy aggregate fields:\n%s", first)
 	}
 }
 
@@ -561,7 +751,8 @@ func TestComparisonRejectsSwappedOrDuplicatedImplementationRoles(t *testing.T) {
 
 func TestComparisonRejectsLegacyLattigoRole(t *testing.T) {
 	openfhe := mustParseCanonical(t, "gao-openfhe-a2b-full", canonicalSamples())
-	legacy := mustParseCanonical(t, "lattigo-route-b", canonicalSamples())
+	legacy := mustParseCanonical(t, "lattigo-gao-a2b-full", canonicalSamples())
+	legacy.Source = "lattigo-route-b"
 
 	_, err := benchcmp.Compare(openfhe, legacy)
 	if err == nil || !strings.Contains(err.Error(), "lattigo-gao-a2b-full") {
@@ -669,6 +860,9 @@ func canonicalSamples() []uint64 {
 }
 
 func canonicalArtifactJSON(implementation string, samples []uint64) string {
+	if implementation == "openfhe" {
+		implementation = benchcmp.FocusedOpenFHESource
+	}
 	payload := struct {
 		Schema                  string                          `json:"schema"`
 		Implementation          string                          `json:"implementation"`
@@ -693,6 +887,7 @@ func canonicalArtifactJSON(implementation string, samples []uint64) string {
 		PackingSlots            uint32                          `json:"packing_slots"`
 		UsefulWords             uint32                          `json:"useful_words"`
 		Parameters              *benchcmp.GaoParameterSemantics `json:"parameters"`
+		NativeParameters        *benchcmp.NativeParameters      `json:"native_parameters"`
 		Threads                 uint32                          `json:"threads"`
 		TimingScope             string                          `json:"timing_scope"`
 		SetupNanoseconds        uint64                          `json:"setup_nanoseconds"`
@@ -703,7 +898,7 @@ func canonicalArtifactJSON(implementation string, samples []uint64) string {
 		MismatchCount           uint64                          `json:"mismatch_count"`
 		VerifiedEvaluations     uint32                          `json:"verified_evaluations"`
 	}{
-		Schema: "lcpdte-ckksint-a2b-benchmark-v2", Implementation: implementation,
+		Schema: benchcmp.CanonicalBenchmarkSchema, Implementation: implementation,
 		HostID: "ryzen-7-h-255", EncryptionMode: "public-key",
 		FactorStorageMode: "resident-precomputed", ScaleSchedule: "openfhe-flexiblemanual-native",
 		BackendBSGSPlan: "openfhe-auto-dim1-0", SourceRevision: "08f1eb87434e7be072cba889270a8400bbffc08e",
@@ -712,7 +907,7 @@ func canonicalArtifactJSON(implementation string, samples []uint64) string {
 		Protocol: "gao-a2b-full-z8-w4-v1", WorkloadID: "uint8-0to255-x32",
 		PackingID: "n65536-cslots32768-zslots8192-w4", OutputContainer: "two-ciphertexts-low4-high4",
 		WordBits: 8, RingDimension: 65_536, PackingSlots: 32_768, UsefulWords: 8_192,
-		Parameters: canonicalParameters(), Threads: 1,
+		Parameters: canonicalParameters(), NativeParameters: canonicalNativeParameters(implementation), Threads: 1,
 		TimingScope: "prepared-online", SetupNanoseconds: 2_000_000_000, WarmupCount: 1, WarmupVerified: true,
 		RepeatCount: uint32(len(samples)), TimedSamplesNanoseconds: samples, VerifiedEvaluations: uint32(len(samples)),
 	}
@@ -739,10 +934,71 @@ func canonicalParameters() *benchcmp.GaoParameterSemantics {
 		PModuliCount: 7, PLog2Aggregate: 350,
 		ScalingModulusBits: 43, FirstModulusBits: 43,
 		MultiplicativeDepth: 20, LargeDigits: 3,
+		MainSecretHammingWeight:      192,
 		EphemeralSecretHammingWeight: 32,
-		LevelBudget:                  [2]uint32{3, 2}, OpenFHERequestedBSGSDimensions: [2]uint32{0, 0},
+		KeySwitchRNSComponents:       3, KeySwitchBaseTwoDecomposition: 0,
+		LevelBudget: [2]uint32{3, 2}, OpenFHERequestedBSGSDimensions: [2]uint32{0, 0},
 		ChunkWidth: 4, CutoffBits: -24,
 	}
+}
+
+func canonicalNativeParameters(implementation string) *benchcmp.NativeParameters {
+	openFHEQBits := []uint32{44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 44, 44, 43, 44}
+	openFHEPBits := []uint32{50, 50, 50, 50, 50, 50, 50}
+	lattigoQBits := []uint32{43, 43, 43, 43, 44, 43, 44, 43, 43, 43, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 43}
+	lattigoPBits := []uint32{51, 50, 51, 50, 51, 51, 49}
+
+	native := &benchcmp.NativeParameters{
+		MainSecretDistribution:        "balanced-sparse-ternary",
+		MainSecretHammingWeight:       192,
+		EphemeralSecretDistribution:   "balanced-sparse-ternary",
+		EphemeralSecretHammingWeight:  32,
+		KeySwitchRNSComponents:        3,
+		KeySwitchBaseTwoDecomposition: 0,
+	}
+	if implementation == benchcmp.FocusedLattigoSource {
+		bound := 19.2
+		native.ActualFirstQModulusBits = 43
+		native.ErrorSampler = "lattigo-bounded-discrete-gaussian"
+		native.ErrorSigma = 3.2
+		native.ErrorConfiguredBound = &bound
+		native.ErrorEffectiveIntegerBound = 19
+		native.KeySwitchTechnique = "lattigo-rns-qp-gadget"
+		native.SecuritySelector = "external-estimator"
+		native.SecurityEvidence = "full-packed-profile-not-assessed"
+		native.QModuliBitLengths = lattigoQBits
+		native.PModuliBitLengths = lattigoPBits
+		native.QModuli = syntheticModuli(lattigoQBits, 43, 1_000)
+		native.PModuli = syntheticModuli(lattigoPBits, 50, 1_000)
+		return native
+	}
+	native.ActualFirstQModulusBits = 44
+	native.ErrorSampler = "openfhe-dgg"
+	native.ErrorSigma = 3.19
+	native.ErrorEffectiveIntegerBound = 39
+	native.KeySwitchTechnique = "openfhe-hybrid"
+	native.SecuritySelector = "HEStd_128_classic"
+	native.SecurityEvidence = "openfhe-he-standard-ternary-table"
+	native.QModuliBitLengths = openFHEQBits
+	native.PModuliBitLengths = openFHEPBits
+	native.QModuli = syntheticModuli(openFHEQBits, 43, 1)
+	native.PModuli = syntheticModuli(openFHEPBits, 50, 1)
+	return native
+}
+
+func syntheticModuli(profile []uint32, target uint32, positiveDelta uint64) []string {
+	result := make([]string, len(profile))
+	pivot := uint64(1) << target
+	for index, bitLength := range profile {
+		value := pivot - 1
+		if bitLength == target+1 {
+			value = pivot + positiveDelta + uint64(index)
+		} else if bitLength == target-1 {
+			value = (pivot >> 1) - 1
+		}
+		result[index] = strconv.FormatUint(value, 10)
+	}
+	return result
 }
 
 func canonicalParametersJSON() string {
@@ -751,6 +1007,24 @@ func canonicalParametersJSON() string {
 		panic(err)
 	}
 	return string(encoded)
+}
+
+func mutateCanonicalNative(t *testing.T, implementation string, mutate func(map[string]any)) []byte {
+	t.Helper()
+	var document map[string]any
+	if err := json.Unmarshal([]byte(canonicalArtifactJSON(implementation, canonicalSamples())), &document); err != nil {
+		t.Fatal(err)
+	}
+	native, ok := document["native_parameters"].(map[string]any)
+	if !ok {
+		t.Fatalf("native_parameters type=%T", document["native_parameters"])
+	}
+	mutate(native)
+	payload, err := json.Marshal(document)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return payload
 }
 
 func mustParseOpenFHE(t *testing.T) benchcmp.Measurement {

@@ -10,6 +10,9 @@ readonly build_dir="${upstream}/build-acceptance/clean-build"
 readonly source_name="gao-openfhe-a2b-full.cpp"
 readonly target_source="${source_root}/src/pke/examples/${source_name}"
 readonly target_relative="src/pke/examples/${source_name}"
+readonly binary="${build_dir}/bin/examples/pke/gao-openfhe-a2b-full"
+readonly driver_sha256_stamp="${build_dir}/gao-openfhe-a2b-full.driver.sha256"
+readonly driver_sha256_stamp_tmp="${driver_sha256_stamp}.tmp.$$"
 readonly canonical_build_profile='CMAKE_BUILD_TYPE=Release;CXX_FLAGS=-march=native,-O3,-DNDEBUG,-fopenmp=libomp;MATHBACKEND=6;OPENFHE_VERSION=1.4.0;HEXL_VERSION=1.2.6;WITH_INTEL_HEXL=ON;WITH_NATIVEOPT=ON;WITH_NTL=ON;WITH_TCM=ON;WITH_OPENMP=ON;OMP_NUM_THREADS=1'
 
 if [[ ! -e "${source_root}/.git" ]]; then
@@ -22,25 +25,36 @@ if [[ "${actual_commit}" != "${expected_commit}" ]]; then
     echo "fhe-simd-alu commit ${actual_commit}; want ${expected_commit}" >&2
     exit 1
 fi
-if ! git -C "${source_root}" diff --quiet HEAD --; then
-    echo "pinned fhe-simd-alu source has tracked modifications" >&2
-    exit 1
-fi
 if git -C "${source_root}" ls-files --error-unmatch "${target_relative}" >/dev/null 2>&1; then
     echo "refusing to overwrite tracked pinned source ${target_relative}" >&2
     exit 1
 fi
-if [[ -e "${target_source}" ]] && ! cmp -s "${script_dir}/${source_name}" "${target_source}"; then
-    echo "untracked ${target_relative} differs from the focused driver; refusing to overwrite it" >&2
+source_status_before="$(git -C "${source_root}" status --porcelain=v1 --untracked-files=all)"
+if [[ -n "${source_status_before}" ]]; then
+    echo "pinned fhe-simd-alu source is not clean before driver injection:" >&2
+    printf '%s\n' "${source_status_before}" >&2
     exit 1
 fi
+if [[ -e "${target_source}" ]]; then
+    echo "untracked driver target exists despite a clean-source status: ${target_relative}" >&2
+    exit 1
+fi
+readonly driver_sha256_before="$(sha256sum "${script_dir}/${source_name}" | awk '{print $1}')"
 
 cleanup_driver_copy() {
     rm -f -- "${target_source}"
+    rm -f -- "${driver_sha256_stamp_tmp}"
 }
 trap cleanup_driver_copy EXIT
 
 cp "${script_dir}/${source_name}" "${target_source}"
+readonly expected_injected_status="?? ${target_relative}"
+source_status_injected="$(git -C "${source_root}" status --porcelain=v1 --untracked-files=all)"
+if [[ "${source_status_injected}" != "${expected_injected_status}" ]]; then
+    echo "pinned fhe-simd-alu source has unexpected changes after driver injection:" >&2
+    printf '%s\n' "${source_status_injected}" >&2
+    exit 1
+fi
 
 readonly cache="${build_dir}/CMakeCache.txt"
 if [[ ! -f "${cache}" ]]; then
@@ -107,6 +121,40 @@ if [[ ! -f "${link_file}" ]] || ! grep -Fq 'libhexl.so' "${link_file}"; then
     exit 1
 fi
 
+if ! cmp -s "${script_dir}/${source_name}" "${target_source}"; then
+    echo "injected focused driver changed during the build" >&2
+    exit 1
+fi
+source_status_built="$(git -C "${source_root}" status --porcelain=v1 --untracked-files=all)"
+if [[ "${source_status_built}" != "${expected_injected_status}" ]]; then
+    echo "pinned fhe-simd-alu source has unexpected changes after the build:" >&2
+    printf '%s\n' "${source_status_built}" >&2
+    exit 1
+fi
+
+rm -f -- "${target_source}"
+source_status_after="$(git -C "${source_root}" status --porcelain=v1 --untracked-files=all)"
+if [[ -n "${source_status_after}" ]]; then
+    echo "pinned fhe-simd-alu source is not clean after driver cleanup:" >&2
+    printf '%s\n' "${source_status_after}" >&2
+    exit 1
+fi
+
+readonly driver_sha256_after="$(sha256sum "${script_dir}/${source_name}" | awk '{print $1}')"
+if [[ "${driver_sha256_after}" != "${driver_sha256_before}" ]]; then
+    echo "tracked focused driver changed during the build" >&2
+    exit 1
+fi
+if [[ ! -x "${binary}" ]]; then
+    echo "focused-driver binary is missing or not executable: ${binary}" >&2
+    exit 1
+fi
+readonly binary_sha256="$(sha256sum "${binary}" | awk '{print $1}')"
+printf 'driver_sha256=%s\nbinary_sha256=%s\n' \
+    "${driver_sha256_after}" "${binary_sha256}" > "${driver_sha256_stamp_tmp}"
+mv -- "${driver_sha256_stamp_tmp}" "${driver_sha256_stamp}"
+
 printf 'validated_build_profile=%s\n' "${canonical_build_profile}" >&2
-printf 'driver_sha256=%s\n' "$(sha256sum "${script_dir}/${source_name}" | awk '{print $1}')" >&2
-printf '%s\n' "${build_dir}/bin/examples/pke/gao-openfhe-a2b-full"
+printf 'driver_sha256=%s\n' "${driver_sha256_after}" >&2
+printf 'binary_sha256=%s\n' "${binary_sha256}" >&2
+printf '%s\n' "${binary}"
