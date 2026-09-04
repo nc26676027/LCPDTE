@@ -201,8 +201,8 @@ delivery remain later gates.
 - [x] Remove or redesign the measured full-packed memory and compute bottlenecks without weakening ciphertext correctness, parameter identity, or the first-operation setup gate.
 - [x] Rerun Gao/OpenFHE locally immediately before the final Lattigo run and preserve both raw artifacts plus whole-process resource records.
 - [x] Require strict artifact identity and `Lattigo mean online <= OpenFHE mean online`; do not substitute cross-host, source-reported, sparse, or native-packing ratios.
-- [ ] Add an end-to-end full-packed example/benchmark path, run affected tests and static checks, complete independent Standards/Spec review, and commit locally on `main` without pushing.
-- **Status:** exact OpenFHE Q/P and error-parameter alignment is under final test and same-host rerun; the earlier aggregate-aligned measurement remains historical until replaced.
+- [x] Add an end-to-end full-packed example/benchmark path, run affected tests and static checks, complete independent Standards/Spec review, and commit locally on `main` without pushing.
+- **Status:** COMPLETE; source `cda2a24` uses the exact ordered OpenFHE Q/P chains and matched numerical parameter admission, the final immediate same-host OpenFHE-to-Lattigo serial replay verifies every output bit with zero mismatches, and the strict mean/median not-slower gates both pass. Earlier aggregate-only and pre-lifecycle measurements remain historical diagnostics, not acceptance evidence.
 
 ## Candidate Research Questions
 

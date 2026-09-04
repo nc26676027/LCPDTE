@@ -10,10 +10,12 @@ The fixed benchmark shape is:
 - ring dimension 65,536, `zN=8`, `zSlots=8192`, `w=4`, cutoff `-24`;
 - 8,192 useful 8-bit words (`0..255`, repeated 32 times);
 - 32,768 complex packing slots and two full Boolean output ciphertexts;
-- Gao parameter semantics: 21 Q moduli / 904 aggregate bits, 7 P moduli /
-  350 aggregate bits, 43-bit scaling and first moduli, depth 20, 3 large
-  digits, weight-192 main secret, weight-32 ephemeral bootstrap key, level
-  budget `[3,2]`, and BSGS request `[0,0]` (OpenFHE automatic selection);
+- Gao parameter semantics: the exact ordered 21-modulus Q chain / 904
+  aggregate bits and ordered 7-modulus P chain / 350 aggregate bits, 43-bit
+  scaling and first-modulus constructor request (the generated first Q is 44
+  bits), depth 20, 3 large digits, weight-192 main secret, weight-32 ephemeral
+  bootstrap key, level budget `[3,2]`, and BSGS request `[0,0]` (OpenFHE
+  automatic selection);
 - explicit OpenFHE `HYBRID` key switching with three RNS decomposition
   components and the `HEStd_128_classic` selector;
 - public-key encryption, resident bootstrap precomputation,
@@ -111,10 +113,14 @@ go run ./cmd/compare-ckksint -openfhe-json <openfhe.json> -lattigo-json <lattigo
 
 The command recomputes mean, median, and useful-word throughput from the five
 verified samples. It exits nonzero unless both Lattigo/OpenFHE latency ratios
-are at most 1. The parameter match covers algorithm settings and aggregate
-modulus bit lengths. Both backends implement the same mathematical DFT target
-with their native scale schedules and execution plans; the comparison does not
-assert identical generated RNS primes or identical backend BSGS decompositions.
-The admitted Lattigo artifact records its live optimized plan as
+are at most 1. Admission requires the exact ordered Q and P moduli plus the
+shared numerical parameters: actual first-Q width, main and ephemeral secret
+weights, error sigma and effective integer bound, and key-switch decomposition.
+Backend mechanisms remain explicit rather than being falsely renamed as one
+implementation: the sampler, secret-distribution, key-switch, security-evidence
+and native DFT-planner labels are validated for their respective backends. Both
+backends implement the same mathematical DFT target with their native scale
+schedules and execution plans, but identical backend BSGS decompositions are
+not required. The admitted Lattigo artifact records its live optimized plan as
 `lattigo-dft-log-bsgs-ratio-2-special-b0-ratio-2-live-output-identity-mask-drop-complex-lut-optimized`, while
 the OpenFHE artifact records `openfhe-auto-dim1-0`.

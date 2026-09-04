@@ -22,7 +22,7 @@
   "packing_slots": 32768,
   "useful_words": 8192,
   "parameters": {
-    "comparison_scope": "gao-algorithm-and-aggregate-modulus-bits",
+    "comparison_scope": "gao-algorithm-exact-q-p-and-numerical-parameters",
     "q_moduli_count": 21,
     "q_log2_aggregate": 904,
     "p_moduli_count": 7,
@@ -62,10 +62,10 @@
   },
   "threads": 1,
   "timing_scope": "prepared-online",
-  "setup_nanoseconds": 145572023807,
+  "setup_nanoseconds": 147090130973,
   "warmup_count": 1,
   "repeat_count": 5,
-  "timed_samples_nanoseconds": [26309255459, 24602206521, 24941294921, 23132755381, 22342342028],
+  "timed_samples_nanoseconds": [22906563026, 22213842741, 22467630012, 23326414391, 23530424238],
   "warmup_verified": true,
   "verified_evaluations": 5,
   "mismatch_count": 0

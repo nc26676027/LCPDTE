@@ -123,10 +123,10 @@ type Measurement struct {
 	Lanes                   uint32                 `json:"lanes,omitempty"`
 }
 
-// GaoParameterSemantics records the algorithm targets and aggregate modulus
-// sizes that must match across backends. ScalingModulusBits and
-// FirstModulusBits are constructor targets; NativeParameters records the
-// resulting first-prime width and complete backend-native RNS chains.
+// GaoParameterSemantics records the algorithm and numerical targets that must
+// match across backends. ScalingModulusBits and FirstModulusBits are constructor
+// targets; NativeParameters records the generated first-prime width, exact
+// ordered RNS chains, and backend-native mechanism evidence.
 type GaoParameterSemantics struct {
 	ComparisonScope                string    `json:"comparison_scope"`
 	QModuliCount                   uint32    `json:"q_moduli_count"`
@@ -147,9 +147,10 @@ type GaoParameterSemantics struct {
 	CutoffBits                     int32     `json:"cutoff_bits"`
 }
 
-// NativeParameters is lossless backend-specific evidence for the parameters
-// that produced a focused benchmark measurement. Native values are validated
-// per backend and are intentionally not required to be identical across them.
+// NativeParameters is lossless evidence for the parameters that produced a
+// focused benchmark measurement. Comparison requires identical ordered Q/P
+// chains and matched numerical fields while retaining truthful backend-specific
+// mechanism, sampler, planner, and security-evidence labels.
 type NativeParameters struct {
 	ActualFirstQModulusBits       uint32   `json:"actual_first_q_modulus_bits"`
 	MainSecretDistribution        string   `json:"main_secret_distribution"`

@@ -1,3 +1,5 @@
 *.sh text eol=lf
 *.sage.py text eol=lf
 research/reproduction/security/** text eol=lf
+research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05/** text eol=lf
+research/benchmarks/gao_openfhe_a2b_full/gao-openfhe-a2b-full.cpp text eol=lf
