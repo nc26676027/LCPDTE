@@ -6,11 +6,10 @@
 
 ## Current Phase
 
-Library productization / workspace consolidation in progress — preserve the
-existing integer CKKS and Route-B evidence, consolidate all reachable work on
-`main`, expose a small supported library interface, and hand the user runnable
-Lattigo-style examples plus an acceptance test surface. Full research integrity
-and private remote delivery remain later gates.
+Phase 10 — repair the confirmed Route-B benchmark distortion with TDD, expose a
+prepared/reusable A2B evaluation seam, and rerun a packing- and protocol-matched
+same-host Gao/OpenFHE comparison. Full research integrity and private remote
+delivery remain later gates.
 
 ## Completion Criteria
 
@@ -185,6 +184,15 @@ and private remote delivery remain later gates.
 - [x] Run focused tests, the affected package suite, the end-to-end command and independent Standards/Spec review; commit the accepted implementation on `main` without pushing.
 - **Status:** COMPLETE for the frozen Phase-9 scope; the same-host Gao/OpenFHE comparison and public Route-B example passed real execution, byte-stable replay, full-result validation, package/static gates, and final independent Standards/Spec review
 
+### Phase 10: Prepared A2B performance repair and matched rerun
+
+- [x] RED: specify the public prepared evaluator's repeated-call behavior and the benchmark protocol's setup/online, warmup/repeat and packing contract.
+- [x] GREEN: move Route-B circuit construction out of online timing and expose the smallest reusable sequential evaluator through `ckksint`.
+- [x] Add a focused 512-word Gao/OpenFHE benchmark so both implementations use `n=8`, `w=4`, identical useful-word count and the same warmup/repeat policy.
+- [x] Rerun Lattigo and OpenFHE serially on the same host, preserve raw artifacts and regenerate the comparison report.
+- [x] Run focused/full affected tests, static checks, end-to-end example, independent Standards/Spec review, and commit on `main` without pushing.
+- **Status:** COMPLETE; final Lattigo and OpenFHE artifacts are correctness-verified, the focused matched OpenFHE candidate is rejected before timing, affected tests/static checks and the public example pass, and both independent reviews report no P0--P2 findings. The accepted change is committed on `main` without pushing.
+
 ## Candidate Research Questions
 
 1. Which algebraic, packing, and lazy-key-switch properties give the CCS 2026 CKKS evaluator its reported low complexity, and how do its separate BFV/BGV/TFHE baselines affect the comparison?
@@ -251,6 +259,10 @@ and private remote delivery remain later gates.
 
 | Error | Attempt | Resolution |
 |---|---:|---|
+| First real repeated A2B run reached the operational capacity gate with 26.19 GiB still counted as used and was blocked at the strict 80% boundary | 1 | Release the first call's transient Go heap before the fresh operational capacity sample; rerun the same public E2E seam. |
+| Phase-10 planning catch-up could not use the Windows Store `python` alias | 1 | Used the interpreter recorded by Graphify; catch-up then completed with no unsynchronized report. |
+| Windows `rg` rejected the literal `ckksint/*.go` path and `functional.go` did not exist | 1 | Searched the package directory without a wildcard and used the actual `functional8*.go` files; both failures were read-only. |
+| `rg` was asked to inspect a nonexistent top-level `scripts` directory | 1 | Kept the command/package/reproduction paths returned by the same search and stopped assuming a scripts directory. |
 | Windows `python` resolves only to the Microsoft Store alias, so session catch-up could not start | 1 | Loaded the Codex workspace runtime and reran the script with its bundled Python executable successfully. |
 | First inline Python form for Graphify detection was corrupted by nested PowerShell quoting | 1 | Rewrote the command with a PowerShell single-quoted Python program and format strings; detection then completed. |
 | Combined Graphify manifest/cost/cleanup command was rejected before execution because the shell payload mixed a here-string with destructive cleanup | 1 | Split persistence from cleanup; saved metadata first, then deleted only ten resolved, explicit paths under `graphify-out`. |

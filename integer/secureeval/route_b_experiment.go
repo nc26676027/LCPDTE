@@ -222,10 +222,9 @@ func retireRouteBInstalledEvaluator(installed *RouteBInstalledEvaluator) {
 	if installed == nil || installed.cell == nil {
 		return
 	}
-	installed.cell.available.Store(false)
-	clearRouteBInstalledVendorEvaluator(installed.cell.evaluator)
-	installed.cell.evaluator = nil
-	installed.cell.records = RBDFTBuildRecordSet{}
+	installed.cell.operationMu.Lock()
+	defer installed.cell.operationMu.Unlock()
+	clearRouteBInstalledEvaluatorCell(installed.cell)
 }
 
 func releaseRouteBTransientHeap() {

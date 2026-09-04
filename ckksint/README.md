@@ -15,10 +15,43 @@ repository's `vendor` mode or a separate fork replacement.
   multiply, and arithmetic-by-short multiply.
 - `Functional8` provides a compact four-word profile for A2B, B2A, signed
   public-threshold comparison, and selected-child depth-2 evaluation.
+- `NewCanonicalRouteBA2B` provides reusable full 8-bit A2B for batches of
+  1--512 bytes as separate client and server objects.
 - `NewCanonicalRouteBDepth2` provides the full Gao-compatible N=2^16,
   logSlots=11 Route-B workflow as separate client and server objects.
 - `LattigoCiphertext`, `LattigoHalves`, `ImportTrustedCiphertext`, and
   `LattigoParameters` are explicit copy boundaries for Lattigo interoperation.
+
+## Canonical Route-B A2B workflow
+
+```go
+client, server, setup, err := ckksint.NewCanonicalRouteBA2B()
+if err != nil {
+    return err
+}
+defer server.Close()
+
+input, encryption, err := client.EncryptA2B([]uint8{0, 1, 15, 16, 127, 255})
+if err != nil {
+    return err
+}
+output, evaluation, err := server.EvaluateA2B(input)
+if err != nil {
+    return err
+}
+bits, decryption, err := client.DecryptA2B(output)
+if err != nil {
+    return err
+}
+
+_, _, _, _, _ = setup, encryption, evaluation, decryption, bits
+```
+
+The first evaluation prepares the immutable circuit and reports that cost in
+`PreparationWallTime`. Later calls reuse the same evaluator and report zero
+preparation time. `OnlineWallTime` covers the homomorphic A2B graph;
+`WallTime` covers the complete public server call. Run the executable example
+with `go run ./examples/ckksint/routeb_a2b`.
 
 ## Canonical Route-B depth-2 workflow
 
@@ -75,22 +108,34 @@ finished in 106.18 seconds with maximum error `2.88e-7` and zero mismatches.
 
 ## Gao/OpenFHE A2B comparison
 
-From the repository root:
+Generate the Lattigo side from the repository root:
+
+```powershell
+go run ./cmd/benchmark-ckksint-a2b -host-id <host-id> -out lattigo-a2b.json
+```
+
+The focused Gao/OpenFHE drivers are in
+`research/benchmarks/gao_openfhe_a2b_full` and
+`research/benchmarks/gao_openfhe_a2b_matched`. The canonical full driver
+validates 8,192 words after every evaluation. The 512-word sparse driver is the
+shape-matched candidate, but the pinned upstream implementation currently
+fails its correctness warmup and therefore emits no performance artifact.
+
+`compare-ckksint` accepts only two verified canonical-v2 artifacts with
+identical protocol, workload, packing, host, single-thread setting, and
+warmup/repeat policy:
 
 ```powershell
 go run ./cmd/compare-ckksint `
-  -openfhe-log research/reproduction/benchmarks/gao_openfhe_vs_lattigo_2026-09-04/gao_openfhe_bench8_source.log `
-  -lattigo-json research/reproduction/route_b/route_b_l11_a2b_full_2026-09-01.json `
+  -openfhe-json openfhe-matched.json `
+  -lattigo-json lattigo-a2b.json `
   -out comparison.json
 ```
 
-The command compares complete 8-bit A2B calls and reports both latency and
-effective words/second. It also exposes the packing difference: Gao/OpenFHE
-uses 8,192 lanes while the current Lattigo Route-B profile uses 512 words. An
-OpenFHE `Error in ...` line or a nonzero Lattigo mismatch count fails the run.
-The Lattigo input must be the complete result envelope: the command invokes its
-full validator to replay the 2×2,048 decoded slots, input digest, lifecycle
-linkage, error maxima, and zero-mismatch ledger before accepting the timing.
+It deliberately rejects Gao's 8,192-word full artifact against Lattigo's
+512-word sparse artifact instead of presenting their native-packing throughput
+as a matched ratio. The measured native configurations remain available as
+separate raw-sample artifacts in the reproduction report.
 
 ## Profiles and interoperation
 
@@ -117,7 +162,7 @@ the Route-B session serialize their public calls.
 
 ```powershell
 go test -count=1 ./ckksint ./integer/secureeval
-go test -count=1 ./internal/benchcmp ./cmd/compare-ckksint
+go test -count=1 ./internal/benchcmp ./cmd/compare-ckksint ./cmd/benchmark-ckksint-a2b
 go test -mod=mod -count=1 ./ckksint -run TestExternalModuleImportsCKKSIntWithoutVendor
 ```
 
@@ -127,4 +172,12 @@ The real Route-B test is opt-in because it executes the full N=2^16 graph:
 $env:LCPDTE_ROUTE_B_E2E = "1"
 go test -count=1 ./ckksint -run TestCanonicalRouteBDepth2EndToEnd -v
 Remove-Item Env:LCPDTE_ROUTE_B_E2E
+```
+
+The reusable A2B acceptance test is also opt-in:
+
+```powershell
+$env:LCPDTE_ROUTE_B_A2B_E2E = "1"
+go test -count=1 ./ckksint -run TestCanonicalRouteBA2BReusesPreparedEvaluator -v
+Remove-Item Env:LCPDTE_ROUTE_B_A2B_E2E
 ```

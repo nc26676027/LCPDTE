@@ -393,6 +393,26 @@ Update this file after every two browsing/view operations and after each materia
 
 ## 2026-09-04 Gao/OpenFHE performance acceptance scope
 
+### Phase-10 correction opened
+
+- The prior 32.693 s Lattigo number includes per-call Route-B circuit/STC construction, while Gao/OpenFHE constructs/precomputes outside its timed region and reports a warm five-run mean after one warmup.
+- The prior throughput ratio also mixes 512 useful Lattigo words with 8,192 OpenFHE words. Phase 10 will compare a matched 512-word Gao sparse path and retain the full-packed Gao number only as a separately labelled reference.
+- Confirmed TDD seams: callers observe repeatable evaluation through a public prepared A2B evaluator; benchmark consumers observe setup time, online samples, warmup/repeat counts and useful-word packing through the benchmark artifact/parser boundary.
+- Scope is proportional: fix these measured distortions and the usable library path; do not add unrelated security or compatibility scaffolding.
+- Source confirmation: `runCanonicalRouteBFirstSparseA2BFull` starts its wall timer before `newRouteBA2BFullCircuit`; that constructor builds the first-round circuit, the 256-bit L3→L1 STC, masks and ID scaling plaintexts. The existing `FullA2B.WallNanoseconds` therefore measures setup plus online HE.
+- The installed evaluator already transitions to an `Operational` lineage after the first authorized operation, but no API consumes that state. The public depth-2 server adds a second single-use boolean. A reusable prepared A2B seam can preserve the first-operation preflight and serialize later calls instead of rebuilding cryptographic setup.
+- The current comparator hard-codes Gao as `warmup=1/repeats=5` and Lattigo as `warmup=0/repeats=1`, and intentionally allows a 16× lane mismatch. Those constants and the v1 summary are the behavioral seam to replace with measured sample metadata and matched-workload admission.
+
+### Phase-10 diagnosis and repaired benchmark
+
+- The reusable Route-B evaluator moves immutable circuit construction and both bound Gao kernels out of prepared-online timing. Five final-code Lattigo samples are `25.080237627`, `26.298585630`, `24.436183473`, `25.039048162`, and `25.267682842` seconds: mean `25.2243475468 s`, median `25.080237627 s`, 512 words, zero mismatches. This is a `22.85%` improvement over the former `32.693327852 s` cold one-shot result.
+- A two-evaluation CPU profile rules out wrapper copies, equality checks, trace snapshots and state bookkeeping as the online gap: together they are below `1%` of online CPU samples. The dominant work is two STC/CTS paths, two ModRaise/Trace paths, and the two Gao polynomial kernels.
+- The public steady-state path did contain avoidable work outside the operator timer: it re-hashed the 2.64-GiB resident DFT artifact, validated each full result report twice, and called `FreeOSMemory` before every request. The accepted repeat path trusts the sealed, session-private resident state and first capacity admission after the complete first-operation gate, retains lightweight lineage/state checks, validates the result once, and keeps allocator pages warm.
+- The same-host Gao/OpenFHE canonical full rerun passed one warmup and five complete 65,536-bit checks. Samples are `21.505279292`, `21.592824670`, `22.458065312`, `22.027393699`, and `22.612968783` seconds: mean `22.0393063512 s`, median `22.027393699 s`, 8,192 words, zero mismatches.
+- At native packing, OpenFHE's complete call is `12.63%` lower latency. Its `18.31x` higher word throughput is predominantly a packing result: the OpenFHE full configuration carries `16x` as many useful words. It is therefore retained as a native-configuration comparison rather than a matched speedup ratio.
+- The focused Gao sparse driver independently verifies its encoder/decryptor on all 4,096 bits, then the pinned upstream `EvalArithToBooleanSparse` warmup fails with 2,107 mismatches. It exits before collecting samples and emits no benchmark artifact. The strict v2 comparator consequently has no admissible matched pair and correctly rejects full-vs-sparse artifacts at the packing identity gate.
+- OpenFHE uses Release Clang, Intel HEXL and native optimization, while the measured Lattigo hotspots are pure-Go NTT/Montgomery arithmetic. A faster generic Lattigo bootstrap does not determine the winner for this two-round integer circuit with different native packing.
+
 - Production acceptance is defined here by two deliverables: a reproducible performance comparison against Gao et al.'s OpenFHE implementation and a public-library workflow that runs setup/keygen, encryption, server-side evaluation, decryption and verification end to end.
 - The authoritative upstream command is `OMP_NUM_THREADS=1 ./bin/examples/pke/benchmark-full 8 bench`. Its `bench` mode fixes ring dimension `2^16`, requests `HEStd_128_classic`, performs one correctness warmup and reports the mean of five timed calls.
 - For `zN=8`, Gao full packing carries 8,192 arithmetic words. The committed upstream log reports A2B `10.1368 s`, batched A2B `13.13 s`, B2A `0.66466 s` and MultFull `0.0941889 s`; these remain source-provided reference observations until rerun on the acceptance host.

@@ -532,6 +532,19 @@
 
 ## 2026-09-04 Gao/OpenFHE performance acceptance
 
+### Phase-10 TDD repair started
+
+- **Status:** in progress
+- Loaded the TDD, implementation, Graphify, file-planning and proportionality contracts; the public test seams are the reusable prepared evaluator and the benchmark artifact/parser.
+- Planning catch-up attempt 1 failed because Windows `python` resolves to the Microsoft Store alias. Attempt 2 used Graphify's recorded Python interpreter and completed with no unsynchronized-session report.
+- Recorded the two confirmed defects before implementation: Route-B online time contains construction/precomputation, and the previous comparison uses incompatible warmup/repeat and packing protocols.
+- Refreshed Graphify lessons, expanded the query only with graph vocabulary, and traced the evaluator/bootstrap/benchmark/packing neighborhood. Direct source inspection remains authoritative because the traversal is broad and vendor-heavy.
+- Inspected Route-B full-A2B, installed lifecycle, public depth-2 wrapper and benchmark comparator. No production source has been edited yet; the next action is the first RED public-behavior test.
+- TDD slice 1 RED: `TestComparisonRejectsDifferentPacking` failed because the comparator returned success for 8,192 versus 512 lanes. GREEN: `Compare` now rejects the mismatch; the focused test passes. The superseded v1 success test will be converted only after a matched fixture exists.
+- TDD slice 2 RED/GREEN: a packing-matched pair with OpenFHE `1/5` and Lattigo `0/1` was accepted; `Compare` now rejects timing-protocol mismatches and the focused test passes.
+- TDD slice 3 RED was a compile failure because `Measurement` had no timing-scope contract. The minimal GREEN adds `TimingScopePreparedOnline` and rejects any ratio unless both measurements declare it; the focused test passes.
+- Public prepared-A2B E2E attempt 1 completed the first conversion, then correctly stopped before the second HE dispatch because transient allocations left process use at 26.19 GiB and the existing first-operation capacity estimate would cross the 80% gate. The operational path now releases transient heap before its fresh capacity sample; this is outside prepared-online timing.
+
 - User narrowed production acceptance to Gao/OpenFHE performance comparison and an end-to-end usable library example; malicious-security, side-channel and unrelated hardening tracks are outside this implementation phase.
 - Updated `CONTEXT.md` so `Production Acceptance` means matched Gao performance evidence plus an end-to-end workflow, and `End-to-End Example` names setup, encryption, server evaluation, decryption and verification through the public library boundary.
 - Queried the existing project graph with `gao, performance, comparison, example, ckks, integer, operator, evaluation, full, source, depth, tree`, then confirmed all benchmark facts against the pinned upstream source.
@@ -555,3 +568,18 @@
 - Corrected the resource column to `Whole-command peak RSS` and recorded that the OpenFHE and Lattigo command scopes differ, so those two peaks are not an operator-level memory ratio. The latency and packed-throughput comparison remains unchanged and both source-artifact and same-host summaries replay byte-identically from tracked inputs.
 - Closed the Apache-2.0 derivative notice gate by adding a prominent modification notice to all 137 embedded Lattigo Go files and recording the v6.1.1 origin and modification categories in `lattigo/NOTICE`; `go mod tidy -diff` and `go mod verify` are clean.
 - Production acceptance for the frozen Phase-9 scope is complete. Final Standards and Spec reviews both returned PASS with no P0-P2 findings; focused benchmark/CLI tests and vet pass, every module package compiles with `-mod=readonly`, full-repository vet passes, and the accepted implementation is committed on `main` as `d23e93a`, `415f26f`, and `b3733a4` without a remote push.
+
+### Phase-10 prepared A2B repair
+
+- TDD RED/GREEN completed for a public reusable Route-B A2B session, prepared-online timing metadata, five raw samples, strict matched-artifact admission, and a steady-state operation that consumes sealed resident state without repeating full artifact validation.
+- Added `NewCanonicalRouteBA2B` with opaque session-bound input/output types and a Lattigo-style `examples/ckksint/routeb_a2b` program covering setup, encryption, reusable evaluation, decryption, byte reconstruction, timings and zero-mismatch failure handling.
+- Added `benchmark-ckksint-a2b`, canonical benchmark schema v2, strict `compare-ckksint` admission, a focused 512-word Gao sparse driver, and a canonical 8,192-word Gao full driver. Both OpenFHE drivers compile against pinned commit `08f1eb8` in Release/HEXL/native mode.
+- Real public A2B reuse passed twice with nonzero first-call preparation, zero second-call preparation and every requested bit correct. The initial second-call capacity failure was fixed by releasing transient Go heap before the existing fresh capacity sample.
+- Performance profiling showed that in-timer copies and evidence checks are under `1%`; the dominant online costs are DFT/ModRaise and polynomial kernels. Removed the measured steady-state over-defense outside the timer: repeated 2.64-GiB resident hashing, duplicate full-report validation, capacity resampling, and per-request `FreeOSMemory`.
+- Final-code Lattigo benchmark passed 1 warmup + 5 verified calls at `25.2243475468 s` mean for 512 words and zero mismatches, improving `22.85%` over the previous cold one-shot result. Whole command exited 0 and peaked at `15,097,008 KiB` RSS.
+- Gao/OpenFHE canonical full passed 1 warmup + 5 verified calls at `22.0393063512 s` mean for 8,192 words and zero mismatches. Whole command exited 0 and peaked at `24,067,576 KiB` RSS.
+- The matched 512-word Gao sparse candidate passed its independent 4,096-bit codec self-check but failed the pinned upstream A2B warmup with 2,107 mismatches, exited before timing and emitted no artifact. No matched ratio is published; the comparator rejects the two valid native artifacts because their packing identities differ.
+- Raw artifacts, resource records, commands, environment and interpretation are recorded under `research/reproduction/benchmarks/gao_openfhe_vs_lattigo_prepared_2026-09-04`.
+- Final verification passed on the accepted tree: affected Go packages, benchmark/comparison commands and examples pass; `go vet ./...`, full module compile-only traversal, module integrity checks, Python artifact validators, shell syntax checks, checksum replay and `git diff --check` all pass. The historical `homchain` suite was not rerun monolithically because that attempt again entered its known long-running path; its exhaustive 181/181 sharded result remains the applicable unchanged-package evidence.
+- Final independent Standards and Spec reviews both report PASS with no P0--P2 or P3 findings. The OpenFHE source copy used by the build helpers is generated only inside the ignored clean-source build tree; the pinned upstream checkout has no project-driver residue.
+- Phase 10 is complete and committed locally on `main`. No remote push was performed.

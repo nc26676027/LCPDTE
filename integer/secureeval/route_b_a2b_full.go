@@ -698,6 +698,15 @@ type routeBA2BFullCircuit struct {
 	idScaleDigest   string
 }
 
+// routeBA2BFullPreparedEvaluator owns the immutable circuit material and the
+// two key-bound Gao kernels used by every sequential evaluation.
+type routeBA2BFullPreparedEvaluator struct {
+	source  *bootstrapping.Evaluator
+	circuit *routeBA2BFullCircuit
+	kernel0 *homchain.GaoA2BKernelN16L11Evaluator
+	kernel1 *homchain.GaoA2BKernelN16L11Evaluator
+}
+
 func newRouteBA2BFullCircuit(evaluator *bootstrapping.Evaluator) (*routeBA2BFullCircuit, error) {
 	first, err := newRouteBA2BFirstRoundCircuit(evaluator)
 	if err != nil {
@@ -723,6 +732,32 @@ func newRouteBA2BFullCircuit(evaluator *bootstrapping.Evaluator) (*routeBA2BFull
 	}, nil
 }
 
+func newRouteBA2BFullPreparedEvaluator(
+	evaluator *bootstrapping.Evaluator,
+) (*routeBA2BFullPreparedEvaluator, error) {
+	if evaluator == nil || evaluator.Evaluator == nil || evaluator.DFTEvaluator == nil {
+		return nil, lineagef("Route-B full A2B evaluator is nil")
+	}
+	circuit, err := newRouteBA2BFullCircuit(evaluator)
+	if err != nil {
+		return nil, err
+	}
+	kernel0, err := bindRouteBA2BFirstRoundKernel(circuit.first.kernel, evaluator)
+	if err != nil {
+		return nil, fmt.Errorf("secureeval: bind Route-B full A2B iter0 kernel: %w", err)
+	}
+	kernel1, err := bindRouteBA2BFirstRoundKernel(circuit.first.kernel, evaluator)
+	if err != nil {
+		return nil, fmt.Errorf("secureeval: bind Route-B full A2B iter1 kernel: %w", err)
+	}
+	if kernel0 == kernel1 {
+		return nil, lineagef("Route-B full A2B kernel evaluator instances are aliased")
+	}
+	return &routeBA2BFullPreparedEvaluator{
+		source: evaluator, circuit: circuit, kernel0: kernel0, kernel1: kernel1,
+	}, nil
+}
+
 // RunFirstSparseA2BFull executes the one authorized complete two-round 8-bit
 // conversion. Capacity admission and installed-resident validation occur
 // before supplemental construction or HE dispatch.
@@ -739,13 +774,21 @@ func (installed *RouteBInstalledEvaluator) RunFirstSparseA2BFull(
 		evaluator *bootstrapping.Evaluator,
 		ciphertext *rlwe.Ciphertext,
 	) (*rlwe.Ciphertext, routeBFirstOperationObservation, error) {
-		low, high, firstObservation, report, runErr := runCanonicalRouteBFirstSparseA2BFull(evaluator, ciphertext)
+		preparationStarted := time.Now()
+		prepared, prepareErr := newRouteBA2BFullPreparedEvaluator(evaluator)
+		if prepareErr != nil {
+			return nil, routeBFirstOperationObservation{}, prepareErr
+		}
+		preparationWall := uint64(time.Since(preparationStarted).Nanoseconds())
+		if preparationWall == 0 {
+			preparationWall = 1
+		}
+		low, high, firstObservation, report, runErr := prepared.evaluateNew(ciphertext)
 		if runErr != nil {
 			return nil, routeBFirstOperationObservation{}, runErr
 		}
-		if reportErr := report.Validate(); reportErr != nil {
-			return nil, routeBFirstOperationObservation{}, reportErr
-		}
+		installed.cell.preparedA2BFull = prepared
+		installed.cell.preparedA2BFullWallNanos = preparationWall
 		capturedHigh = high
 		fullReport = report
 		return low, firstObservation, nil
@@ -765,6 +808,47 @@ func (installed *RouteBInstalledEvaluator) RunFirstSparseA2BFull(
 	return RouteBA2BFullResult{lowMSB: low, highMSB: capturedHigh}, firstOperation, fullReport, nil
 }
 
+// RunSparseA2BFull executes another complete conversion with the circuit
+// prepared by RunFirstSparseA2BFull. Calls on copies of the same installed
+// evaluator are serialized by the shared cell.
+func (installed *RouteBInstalledEvaluator) RunSparseA2BFull(
+	input *rlwe.Ciphertext,
+) (
+	result RouteBA2BFullResult,
+	operation RouteBFirstOperationReport,
+	fullReport RouteBA2BFullReport,
+	err error,
+) {
+	var capturedHigh *rlwe.Ciphertext
+	runner := func(
+		evaluator *bootstrapping.Evaluator,
+		ciphertext *rlwe.Ciphertext,
+	) (*rlwe.Ciphertext, routeBFirstOperationObservation, error) {
+		if installed == nil || installed.cell == nil || installed.cell.preparedA2BFull == nil ||
+			installed.cell.preparedA2BFull.source != evaluator {
+			return nil, routeBFirstOperationObservation{}, lineagef("Route-B full A2B evaluator is not prepared")
+		}
+		low, high, observation, report, runErr := installed.cell.preparedA2BFull.evaluateNew(ciphertext)
+		if runErr != nil {
+			return nil, routeBFirstOperationObservation{}, runErr
+		}
+		capturedHigh = high
+		fullReport = report
+		return low, observation, nil
+	}
+	low, operation, err := installed.runOperationalA2BFullWithHooks(
+		input,
+		runner,
+	)
+	if err != nil {
+		return RouteBA2BFullResult{}, RouteBFirstOperationReport{}, RouteBA2BFullReport{}, err
+	}
+	if low == nil || capturedHigh == nil || fullReport.Digest == "" {
+		return RouteBA2BFullResult{}, RouteBFirstOperationReport{}, RouteBA2BFullReport{}, lineagef("Route-B prepared full A2B returned an incomplete result")
+	}
+	return RouteBA2BFullResult{lowMSB: low, highMSB: capturedHigh}, operation, fullReport, nil
+}
+
 func runCanonicalRouteBFirstSparseA2BFull(
 	evaluator *bootstrapping.Evaluator,
 	input *rlwe.Ciphertext,
@@ -775,24 +859,33 @@ func runCanonicalRouteBFirstSparseA2BFull(
 	report RouteBA2BFullReport,
 	err error,
 ) {
-	started := time.Now()
-	if evaluator == nil || evaluator.Evaluator == nil || evaluator.DFTEvaluator == nil || input == nil {
-		return nil, nil, firstObservation, report, lineagef("Route-B full A2B evaluator or input is nil")
-	}
-	circuit, err := newRouteBA2BFullCircuit(evaluator)
+	prepared, err := newRouteBA2BFullPreparedEvaluator(evaluator)
 	if err != nil {
 		return nil, nil, firstObservation, report, err
 	}
-	kernel0Evaluator, err := bindRouteBA2BFirstRoundKernel(circuit.first.kernel, evaluator)
-	if err != nil {
-		return nil, nil, firstObservation, report, fmt.Errorf("secureeval: bind Route-B full A2B iter0 kernel: %w", err)
+	return prepared.evaluateNew(input)
+}
+
+func (prepared *routeBA2BFullPreparedEvaluator) evaluateNew(
+	input *rlwe.Ciphertext,
+) (
+	lowMSB *rlwe.Ciphertext,
+	highMSB *rlwe.Ciphertext,
+	firstObservation routeBFirstOperationObservation,
+	report RouteBA2BFullReport,
+	err error,
+) {
+	started := time.Now()
+	if prepared == nil || prepared.source == nil || prepared.circuit == nil ||
+		prepared.kernel0 == nil || prepared.kernel1 == nil || input == nil {
+		return nil, nil, firstObservation, report, lineagef("Route-B prepared full A2B evaluator or input is nil")
 	}
-	kernel1Evaluator, err := bindRouteBA2BFirstRoundKernel(circuit.first.kernel, evaluator)
-	if err != nil {
-		return nil, nil, firstObservation, report, fmt.Errorf("secureeval: bind Route-B full A2B iter1 kernel: %w", err)
-	}
-	if kernel0Evaluator == kernel1Evaluator {
-		return nil, nil, firstObservation, report, lineagef("Route-B full A2B kernel evaluator instances are aliased")
+	evaluator := prepared.source
+	circuit := prepared.circuit
+	kernel0Evaluator := prepared.kernel0
+	kernel1Evaluator := prepared.kernel1
+	if evaluator.Evaluator == nil || evaluator.DFTEvaluator == nil {
+		return nil, nil, firstObservation, report, lineagef("Route-B prepared full A2B source evaluator is incomplete")
 	}
 	params := evaluator.BootstrappingParameters
 	defaultScale := params.DefaultScale()

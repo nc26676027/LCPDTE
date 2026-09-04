@@ -1,0 +1,29 @@
+{
+  "schema": "lcpdte-ckksint-a2b-benchmark-v2",
+  "implementation": "lattigo-route-b",
+  "completed_at": "2026-09-04T08:30:00.352174043Z",
+  "host_id": "laptop-a8eol5vm-wsl2",
+  "protocol": "gao-a2b-sparse-z8-w4-v1",
+  "workload_id": "uint8-0to255-twice",
+  "packing_id": "n65536-cslots2048-zslots512-w4",
+  "output_container": "two-ciphertexts-low4-high4",
+  "word_bits": 8,
+  "ring_dimension": 65536,
+  "packing_slots": 2048,
+  "useful_words": 512,
+  "threads": 1,
+  "timing_scope": "prepared-online",
+  "setup_nanoseconds": 37674321160,
+  "warmup_count": 1,
+  "warmup_verified": true,
+  "repeat_count": 5,
+  "timed_samples_nanoseconds": [
+    25080237627,
+    26298585630,
+    24436183473,
+    25039048162,
+    25267682842
+  ],
+  "mismatch_count": 0,
+  "verified_evaluations": 5
+}

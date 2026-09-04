@@ -218,6 +218,50 @@ func TestRouteBInstalledEvaluatorA2BFullUsesExpandedGateBeforeHE(t *testing.T) {
 	}
 }
 
+func TestRouteBInstalledEvaluatorPreparedA2BRepeatUsesSealedResidentState(t *testing.T) {
+	admitted := scriptedPhysicalMemoryResult{
+		totals: physicalMemoryTotals{total: 33_617_782_768, available: 17_151_951_897},
+	}
+	sampler := &scriptedPhysicalMemorySampler{results: []scriptedPhysicalMemoryResult{
+		admitted, admitted, admitted, admitted, admitted,
+	}}
+	fixture := newSmallRouteBInstalledFixture(t, sampler)
+	firstOutput, _, err := fixture.installed.runFirstOperationWithHooks(
+		new(rlwe.Ciphertext), routeBCapacityGateA2BFull, routeBRuntimeOperationA2BFull,
+		fixture.installedResidentValidator(new(int)),
+		func(*bootstrapping.Evaluator, bootstrapping.PreparedParameters) error { return nil },
+		func(*bootstrapping.Evaluator, *rlwe.Ciphertext) (*rlwe.Ciphertext, routeBFirstOperationObservation, error) {
+			return new(rlwe.Ciphertext), canonicalTestRouteBFirstOperationObservation(), nil
+		},
+	)
+	if err != nil || firstOutput == nil {
+		t.Fatalf("prepare operational A2B fixture: output=%v err=%v", firstOutput, err)
+	}
+	fixture.installed.cell.preparedA2BFull = &routeBA2BFullPreparedEvaluator{
+		source: fixture.installed.cell.evaluator,
+	}
+
+	runnerCalls := 0
+	output, report, err := fixture.installed.runOperationalA2BFullWithHooks(
+		new(rlwe.Ciphertext),
+		func(*bootstrapping.Evaluator, *rlwe.Ciphertext) (*rlwe.Ciphertext, routeBFirstOperationObservation, error) {
+			runnerCalls++
+			return new(rlwe.Ciphertext), canonicalTestRouteBFirstOperationObservation(), nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output == nil || report.Validate() != nil || runnerCalls != 1 ||
+		report.RuntimeCapacity.Operation != routeBRuntimeOperationA2BFull ||
+		fixture.permit.lineage.state.Load() != uint32(routeBLineageOperational) ||
+		fixture.permit.lineage.lastConsumedGeneration.Load() != 5 || sampler.calls != 5 {
+		t.Fatalf("prepared repeat output/report/run/state/generation=%v/%+v/%d/%d/%d",
+			output, report, runnerCalls, fixture.permit.lineage.state.Load(),
+			fixture.permit.lineage.lastConsumedGeneration.Load())
+	}
+}
+
 func TestRouteBInstalledEvaluatorSigned8RootTreeUsesExpandedGateBeforeHE(t *testing.T) {
 	admitted := scriptedPhysicalMemoryResult{
 		totals: physicalMemoryTotals{total: 33_617_782_768, available: 17_151_951_897},

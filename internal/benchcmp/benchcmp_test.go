@@ -197,36 +197,92 @@ func TestParseLattigoRouteBRejectsNonCanonicalShape(t *testing.T) {
 	}
 }
 
-func TestComparisonMakesLaneMismatchExplicit(t *testing.T) {
-	openfhe := mustParseOpenFHE(t)
-	lattigo := mustParseLattigo(t)
+func TestParseCanonicalDerivesStatisticsFromVerifiedSamples(t *testing.T) {
+	got, err := benchcmp.ParseCanonical(strings.NewReader(canonicalArtifactJSON("openfhe", []uint64{
+		9_000_000_000, 11_000_000_000, 10_000_000_000, 12_000_000_000, 8_000_000_000,
+	})), "openfhe.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got.Source != "openfhe" || got.Provenance != "openfhe.json" {
+		t.Fatalf("identity=%+v", got)
+	}
+	if got.A2BMeanNanoseconds != 10_000_000_000 || got.A2BMedianNanoseconds != 10_000_000_000 {
+		t.Fatalf("aggregates=%+v", got)
+	}
+	if math.Abs(got.EffectiveWordsPerSecond-51.2) > 1e-12 {
+		t.Fatalf("words/s=%.12f", got.EffectiveWordsPerSecond)
+	}
+	if got.Repeats != 5 || got.VerifiedEvaluations != 5 || len(got.TimedSamplesNanoseconds) != 5 {
+		t.Fatalf("sample protocol=%+v", got)
+	}
+}
+
+func TestParseCanonicalDerivesEvenSampleMedian(t *testing.T) {
+	got, err := benchcmp.ParseCanonical(
+		strings.NewReader(canonicalArtifactJSON("openfhe", []uint64{1, 2, 3, 100})),
+		"openfhe.json",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.A2BMeanNanoseconds != 26.5 || got.A2BMedianNanoseconds != 2.5 {
+		t.Fatalf("mean=%f median=%f", got.A2BMeanNanoseconds, got.A2BMedianNanoseconds)
+	}
+}
+
+func TestParseCanonicalRejectsUnverifiedOrZeroTimedSamples(t *testing.T) {
+	tests := []struct {
+		name        string
+		payload     string
+		wantMessage string
+	}{
+		{
+			name:        "zero sample",
+			payload:     canonicalArtifactJSON("openfhe", []uint64{9_000_000_000, 0, 10_000_000_000, 12_000_000_000, 8_000_000_000}),
+			wantMessage: "timed_samples_nanoseconds[1] must be nonzero",
+		},
+		{
+			name:        "verification count",
+			payload:     strings.Replace(canonicalArtifactJSON("openfhe", canonicalSamples()), `"verified_evaluations":5`, `"verified_evaluations":4`, 1),
+			wantMessage: "verified_evaluations=4, want repeat_count=5",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := benchcmp.ParseCanonical(strings.NewReader(test.payload), "invalid.json")
+			if err == nil || !strings.Contains(err.Error(), test.wantMessage) {
+				t.Fatalf("error=%v, want substring %q", err, test.wantMessage)
+			}
+		})
+	}
+}
+
+func TestComparisonUsesOnlyMatchedCanonicalMeasurements(t *testing.T) {
+	openfhe := mustParseCanonical(t, "gao-openfhe-a2b-sparse", []uint64{
+		9_000_000_000, 11_000_000_000, 10_000_000_000, 12_000_000_000, 8_000_000_000,
+	})
+	lattigo := mustParseCanonical(t, "lattigo-route-b", []uint64{
+		7_000_000_000, 9_000_000_000, 8_000_000_000, 10_000_000_000, 6_000_000_000,
+	})
+	lattigo.OutputContainer = "two-serial-ciphertexts"
 
 	got, err := benchcmp.Compare(openfhe, lattigo)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Schema != "lcpdte-ckksint-a2b-comparison-v1" {
+	if got.Schema != "lcpdte-ckksint-a2b-comparison-v2" {
 		t.Fatalf("schema=%q", got.Schema)
 	}
-	if !got.Comparison.LaneMismatch || got.Comparison.OpenFHELanesPerLattigoLane != 16 {
-		t.Fatalf("lane comparison=%+v", got.Comparison)
+	if math.Abs(got.Comparison.MeanLatencyRatioLattigoOverOpenFHE-0.8) > 1e-12 ||
+		math.Abs(got.Comparison.MedianLatencyRatioLattigoOverOpenFHE-0.8) > 1e-12 ||
+		math.Abs(got.Comparison.EffectiveThroughputRatioLattigoOverOpenFHE-1.25) > 1e-12 {
+		t.Fatalf("comparison=%+v", got.Comparison)
 	}
-	if !got.Comparison.SameWordBits || !got.Comparison.SameRingDimension {
-		t.Fatalf("shape comparison=%+v", got.Comparison)
-	}
-	if math.Abs(got.Comparison.WholeCallLatencyRatioLattigoOverOpenFHE-2.548165) > 1e-6 {
-		t.Fatalf("latency ratio=%f", got.Comparison.WholeCallLatencyRatioLattigoOverOpenFHE)
-	}
-	if math.Abs(got.Comparison.EffectiveThroughputRatioLattigoOverOpenFHE-0.024527) > 1e-6 {
-		t.Fatalf("throughput ratio=%f", got.Comparison.EffectiveThroughputRatioLattigoOverOpenFHE)
-	}
-
-	wantText := "schema=lcpdte-ckksint-a2b-comparison-v1\n" +
-		"openfhe source=gao-openfhe-benchmark-full provenance=\"testdata/openfhe_bench8.log\" a2b_latency_ns=10136800000 a2b_latency_seconds=10.136800 effective_words_per_second=808.144582 word_bits=8 ring_dimension=65536 lanes=8192 warmup=1 repeats=5 mismatch_count=0\n" +
-		"lattigo source=lattigo-route-b-l11-a2b-full provenance=\"testdata/lattigo_route_b.json\" a2b_latency_ns=25830240800 a2b_latency_seconds=25.830241 effective_words_per_second=19.821728 word_bits=8 ring_dimension=65536 lanes=512 warmup=0 repeats=1 mismatch_count=0\n" +
-		"comparison lane_mismatch=true openfhe_lanes_per_lattigo_lane=16.000000 same_word_bits=true same_ring_dimension=true whole_call_latency_ratio_lattigo_over_openfhe=2.548165 effective_throughput_ratio_lattigo_over_openfhe=0.024527\n"
-	if text := benchcmp.FormatText(got); text != wantText {
-		t.Fatalf("text summary:\n%s\nwant:\n%s", text, wantText)
+	if !strings.Contains(benchcmp.FormatText(got), "mean_latency_ratio_lattigo_over_openfhe=0.800000") {
+		t.Fatalf("text summary:\n%s", benchcmp.FormatText(got))
 	}
 
 	first, err := benchcmp.MarshalJSON(got)
@@ -240,32 +296,115 @@ func TestComparisonMakesLaneMismatchExplicit(t *testing.T) {
 	if !bytes.Equal(first, second) || !json.Valid(first) || first[len(first)-1] != '\n' {
 		t.Fatalf("unstable JSON summary:\n%s", first)
 	}
-	if !bytes.Contains(first, []byte(`"provenance": "testdata/openfhe_bench8.log"`)) ||
-		!bytes.Contains(first, []byte(`"provenance": "testdata/lattigo_route_b.json"`)) {
-		t.Fatalf("JSON summary lacks input provenance:\n%s", first)
+	if bytes.Contains(first, []byte(`"a2b_latency_nanoseconds"`)) || bytes.Contains(first, []byte(`"lanes"`)) {
+		t.Fatalf("v2 summary leaked legacy aggregate fields:\n%s", first)
 	}
 }
 
-func TestComparisonRejectsDifferentWordBits(t *testing.T) {
-	openfhe := mustParseOpenFHE(t)
-	lattigo := mustParseLattigo(t)
-	lattigo.WordBits = 16
+func TestComparisonRejectsSwappedOrDuplicatedImplementationRoles(t *testing.T) {
+	openfhe := mustParseCanonical(t, "gao-openfhe-a2b-sparse", canonicalSamples())
+	lattigo := mustParseCanonical(t, "lattigo-route-b", canonicalSamples())
 
-	_, err := benchcmp.Compare(openfhe, lattigo)
-	if err == nil || !strings.Contains(err.Error(), "word_bits mismatch") {
-		t.Fatalf("error=%v", err)
+	if _, err := benchcmp.Compare(lattigo, openfhe); err == nil || !strings.Contains(err.Error(), "OpenFHE implementation") {
+		t.Fatalf("swapped roles error=%v", err)
+	}
+	if _, err := benchcmp.Compare(lattigo, lattigo); err == nil || !strings.Contains(err.Error(), "OpenFHE implementation") {
+		t.Fatalf("duplicated Lattigo role error=%v", err)
+	}
+	if _, err := benchcmp.Compare(openfhe, openfhe); err == nil || !strings.Contains(err.Error(), "Lattigo implementation") {
+		t.Fatalf("duplicated OpenFHE role error=%v", err)
 	}
 }
 
-func TestComparisonRejectsDifferentRingDimensions(t *testing.T) {
-	openfhe := mustParseOpenFHE(t)
-	lattigo := mustParseLattigo(t)
-	lattigo.RingDimension = 32_768
-
-	_, err := benchcmp.Compare(openfhe, lattigo)
-	if err == nil || !strings.Contains(err.Error(), "ring_dimension mismatch") {
-		t.Fatalf("error=%v", err)
+func TestComparisonRejectsAnyUnmatchedOrNonCanonicalProtocolDimension(t *testing.T) {
+	tests := []struct {
+		name        string
+		mutate      func(openfhe, lattigo *benchcmp.Measurement)
+		wantMessage string
+	}{
+		{name: "eight bit only", mutate: func(a, b *benchcmp.Measurement) { a.WordBits, b.WordBits = 16, 16 }, wantMessage: "word_bits must be 8"},
+		{name: "word bits", mutate: func(a, b *benchcmp.Measurement) { b.WordBits = 16 }, wantMessage: "word_bits mismatch"},
+		{name: "ring", mutate: func(a, b *benchcmp.Measurement) { b.RingDimension /= 2 }, wantMessage: "ring_dimension mismatch"},
+		{name: "packing slots", mutate: func(a, b *benchcmp.Measurement) { b.PackingSlots /= 2 }, wantMessage: "packing_slots mismatch"},
+		{name: "useful words", mutate: func(a, b *benchcmp.Measurement) { b.UsefulWords /= 2 }, wantMessage: "useful_words mismatch"},
+		{name: "warmup", mutate: func(a, b *benchcmp.Measurement) { b.Warmup++ }, wantMessage: "timing protocol mismatch"},
+		{name: "repeats", mutate: func(a, b *benchcmp.Measurement) {
+			b.Repeats = 4
+			b.TimedSamplesNanoseconds = b.TimedSamplesNanoseconds[:4]
+			b.VerifiedEvaluations = 4
+		}, wantMessage: "timing protocol mismatch"},
+		{name: "threads", mutate: func(a, b *benchcmp.Measurement) { b.Threads = 2 }, wantMessage: "threads must be 1"},
+		{name: "host", mutate: func(a, b *benchcmp.Measurement) { b.HostID = "other-host" }, wantMessage: "host_id mismatch"},
+		{name: "protocol", mutate: func(a, b *benchcmp.Measurement) { b.Protocol = "other-protocol" }, wantMessage: "protocol mismatch"},
+		{name: "workload", mutate: func(a, b *benchcmp.Measurement) { b.WorkloadID = "other-workload" }, wantMessage: "workload_id mismatch"},
+		{name: "packing id", mutate: func(a, b *benchcmp.Measurement) { b.PackingID = "other-packing" }, wantMessage: "packing_id mismatch"},
+		{name: "scope", mutate: func(a, b *benchcmp.Measurement) { b.TimingScope = "setup-and-online" }, wantMessage: "timing scope"},
+		{name: "warmup verification", mutate: func(a, b *benchcmp.Measurement) { b.WarmupVerified = false }, wantMessage: "warmup_verified"},
+		{name: "verification", mutate: func(a, b *benchcmp.Measurement) { b.VerifiedEvaluations = 4 }, wantMessage: "verified_evaluations"},
+		{name: "zero sample", mutate: func(a, b *benchcmp.Measurement) { b.TimedSamplesNanoseconds[2] = 0 }, wantMessage: "must be nonzero"},
 	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			openfhe := mustParseCanonical(t, "gao-openfhe-a2b-sparse", canonicalSamples())
+			lattigo := mustParseCanonical(t, "lattigo-route-b", canonicalSamples())
+			test.mutate(&openfhe, &lattigo)
+			_, err := benchcmp.Compare(openfhe, lattigo)
+			if err == nil || !strings.Contains(err.Error(), test.wantMessage) {
+				t.Fatalf("error=%v, want substring %q", err, test.wantMessage)
+			}
+		})
+	}
+}
+
+func mustParseCanonical(t *testing.T, implementation string, samples []uint64) benchcmp.Measurement {
+	t.Helper()
+	measurement, err := benchcmp.ParseCanonical(strings.NewReader(canonicalArtifactJSON(implementation, samples)), implementation+".json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return measurement
+}
+
+func canonicalSamples() []uint64 {
+	return []uint64{9_000_000_000, 11_000_000_000, 10_000_000_000, 12_000_000_000, 8_000_000_000}
+}
+
+func canonicalArtifactJSON(implementation string, samples []uint64) string {
+	payload := struct {
+		Schema                  string   `json:"schema"`
+		Implementation          string   `json:"implementation"`
+		HostID                  string   `json:"host_id"`
+		Protocol                string   `json:"protocol"`
+		WorkloadID              string   `json:"workload_id"`
+		PackingID               string   `json:"packing_id"`
+		OutputContainer         string   `json:"output_container"`
+		WordBits                uint32   `json:"word_bits"`
+		RingDimension           uint32   `json:"ring_dimension"`
+		PackingSlots            uint32   `json:"packing_slots"`
+		UsefulWords             uint32   `json:"useful_words"`
+		Threads                 uint32   `json:"threads"`
+		TimingScope             string   `json:"timing_scope"`
+		SetupNanoseconds        uint64   `json:"setup_nanoseconds"`
+		WarmupCount             uint32   `json:"warmup_count"`
+		WarmupVerified          bool     `json:"warmup_verified"`
+		RepeatCount             uint32   `json:"repeat_count"`
+		TimedSamplesNanoseconds []uint64 `json:"timed_samples_nanoseconds"`
+		MismatchCount           uint64   `json:"mismatch_count"`
+		VerifiedEvaluations     uint32   `json:"verified_evaluations"`
+	}{
+		Schema: "lcpdte-ckksint-a2b-benchmark-v2", Implementation: implementation,
+		HostID: "ryzen-7-h-255", Protocol: "gao-zheng-int8-a2b-n8-w4", WorkloadID: "signed-int8-512-fixed-v1",
+		PackingID: "complex-slots-2048-words-512-v1", OutputContainer: "one-ciphertext",
+		WordBits: 8, RingDimension: 65_536, PackingSlots: 2_048, UsefulWords: 512, Threads: 1,
+		TimingScope: "prepared-online", SetupNanoseconds: 2_000_000_000, WarmupCount: 1, WarmupVerified: true,
+		RepeatCount: uint32(len(samples)), TimedSamplesNanoseconds: samples, VerifiedEvaluations: uint32(len(samples)),
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		panic(err)
+	}
+	return string(encoded)
 }
 
 func mustParseOpenFHE(t *testing.T) benchcmp.Measurement {

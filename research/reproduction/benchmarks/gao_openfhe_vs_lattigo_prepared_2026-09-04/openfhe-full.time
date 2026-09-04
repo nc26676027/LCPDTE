@@ -1,0 +1,23 @@
+	Command being timed: "env GAO_BUILD_JOBS=1 bash research/benchmarks/gao_openfhe_a2b_full/run_wsl.sh -host-id laptop-a8eol5vm-wsl2 -out research/reproduction/benchmarks/gao_openfhe_vs_lattigo_prepared_2026-09-04/openfhe-full.json"
+	User time (seconds): 375.51
+	System time (seconds): 47.46
+	Percent of CPU this job got: 92%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 7:36.48
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 24067576
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 136398
+	Minor (reclaiming a frame) page faults: 8616240
+	Voluntary context switches: 200372
+	Involuntary context switches: 1084
+	Swaps: 0
+	File system inputs: 7155786
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

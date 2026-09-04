@@ -200,6 +200,11 @@ func (installed *RouteBInstalledEvaluator) runFirstOperationWithHooks(
 	if residentValidator == nil || installedValidator == nil || runner == nil {
 		return nil, RouteBFirstOperationReport{}, lineagef("first-operation validator or runner is nil")
 	}
+	if installed == nil || installed.cell == nil {
+		return nil, RouteBFirstOperationReport{}, lineagef("first-operation input or installed evaluator is empty")
+	}
+	installed.cell.operationMu.Lock()
+	defer installed.cell.operationMu.Unlock()
 	expectedGate, err := routeBCapacityGateForRuntimeOperation(runtimeOperation)
 	if err != nil || expectedGate != capacityGate ||
 		(runtimeOperation != routeBRuntimeOperationPreflight &&
@@ -259,10 +264,7 @@ func (installed *RouteBInstalledEvaluator) runFirstOperationWithHooks(
 		}
 		if !published {
 			lineage.state.Store(uint32(routeBLineageFailed))
-			cell.available.Store(false)
-			clearRouteBInstalledVendorEvaluator(cell.evaluator)
-			cell.evaluator = nil
-			cell.records = RBDFTBuildRecordSet{}
+			clearRouteBInstalledEvaluatorCell(cell)
 			cell.firstOperation = RouteBFirstOperationReport{}
 			output = nil
 			report = RouteBFirstOperationReport{}
@@ -299,6 +301,121 @@ func (installed *RouteBInstalledEvaluator) runFirstOperationWithHooks(
 	lineage.state.Store(uint32(routeBLineageOperational))
 	published = true
 	return output, report, nil
+}
+
+func (installed *RouteBInstalledEvaluator) runOperationalA2BFullWithHooks(
+	input *rlwe.Ciphertext,
+	runner routeBFirstOperationRunner,
+) (
+	output *rlwe.Ciphertext,
+	report RouteBFirstOperationReport,
+	err error,
+) {
+	if runner == nil {
+		return nil, RouteBFirstOperationReport{}, lineagef("operational A2B runner is nil")
+	}
+	if installed == nil || installed.cell == nil {
+		return nil, RouteBFirstOperationReport{}, lineagef("operational A2B input or installed evaluator is empty")
+	}
+	cell := installed.cell
+	cell.operationMu.Lock()
+	defer cell.operationMu.Unlock()
+	if err = validateRouteBOperationalA2BFullInputs(cell, input); err != nil {
+		return nil, RouteBFirstOperationReport{}, err
+	}
+
+	preparedIdentity := cell.ready.Spec.PreparedParameterDigest
+	payload := cell.ready.Spec.ActualPayload
+	pairIdentity := cell.ready.Spec.ArtifactPairManifestDigest
+	runtimeEvidence := cell.firstOperation.RuntimeCapacity
+	if err = runtimeEvidence.Validate(); err != nil {
+		return nil, RouteBFirstOperationReport{}, err
+	}
+	if runtimeEvidence.Operation != routeBRuntimeOperationA2BFull ||
+		runtimeEvidence.LineageIdentity != cell.lineage.readyPermitIdentity {
+		return nil, RouteBFirstOperationReport{}, lineagef("prepared A2B capacity evidence differs from the first admitted operation")
+	}
+	if !cell.lineage.state.CompareAndSwap(
+		uint32(routeBLineageOperational), uint32(routeBLineagePreflighting),
+	) {
+		return nil, RouteBFirstOperationReport{}, lineagef("Route-B lineage is no longer operational")
+	}
+	published := false
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err = fmt.Errorf("secureeval: Route-B operational A2B panicked: %v", recovered)
+		}
+		if !published {
+			cell.lineage.state.Store(uint32(routeBLineageFailed))
+			clearRouteBInstalledEvaluatorCell(cell)
+			output = nil
+			report = RouteBFirstOperationReport{}
+		}
+	}()
+
+	output, observation, err := runner(cell.evaluator, input)
+	if err != nil {
+		return nil, RouteBFirstOperationReport{}, fmt.Errorf("secureeval: execute operational A2B: %w", err)
+	}
+	if output == nil {
+		return nil, RouteBFirstOperationReport{}, lineagef("operational A2B returned nil output")
+	}
+	report, err = newRouteBFirstOperationReport(
+		runtimeEvidence, preparedIdentity, payload, pairIdentity, observation,
+	)
+	if err != nil {
+		return nil, RouteBFirstOperationReport{}, err
+	}
+	cell.lineage.state.Store(uint32(routeBLineageOperational))
+	published = true
+	return output, report, nil
+}
+
+func validateRouteBOperationalA2BFullInputs(
+	cell *routeBInstalledEvaluatorCell,
+	input *rlwe.Ciphertext,
+) error {
+	if cell == nil || input == nil || !cell.available.Load() || cell.evaluator == nil ||
+		cell.preparedA2BFull == nil || cell.preparedA2BFull.source != cell.evaluator {
+		return lineagef("operational A2B input, evaluator, or prepared circuit is empty")
+	}
+	if cell.authority == nil || cell.authority.owner == nil || cell.lineage == nil ||
+		cell.lineage.owner != cell.authority.owner {
+		return lineagef("operational A2B Authority or owner is invalid")
+	}
+	lineage := cell.lineage
+	if lineage.state.Load() != uint32(routeBLineageOperational) {
+		return lineagef("Route-B lineage is not operational")
+	}
+	if err := cell.install.Validate(); err != nil {
+		return err
+	}
+	if err := cell.ready.ValidateFrozenSemantics(); err != nil {
+		return err
+	}
+	if err := cell.firstOperation.Validate(); err != nil {
+		return lineagef("operational A2B first-operation evidence is invalid: %v", err)
+	}
+	readyRecord, err := cell.ready.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	readyIdentity, err := RBAUTHRecordIdentity(readyRecord)
+	if err != nil {
+		return err
+	}
+	if cell.install.Operation != routeBRuntimeOperationInstall ||
+		cell.install.Digest != lineage.installCapacityEvidenceIdentity ||
+		cell.install.LineageIdentity != lineage.readyPermitIdentity ||
+		readyIdentity != lineage.readyPermitIdentity ||
+		cell.ready.Spec.BuildReceiptDigest != lineage.buildReceiptIdentity ||
+		cell.ready.Spec.ArtifactPairManifestDigest != lineage.artifactPairManifestIdentity ||
+		cell.ready.Spec.ActualPayload != lineage.actualPayload ||
+		cell.receipt.Payload != lineage.actualPayload ||
+		cell.receipt.ArtifactManifestDigest != lineage.artifactPairManifestIdentity {
+		return lineagef("operational A2B evaluator differs from its private anchors")
+	}
+	return nil
 }
 
 func validateRouteBFirstOperationInputs(

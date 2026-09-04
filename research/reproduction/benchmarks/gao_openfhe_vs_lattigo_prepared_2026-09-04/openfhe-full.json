@@ -1,0 +1,22 @@
+{
+  "schema": "lcpdte-ckksint-a2b-benchmark-v2",
+  "implementation": "gao-openfhe-a2b-full",
+  "host_id": "laptop-a8eol5vm-wsl2",
+  "protocol": "gao-a2b-full-z8-w4-v1",
+  "workload_id": "uint8-0to255-x32",
+  "packing_id": "n65536-cslots32768-zslots8192-w4",
+  "output_container": "two-ciphertexts-low4-high4",
+  "word_bits": 8,
+  "ring_dimension": 65536,
+  "packing_slots": 32768,
+  "useful_words": 8192,
+  "threads": 1,
+  "timing_scope": "prepared-online",
+  "setup_nanoseconds": 148274586646,
+  "warmup_count": 1,
+  "repeat_count": 5,
+  "timed_samples_nanoseconds": [21505279292, 21592824670, 22458065312, 22027393699, 22612968783],
+  "warmup_verified": true,
+  "verified_evaluations": 5,
+  "mismatch_count": 0
+}

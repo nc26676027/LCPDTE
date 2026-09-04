@@ -17,30 +17,35 @@ func main() {
 func run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("compare-ckksint", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	openFHEPath := flags.String("openfhe-log", "", "Gao benchmark-full text log")
-	lattigoPath := flags.String("lattigo-json", "", "Lattigo route-b-l11-a2b-full JSON envelope")
+	openFHEPath := flags.String("openfhe-json", "", "focused Gao/OpenFHE canonical benchmark JSON")
+	legacyOpenFHEPath := flags.String("openfhe-log", "", "legacy Gao benchmark-full log (descriptive only)")
+	lattigoPath := flags.String("lattigo-json", "", "focused Lattigo canonical benchmark JSON")
 	outputPath := flags.String("out", "", "optional JSON summary path")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}
+	if *legacyOpenFHEPath != "" {
+		fmt.Fprintln(stderr, "compare-ckksint: legacy artifacts are descriptive-only and cannot produce v2 performance ratios; use -openfhe-json with matched canonical artifacts")
+		return 2
+	}
 	if *openFHEPath == "" || *lattigoPath == "" {
-		fmt.Fprintln(stderr, "compare-ckksint: -openfhe-log and -lattigo-json are required")
+		fmt.Fprintln(stderr, "compare-ckksint: -openfhe-json and -lattigo-json are required")
 		return 2
 	}
 
 	openFHEInput, err := os.Open(*openFHEPath)
 	if err != nil {
-		fmt.Fprintf(stderr, "compare-ckksint: open Gao OpenFHE log: %v\n", err)
+		fmt.Fprintf(stderr, "compare-ckksint: open Gao OpenFHE JSON: %v\n", err)
 		return 1
 	}
-	openFHE, err := benchcmp.ParseGaoOpenFHE(openFHEInput, *openFHEPath)
+	openFHE, err := benchcmp.ParseCanonical(openFHEInput, *openFHEPath)
 	closeErr := openFHEInput.Close()
 	if err != nil {
 		fmt.Fprintf(stderr, "compare-ckksint: %v\n", err)
 		return 1
 	}
 	if closeErr != nil {
-		fmt.Fprintf(stderr, "compare-ckksint: close Gao OpenFHE log: %v\n", closeErr)
+		fmt.Fprintf(stderr, "compare-ckksint: close Gao OpenFHE JSON: %v\n", closeErr)
 		return 1
 	}
 
@@ -49,7 +54,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "compare-ckksint: open Lattigo JSON: %v\n", err)
 		return 1
 	}
-	lattigo, err := benchcmp.ParseLattigoRouteB(lattigoInput, *lattigoPath)
+	lattigo, err := benchcmp.ParseCanonical(lattigoInput, *lattigoPath)
 	closeErr = lattigoInput.Close()
 	if err != nil {
 		fmt.Fprintf(stderr, "compare-ckksint: %v\n", err)

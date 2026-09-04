@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sync"
 	"sync/atomic"
 
 	"github.com/nc26676027/LCPDTE/integer/secureprofile"
@@ -20,9 +21,10 @@ type RouteBInstalledEvaluator struct {
 }
 
 type routeBInstalledEvaluatorCell struct {
-	authority *routeBAuthorityCell
-	lineage   *routeBLineageCell
-	available atomic.Bool
+	operationMu sync.Mutex
+	authority   *routeBAuthorityCell
+	lineage     *routeBLineageCell
+	available   atomic.Bool
 
 	evaluator      *bootstrapping.Evaluator
 	receipt        RBDFTBuildReceiptReport
@@ -30,6 +32,9 @@ type routeBInstalledEvaluatorCell struct {
 	ready          ReadyPermitReport
 	install        RuntimeCapacityEvidenceReport
 	firstOperation RouteBFirstOperationReport
+
+	preparedA2BFull          *routeBA2BFullPreparedEvaluator
+	preparedA2BFullWallNanos uint64
 }
 
 func (installed *RouteBInstalledEvaluator) IsZero() bool {
@@ -359,4 +364,16 @@ func clearRouteBInstalledVendorEvaluator(evaluator *bootstrapping.Evaluator) {
 	evaluator.Evaluator = nil
 	evaluator.DFTEvaluator = nil
 	evaluator.Mod1Evaluator = nil
+}
+
+func clearRouteBInstalledEvaluatorCell(cell *routeBInstalledEvaluatorCell) {
+	if cell == nil {
+		return
+	}
+	cell.available.Store(false)
+	cell.preparedA2BFull = nil
+	cell.preparedA2BFullWallNanos = 0
+	clearRouteBInstalledVendorEvaluator(cell.evaluator)
+	cell.evaluator = nil
+	cell.records = RBDFTBuildRecordSet{}
 }
