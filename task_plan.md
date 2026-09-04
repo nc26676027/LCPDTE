@@ -346,4 +346,4 @@ delivery remain later gates.
 - [x] Commit the clean implementation revision used by both benchmark builds (`1a35425`).
 - [x] Rebuild and rerun pinned OpenFHE locally, then run Lattigo without concurrent workload.
 - [x] Admit both artifacts through the strict comparator and check both mean and median ratios are at most 1.
-- [ ] Check in the local reproduction bundle, independent reviews, and final manual-test instructions.
+- [x] Check in the local reproduction bundle, independent reviews, and final manual-test instructions.
