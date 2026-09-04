@@ -92,6 +92,7 @@ func TestBenchmarkRejectsNonAcceptanceBuildBeforeSessionConstruction(t *testing.
 		},
 		func() (benchmarkExecutionMetadata, error) { return metadata, nil },
 		time.Now,
+		func() {},
 	)
 	if err == nil || !strings.Contains(err.Error(), "build_profile") || constructed {
 		t.Fatalf("error=%v session_constructed=%t", err, constructed)
@@ -330,6 +331,7 @@ func TestBenchmarkRecordsOnlyPreparedOnlineSamples(t *testing.T) {
 		clockValues = append(clockValues, started, started.Add(time.Duration(201+repeat)*time.Nanosecond))
 	}
 	clockIndex := 0
+	collections := 0
 	now := func() time.Time {
 		if clockIndex >= len(clockValues) {
 			t.Fatal("benchmark clock read beyond the five timed public calls")
@@ -343,12 +345,16 @@ func TestBenchmarkRecordsOnlyPreparedOnlineSamples(t *testing.T) {
 		factory,
 		func() (benchmarkExecutionMetadata, error) { return testExecutionMetadata(), nil },
 		now,
+		func() { collections++ },
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if encryptions != 1 || encryptedWords != 8_192 || evaluations != 6 || decryptions != 6 {
 		t.Fatalf("encryptions=%d encrypted_words=%d evaluations=%d decryptions=%d", encryptions, encryptedWords, evaluations, decryptions)
+	}
+	if collections != benchmarkRepeats {
+		t.Fatalf("collections=%d, want one after warmup and before each timed reuse", collections)
 	}
 	if got.SetupNanoseconds != 20 {
 		t.Fatalf("setup_ns=%d, want 20", got.SetupNanoseconds)

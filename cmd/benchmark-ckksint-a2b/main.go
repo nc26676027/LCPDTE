@@ -450,7 +450,7 @@ func parseBuildBool(value string) (bool, error) {
 }
 
 func runCanonicalBenchmark(hostID string) (benchcmp.CanonicalArtifact, error) {
-	return runCanonicalBenchmarkWithFactory(hostID, newSession, currentExecutionMetadata, time.Now)
+	return runCanonicalBenchmarkWithFactory(hostID, newSession, currentExecutionMetadata, time.Now, runtime.GC)
 }
 
 func runCanonicalBenchmarkWithFactory(
@@ -458,9 +458,10 @@ func runCanonicalBenchmarkWithFactory(
 	factory sessionFactory,
 	readMetadata executionMetadataReader,
 	now func() time.Time,
+	collect func(),
 ) (benchcmp.CanonicalArtifact, error) {
-	if now == nil {
-		return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark clock is required")
+	if now == nil || collect == nil {
+		return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark clock and garbage collector are required")
 	}
 	execution, err := readMetadata()
 	if err != nil {
@@ -498,7 +499,7 @@ func runCanonicalBenchmarkWithFactory(
 	}
 	warmupOutput = nil
 	warmupBits = nil
-	runtime.GC()
+	collect()
 	var profileFile *os.File
 	if profilePath := strings.TrimSpace(os.Getenv("LCPDTE_GAO_CPU_PROFILE")); profilePath != "" {
 		profileFile, err = os.Create(profilePath)
@@ -538,6 +539,15 @@ func runCanonicalBenchmarkWithFactory(
 		}
 		if mismatches := countBitMismatches(words, bits); mismatches != 0 {
 			return benchcmp.CanonicalArtifact{}, fmt.Errorf("verify repeat %d: mismatch_count=%d", repeat+1, mismatches)
+		}
+		// OpenFHE destroys each result after verification, outside its timed
+		// EvalArithToBooleanFull call. Release the equivalent Go objects and
+		// collect before the next timed reuse so prior results are not charged
+		// to a later public Evaluate call.
+		output = nil
+		bits = nil
+		if repeat+1 < benchmarkRepeats {
+			collect()
 		}
 	}
 
