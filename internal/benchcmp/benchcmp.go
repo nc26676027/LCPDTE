@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"math/bits"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -282,6 +283,9 @@ func Compare(openfhe, lattigo Measurement) (Summary, error) {
 	if lattigo.OutputContainer != GaoFullOutputContainer {
 		return Summary{}, fmt.Errorf("compare A2B artifacts: Lattigo output_container=%q, want %q", lattigo.OutputContainer, GaoFullOutputContainer)
 	}
+	if err = validateMatchedNativeParameters(*openfhe.NativeParameters, *lattigo.NativeParameters); err != nil {
+		return Summary{}, fmt.Errorf("compare A2B artifacts: %w", err)
+	}
 
 	meanRatio := lattigo.A2BMeanNanoseconds / openfhe.A2BMeanNanoseconds
 	medianRatio := lattigo.A2BMedianNanoseconds / openfhe.A2BMedianNanoseconds
@@ -307,6 +311,38 @@ func Compare(openfhe, lattigo Measurement) (Summary, error) {
 		)
 	}
 	return summary, nil
+}
+
+func validateMatchedNativeParameters(openfhe, lattigo NativeParameters) error {
+	if !slices.Equal(openfhe.QModuli, lattigo.QModuli) {
+		return fmt.Errorf("native q_moduli mismatch between OpenFHE and Lattigo")
+	}
+	if !slices.Equal(openfhe.PModuli, lattigo.PModuli) {
+		return fmt.Errorf("native p_moduli mismatch between OpenFHE and Lattigo")
+	}
+	if openfhe.ActualFirstQModulusBits != lattigo.ActualFirstQModulusBits {
+		return fmt.Errorf(
+			"native actual_first_q_modulus_bits mismatch: OpenFHE=%d Lattigo=%d",
+			openfhe.ActualFirstQModulusBits, lattigo.ActualFirstQModulusBits,
+		)
+	}
+	if openfhe.MainSecretHammingWeight != lattigo.MainSecretHammingWeight ||
+		openfhe.EphemeralSecretHammingWeight != lattigo.EphemeralSecretHammingWeight {
+		return fmt.Errorf("native secret Hamming weights mismatch between OpenFHE and Lattigo")
+	}
+	if openfhe.ErrorSigma != lattigo.ErrorSigma ||
+		openfhe.ErrorEffectiveIntegerBound != lattigo.ErrorEffectiveIntegerBound {
+		return fmt.Errorf(
+			"native error parameters mismatch: OpenFHE=sigma %g/bound %d Lattigo=sigma %g/bound %d",
+			openfhe.ErrorSigma, openfhe.ErrorEffectiveIntegerBound,
+			lattigo.ErrorSigma, lattigo.ErrorEffectiveIntegerBound,
+		)
+	}
+	if openfhe.KeySwitchRNSComponents != lattigo.KeySwitchRNSComponents ||
+		openfhe.KeySwitchBaseTwoDecomposition != lattigo.KeySwitchBaseTwoDecomposition {
+		return fmt.Errorf("native key-switch decomposition mismatch between OpenFHE and Lattigo")
+	}
+	return nil
 }
 
 // FormatText renders a deterministic, line-oriented human summary.
@@ -867,16 +903,18 @@ func nativeProfileFor(source string) (expectedNativeParameters, error) {
 		common.pModuliBitLengths = []uint32{50, 50, 50, 50, 50, 50, 50}
 		return common, nil
 	case FocusedLattigoSource:
-		bound := 19.2
+		bound := 39.0
+		common.mainSecretDistribution = "fixed-h-symmetric-sparse-ternary"
+		common.ephemeralSecretDistribution = "fixed-h-symmetric-sparse-ternary"
 		common.errorSampler = "lattigo-bounded-discrete-gaussian"
-		common.errorSigma = 3.2
+		common.errorSigma = 3.19
 		common.errorConfiguredBound = &bound
-		common.errorEffectiveIntegerBound = 19
+		common.errorEffectiveIntegerBound = 39
 		common.keySwitchTechnique = "lattigo-rns-qp-gadget"
 		common.securitySelector = "external-estimator"
 		common.securityEvidence = "full-packed-profile-not-assessed"
-		common.qModuliBitLengths = []uint32{43, 43, 43, 43, 44, 43, 44, 43, 43, 43, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 43}
-		common.pModuliBitLengths = []uint32{51, 50, 51, 50, 51, 51, 49}
+		common.qModuliBitLengths = []uint32{44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 44, 44, 43, 44}
+		common.pModuliBitLengths = []uint32{50, 50, 50, 50, 50, 50, 50}
 		return common, nil
 	default:
 		return expectedNativeParameters{}, fmt.Errorf(

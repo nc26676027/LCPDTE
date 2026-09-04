@@ -212,23 +212,23 @@ func writeCanonicalArtifact(t *testing.T, implementation, outputContainer string
 func comparisonNativeParameters(implementation string) *benchcmp.NativeParameters {
 	openFHEQBits := []uint32{44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 44, 44, 43, 44}
 	openFHEPBits := []uint32{50, 50, 50, 50, 50, 50, 50}
-	lattigoQBits := []uint32{43, 43, 43, 43, 44, 43, 44, 43, 43, 43, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 43}
-	lattigoPBits := []uint32{51, 50, 51, 50, 51, 51, 49}
 	native := &benchcmp.NativeParameters{
 		MainSecretDistribution: "balanced-sparse-ternary", MainSecretHammingWeight: 192,
 		EphemeralSecretDistribution: "balanced-sparse-ternary", EphemeralSecretHammingWeight: 32,
 		KeySwitchRNSComponents: 3,
 	}
 	if implementation == benchcmp.FocusedLattigoSource {
-		bound := 19.2
-		native.ActualFirstQModulusBits = 43
-		native.ErrorSampler, native.ErrorSigma, native.ErrorConfiguredBound = "lattigo-bounded-discrete-gaussian", 3.2, &bound
-		native.ErrorEffectiveIntegerBound = 19
+		bound := 39.0
+		native.MainSecretDistribution = "fixed-h-symmetric-sparse-ternary"
+		native.EphemeralSecretDistribution = "fixed-h-symmetric-sparse-ternary"
+		native.ActualFirstQModulusBits = 44
+		native.ErrorSampler, native.ErrorSigma, native.ErrorConfiguredBound = "lattigo-bounded-discrete-gaussian", 3.19, &bound
+		native.ErrorEffectiveIntegerBound = 39
 		native.KeySwitchTechnique = "lattigo-rns-qp-gadget"
 		native.SecuritySelector, native.SecurityEvidence = "external-estimator", "full-packed-profile-not-assessed"
-		native.QModuliBitLengths, native.PModuliBitLengths = lattigoQBits, lattigoPBits
-		native.QModuli = comparisonSyntheticModuli(lattigoQBits, 43, 1_000)
-		native.PModuli = comparisonSyntheticModuli(lattigoPBits, 50, 1_000)
+		native.QModuliBitLengths, native.PModuliBitLengths = openFHEQBits, openFHEPBits
+		native.QModuli = comparisonSyntheticModuli(openFHEQBits, 43, 1)
+		native.PModuli = comparisonSyntheticModuli(openFHEPBits, 50, 1)
 		return native
 	}
 	native.ActualFirstQModulusBits = 44

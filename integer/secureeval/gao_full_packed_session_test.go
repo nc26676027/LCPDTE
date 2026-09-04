@@ -107,10 +107,10 @@ func TestGaoFullPackedParameterReportDerivesRuntimeModuli(t *testing.T) {
 		got.ScaleSchedule != "lattigo-explicit-level-scale-native" {
 		t.Fatalf("runtime parameter report=%+v", got)
 	}
-	if got.MainSecretDistribution != "balanced-sparse-ternary" || got.MainSecretHammingWeight != 192 ||
-		got.EphemeralSecretDistribution != "balanced-sparse-ternary" || got.EphemeralSecretHammingWeight != 32 ||
-		got.ErrorSampler != "lattigo-bounded-discrete-gaussian" || got.ErrorSigma != 3.2 ||
-		got.ErrorConfiguredBound != 19.2 || got.ErrorEffectiveIntegerBound != 19 ||
+	if got.MainSecretDistribution != "fixed-h-symmetric-sparse-ternary" || got.MainSecretHammingWeight != 192 ||
+		got.EphemeralSecretDistribution != "fixed-h-symmetric-sparse-ternary" || got.EphemeralSecretHammingWeight != 32 ||
+		got.ErrorSampler != "lattigo-bounded-discrete-gaussian" || got.ErrorSigma != 3.19 ||
+		got.ErrorConfiguredBound != 39 || got.ErrorEffectiveIntegerBound != 39 ||
 		got.KeySwitchTechnique != "lattigo-rns-qp-gadget" || got.RNSDecompositionComponents != 3 ||
 		got.BaseTwoDecomposition != 0 || got.SecuritySelector != "external-estimator" ||
 		got.SecurityEvidence != "full-packed-profile-not-assessed" {

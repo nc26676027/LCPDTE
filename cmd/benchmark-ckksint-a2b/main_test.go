@@ -99,8 +99,8 @@ func TestBenchmarkRejectsNonAcceptanceBuildBeforeSessionConstruction(t *testing.
 }
 
 func testSetupInfo() ckksint.GaoFullPackedA2BSetupInfo {
-	qBits := []int{43, 43, 43, 43, 44, 43, 44, 43, 43, 43, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 43}
-	pBits := []int{51, 50, 51, 50, 51, 51, 49}
+	qBits := []int{44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 44, 44, 43, 44}
+	pBits := []int{50, 50, 50, 50, 50, 50, 50}
 	return ckksint.GaoFullPackedA2BSetupInfo{
 		ParameterWallTime:          2 * time.Second,
 		KeyGenerationWallTime:      3 * time.Second,
@@ -110,13 +110,13 @@ func testSetupInfo() ckksint.GaoFullPackedA2BSetupInfo {
 			RingDimension: 65_536, PackingSlots: 32_768, UsefulWords: 8_192,
 			QModuliCount: 21, QLog2Aggregate: 904, PModuliCount: 7, PLog2Aggregate: 350,
 			ScalingModulusBits: 43, FirstModulusBits: 43, MultiplicativeDepth: 20,
-			ActualFirstQModulusBits: 43,
-			QModuli:                 syntheticSetupModuli(qBits, 43, 1_000), PModuli: syntheticSetupModuli(pBits, 50, 1_000),
+			ActualFirstQModulusBits: 44,
+			QModuli:                 syntheticSetupModuli(qBits, 43, 1), PModuli: syntheticSetupModuli(pBits, 50, 1),
 			QModuliBitLengths: qBits, PModuliBitLengths: pBits,
-			LargeDigits: 3, MainSecretDistribution: "balanced-sparse-ternary", MainSecretHammingWeight: 192,
-			EphemeralSecretDistribution: "balanced-sparse-ternary", EphemeralSecretHammingWeight: 32,
-			ErrorSampler: "lattigo-bounded-discrete-gaussian", ErrorSigma: 3.2,
-			ErrorConfiguredBound: 19.2, ErrorEffectiveIntegerBound: 19,
+			LargeDigits: 3, MainSecretDistribution: "fixed-h-symmetric-sparse-ternary", MainSecretHammingWeight: 192,
+			EphemeralSecretDistribution: "fixed-h-symmetric-sparse-ternary", EphemeralSecretHammingWeight: 32,
+			ErrorSampler: "lattigo-bounded-discrete-gaussian", ErrorSigma: 3.19,
+			ErrorConfiguredBound: 39, ErrorEffectiveIntegerBound: 39,
 			KeySwitchTechnique: "lattigo-rns-qp-gadget", RNSDecompositionComponents: 3,
 			BaseTwoDecomposition: 0, SecuritySelector: "external-estimator", SecurityEvidence: "full-packed-profile-not-assessed",
 			LevelBudget: [2]int{3, 2}, OpenFHERequestedBSGSDimensions: [2]int{0, 0},
@@ -185,11 +185,11 @@ func TestCanonicalArtifactRecordsPreparedOnlineProtocol(t *testing.T) {
 	if got.Parameters == nil || *got.Parameters != *benchcmp.CanonicalGaoParameters() {
 		t.Fatalf("parameters=%+v", got.Parameters)
 	}
-	if got.NativeParameters == nil || got.NativeParameters.ActualFirstQModulusBits != 43 ||
-		got.NativeParameters.MainSecretDistribution != "balanced-sparse-ternary" ||
+	if got.NativeParameters == nil || got.NativeParameters.ActualFirstQModulusBits != 44 ||
+		got.NativeParameters.MainSecretDistribution != "fixed-h-symmetric-sparse-ternary" ||
 		got.NativeParameters.MainSecretHammingWeight != 192 ||
 		got.NativeParameters.ErrorSampler != "lattigo-bounded-discrete-gaussian" ||
-		got.NativeParameters.ErrorConfiguredBound == nil || *got.NativeParameters.ErrorConfiguredBound != 19.2 ||
+		got.NativeParameters.ErrorConfiguredBound == nil || *got.NativeParameters.ErrorConfiguredBound != 39 ||
 		got.NativeParameters.KeySwitchTechnique != "lattigo-rns-qp-gadget" ||
 		!reflect.DeepEqual(got.NativeParameters.QModuli, setup.Parameters.QModuli) ||
 		!reflect.DeepEqual(got.NativeParameters.PModuli, setup.Parameters.PModuli) {

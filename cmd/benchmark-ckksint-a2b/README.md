@@ -5,7 +5,7 @@ benchmark through the public `ckksint` API:
 
 ```powershell
 wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/WorkSpace/LCPDTE && GOAMD64=v4 go build -o /tmp/lcpdte-benchmark-ckksint-a2b ./cmd/benchmark-ckksint-a2b'
-wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/WorkSpace/LCPDTE && GOAMD64=v4 GOMAXPROCS=1 GOGC=100 GOMEMLIMIT=20GiB POST_WARMUP_GC=on LCPDTE_GAO_CPU_PROFILE= /tmp/lcpdte-benchmark-ckksint-a2b -host-id <stable-host-id> -out lattigo-a2b.json'
+wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/WorkSpace/LCPDTE && GOAMD64=v4 GOMAXPROCS=1 GOGC=100 GOMEMLIMIT=20GiB POST_WARMUP_GC=on LCPDTE_GAO_CPU_PROFILE= /tmp/lcpdte-benchmark-ckksint-a2b -host-id local-wsl-host -out /tmp/lattigo-v3.json'
 ```
 
 The workload is 8,192 bytes (`0..255` repeated 32 times) at `N=65536`. Every
@@ -42,8 +42,10 @@ technique, and the profile-specific security selector/evidence status. The
 full-packed Lattigo path reports `full-packed-profile-not-assessed`; it does not
 reuse the circuit-specific C75 `CONDITIONAL-PASS`. The comparison parser
 recomputes chain counts and product bit lengths rather than trusting emitted
-aggregates. Backend-native differences remain explicit instead of being
-presented as prime-for-prime equality.
+aggregates. Cross-backend comparison requires the exact ordered Q/P values,
+actual first-Q width, H=192/H=32, sigma=3.19/effective bound=39, and
+decomposition counts. Backend-native sampling algorithms, key switching,
+security selection, scale schedules, and planners remain explicit.
 
 The artifact also records the Go VCS revision, clean/modified flag, runtime,
 compiler, build profile, OS, architecture, scale schedule, factor-storage

@@ -5,11 +5,48 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"math/big"
+	"slices"
 	"strconv"
 	"testing"
 
 	"github.com/nc26676027/LCPDTE/lattigo/ring"
 )
+
+func TestGaoOpenFHEFullN16ParametersMatchPinnedOpenFHE(t *testing.T) {
+	params, err := GaoOpenFHEFullN16Parameters()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantQ := []uint64{
+		8796103114753, 8796120416257, 8796142305281, 8796131819521,
+		8796137586689, 8796135227393, 8796142043137, 8796136144897,
+		8796141649921, 8796137717761, 8796139159553, 8796122644481,
+		8796134178817, 8796123824129, 8796130508801, 8796087386113,
+		8796114124801, 8796110192641, 8796112814081, 8796090007553,
+		8796105342977,
+	}
+	wantP := []uint64{
+		1125899903827969, 1125899902124033, 1125899887312897,
+		1125899886395393, 1125899885740033, 1125899884167169,
+		1125899884036097,
+	}
+	if !slices.Equal(params.Q(), wantQ) {
+		t.Fatalf("Q chain does not match pinned OpenFHE: got=%v", params.Q())
+	}
+	if !slices.Equal(params.P(), wantP) {
+		t.Fatalf("P chain does not match pinned OpenFHE: got=%v", params.P())
+	}
+	if got, ok := params.Xs().(ring.Ternary); !ok || got.H != 192 || got.P != 0 {
+		t.Fatalf("main secret does not match pinned OpenFHE H=192: %#v", params.Xs())
+	}
+	if got, ok := params.Xe().(ring.DiscreteGaussian); !ok || got.Sigma != 3.19 || got.Bound != 39 {
+		t.Fatalf("error distribution does not match pinned OpenFHE sigma/effective bound: %#v", params.Xe())
+	}
+	if params.QBigInt().BitLen() != 904 || params.PBigInt().BitLen() != 350 {
+		t.Fatalf("aggregate modulus bits drifted: Q=%d P=%d", params.QBigInt().BitLen(), params.PBigInt().BitLen())
+	}
+}
 
 func TestGaoCompatibleN16ParametersAndManifest(t *testing.T) {
 	first, err := GaoCompatibleN16Parameters()

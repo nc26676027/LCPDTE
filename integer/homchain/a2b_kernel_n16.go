@@ -528,6 +528,9 @@ func (e *GaoA2BKernelN16L11Evaluator) EvaluatePreparedMSBNew(input *rlwe.Ciphert
 	if err != nil {
 		return nil, fmt.Errorf("homchain: evaluate N16 full-packed Gao MSB exponential polynomial: %w", err)
 	}
+	if err = normalizeGaoA2BKernelPolynomialScale(exponential, e.circuit.params.DefaultScale()); err != nil {
+		return nil, fmt.Errorf("homchain: normalize N16 full-packed Gao MSB exponential scale: %w", err)
+	}
 	if exponential.Level() != input.Level()-e.circuit.exponentialOperand.Depth() || exponential.Degree() != 1 {
 		return nil, fmt.Errorf("homchain: N16 full-packed Gao MSB exponential state changed")
 	}
@@ -544,6 +547,9 @@ func (e *GaoA2BKernelN16L11Evaluator) EvaluatePreparedMSBNew(input *rlwe.Ciphert
 	msb, err := e.polynomial.Evaluate(root, evaluationMSB, e.circuit.params.DefaultScale())
 	if err != nil {
 		return nil, fmt.Errorf("homchain: evaluate N16 full-packed Gao MSB LUT: %w", err)
+	}
+	if err = normalizeGaoA2BKernelPolynomialScale(msb, e.circuit.params.DefaultScale()); err != nil {
+		return nil, fmt.Errorf("homchain: normalize N16 full-packed Gao MSB LUT scale: %w", err)
 	}
 	if msb == nil || msb.Level() != e.circuit.profile.booleanOutputLevel || msb.Degree() != 1 ||
 		!e.circuit.profile.booleanOutputScale.EqualScale(msb.Scale) {
@@ -600,7 +606,10 @@ func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verify
 
 	states := make([]GaoA2BKernelCiphertextState, 0, 8)
 	state, err := snapshotA2BKernelState(GaoA2BKernelStageInput, input, e.circuit.params.DefaultScale())
-	if err != nil || !state.ScaleExact {
+	if err != nil {
+		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao input scale state changed: %w", err)
+	}
+	if err = requireA2BKernelExactScale(state); err != nil {
 		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao input scale state changed: %w", err)
 	}
 	states = append(states, state)
@@ -629,12 +638,18 @@ func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verify
 	if err != nil {
 		return GaoA2BKernelResult{}, fmt.Errorf("homchain: evaluate N16/L11 Gao exponential polynomial: %w", err)
 	}
+	if err = normalizeGaoA2BKernelPolynomialScale(exponential, e.circuit.params.DefaultScale()); err != nil {
+		return GaoA2BKernelResult{}, fmt.Errorf("homchain: normalize N16/L11 Gao exponential scale: %w", err)
+	}
 	wantExponentialLevel := input.Level() - exponentialOperand.Depth()
 	if exponential.Level() != wantExponentialLevel || exponential.Degree() != 1 {
 		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao exponential state changed")
 	}
 	state, err = snapshotA2BKernelState(GaoA2BKernelStageExponential, exponential, e.circuit.params.DefaultScale())
-	if err != nil || !state.ScaleExact {
+	if err != nil {
+		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao exponential scale state changed: %w", err)
+	}
+	if err = requireA2BKernelExactScale(state); err != nil {
 		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao exponential scale state changed: %w", err)
 	}
 	states = append(states, state)
@@ -657,7 +672,10 @@ func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verify
 			return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao square %d state changed", round)
 		}
 		state, err = snapshotA2BKernelState(stage, root, expectedScale)
-		if err != nil || !state.ScaleExact {
+		if err != nil {
+			return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao square %d scale state changed: %w", round, err)
+		}
+		if err = requireA2BKernelExactScale(state); err != nil {
 			return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao square %d scale state changed: %w", round, err)
 		}
 		states = append(states, state)
@@ -689,6 +707,11 @@ func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verify
 	}
 	if len(lutOutputs) != 2 || lutOutputs[0] == nil || lutOutputs[1] == nil {
 		return GaoA2BKernelResult{}, fmt.Errorf("homchain: N16/L11 Gao LUT output shape changed")
+	}
+	for index, output := range lutOutputs {
+		if err = normalizeGaoA2BKernelPolynomialScale(output, e.circuit.params.DefaultScale()); err != nil {
+			return GaoA2BKernelResult{}, fmt.Errorf("homchain: normalize N16/L11 Gao LUT output %d scale: %w", index, err)
+		}
 	}
 	wantLUTLevel := root.Level() - identityOperand.Depth()
 	for index, output := range lutOutputs {
@@ -760,6 +783,25 @@ func (e *GaoA2BKernelN16L11Evaluator) evaluateNew(input *rlwe.Ciphertext, verify
 			runtimePath: e.circuit.profile.RuntimePath(), states: states, operationCounts: counts,
 		},
 	}, nil
+}
+
+// Polynomial evaluation targets a scale but its internal high-precision
+// divisions can leave a few low-order metadata bits of rounding error. Once
+// the result is within Lattigo's own polynomial-scale tolerance, pinning the
+// metadata to the requested target prevents that harmless rounding residue
+// from contaminating the exact, operation-derived scale schedule that follows.
+func normalizeGaoA2BKernelPolynomialScale(ciphertext *rlwe.Ciphertext, target rlwe.Scale) error {
+	if ciphertext == nil || ciphertext.MetaData == nil {
+		return fmt.Errorf("polynomial output is nil or has nil metadata")
+	}
+	if !ciphertext.Scale.InDelta(target, float64(rlwe.ScalePrecision-12)) {
+		return fmt.Errorf(
+			"polynomial output scale=%s is outside target tolerance=%s",
+			ciphertext.Scale.Value.Text('x', -1), target.Value.Text('x', -1),
+		)
+	}
+	ciphertext.Scale = target
+	return nil
 }
 
 func (e *GaoA2BKernelN16L11Evaluator) validateInput(input *rlwe.Ciphertext) error {

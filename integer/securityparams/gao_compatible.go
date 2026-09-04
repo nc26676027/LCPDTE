@@ -24,6 +24,8 @@ const (
 	GaoCompatibleSigma         = 3.2
 	GaoCompatibleBound         = 19.2
 	GaoCompatibleDefaultScale  = 43
+	GaoOpenFHEFullSigma        = 3.19
+	GaoOpenFHEFullBound        = 39.0
 	// GaoCompatibleManifestDigest authenticates the canonical parameter-only
 	// manifest before runtime key evidence is attached.
 	GaoCompatibleManifestDigest = "e2dc7b14f041589be98f27f0634dab1bc77b910babcc9a8c7775f81d498b3f3d"
@@ -32,6 +34,25 @@ const (
 	FunctionalA2BSchemaVersion  = GaoCompatibleSchemaVersion
 	FunctionalA2BManifestDigest = "d01835f4e15c2426d8f5c77667b93d30e7563ac37d4533f8b61685e412e463d5"
 )
+
+// These ordered RNS chains are the values emitted by the pinned OpenFHE
+// 08f1eb87434e7be072cba889270a8400bbffc08e full-packed Gao benchmark.
+// Keeping the values, rather than only their aggregate bit lengths, makes the
+// Lattigo/OpenFHE performance comparison use the same numerical modulus tuple.
+var gaoOpenFHEFullQ = []uint64{
+	8796103114753, 8796120416257, 8796142305281, 8796131819521,
+	8796137586689, 8796135227393, 8796142043137, 8796136144897,
+	8796141649921, 8796137717761, 8796139159553, 8796122644481,
+	8796134178817, 8796123824129, 8796130508801, 8796087386113,
+	8796114124801, 8796110192641, 8796112814081, 8796090007553,
+	8796105342977,
+}
+
+var gaoOpenFHEFullP = []uint64{
+	1125899903827969, 1125899902124033, 1125899887312897,
+	1125899886395393, 1125899885740033, 1125899884167169,
+	1125899884036097,
+}
 
 // PrimeRecord is an ordered, lossless record of one RNS prime.
 type PrimeRecord struct {
@@ -108,29 +129,16 @@ func GaoCompatibleN16Parameters() (ckks.Parameters, error) {
 }
 
 // GaoOpenFHEFullN16Parameters returns the independent Lattigo parameter tuple
-// used for the shape-matched Gao/OpenFHE full-packed benchmark. It preserves
-// the 21-prime Q chain and seven-prime P chain while matching the aggregate
-// runtime modulus sizes reported by OpenFHE: |Q|=904 bits and |P|=350 bits.
-// The final 49-bit auxiliary-prime target compensates for the Lattigo prime
-// generator's upper-side convention; the generated P product is checked by
-// the full-packed transport contract.
+// used for the Gao/OpenFHE full-packed benchmark. It uses the exact ordered
+// Q/P chains emitted by the pinned OpenFHE build, along with the matching
+// H=192 secret and sigma=3.19/effective-bound=39 error profile.
 func GaoOpenFHEFullN16Parameters() (ckks.Parameters, error) {
-	logQ := make([]int, 21)
-	for i := range logQ {
-		logQ[i] = 43
-	}
-	logP := make([]int, 7)
-	for i := range logP {
-		logP[i] = 50
-	}
-	logP[len(logP)-1] = 49
-
 	return ckks.NewParametersFromLiteral(ckks.ParametersLiteral{
 		LogN:            GaoCompatibleLogN,
-		LogQ:            logQ,
-		LogP:            logP,
+		Q:               append([]uint64(nil), gaoOpenFHEFullQ...),
+		P:               append([]uint64(nil), gaoOpenFHEFullP...),
 		Xs:              ring.Ternary{H: GaoCompatibleMainWeight},
-		Xe:              ring.DiscreteGaussian{Sigma: GaoCompatibleSigma, Bound: GaoCompatibleBound},
+		Xe:              ring.DiscreteGaussian{Sigma: GaoOpenFHEFullSigma, Bound: GaoOpenFHEFullBound},
 		RingType:        ring.Standard,
 		LogDefaultScale: GaoCompatibleDefaultScale,
 	})

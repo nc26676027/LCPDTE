@@ -147,3 +147,28 @@ func TestGaoA2BKernelN16PreparedMSBEntryRejectsNilEvaluator(t *testing.T) {
 		t.Fatalf("nil prepared MSB evaluator: result=%v err=%v", result, err)
 	}
 }
+
+func TestNormalizeGaoA2BKernelPolynomialScaleAcceptsOnlyRoundingResidue(t *testing.T) {
+	params, err := securityparams.GaoOpenFHEFullN16Parameters()
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := params.DefaultScale()
+	ciphertext := rlwe.NewCiphertext(params, 1, 0)
+
+	one := new(big.Float).SetPrec(rlwe.ScalePrecision).SetInt64(1)
+	delta := new(big.Float).SetPrec(rlwe.ScalePrecision).SetInt64(1)
+	delta.SetMantExp(delta, -120)
+	ciphertext.Scale = target.Mul(rlwe.NewScale(new(big.Float).SetPrec(rlwe.ScalePrecision).Add(one, delta)))
+	if err = normalizeGaoA2BKernelPolynomialScale(ciphertext, target); err != nil {
+		t.Fatalf("rounding residue was rejected: %v", err)
+	}
+	if !ciphertext.Scale.Equal(target) {
+		t.Fatalf("normalized scale=%s, want %s", ciphertext.Scale.Value.Text('x', -1), target.Value.Text('x', -1))
+	}
+
+	ciphertext.Scale = target.Mul(rlwe.NewScale(2))
+	if err = normalizeGaoA2BKernelPolynomialScale(ciphertext, target); err == nil {
+		t.Fatal("material scale drift was accepted")
+	}
+}

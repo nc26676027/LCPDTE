@@ -33,19 +33,25 @@ decryption, and an independent plaintext check. `gao_full_a2b` uses all 32,768
 complex slots for 8,192 8-bit words. The other three examples use the small
 `DemoOnly` profile for fast API experiments.
 
-Produce a correctness-checked prepared-online Lattigo benchmark artifact:
+Produce a correctness-checked prepared-online Lattigo benchmark artifact from
+the repository root inside WSL:
 
 ```bash
-go run ./cmd/benchmark-ckksint-a2b -host-id <host-id> -out lattigo-a2b.json
+GOAMD64=v4 go build -o /tmp/lcpdte-benchmark-ckksint-a2b ./cmd/benchmark-ckksint-a2b
+GOAMD64=v4 GOMAXPROCS=1 GOGC=100 GOMEMLIMIT=20GiB POST_WARMUP_GC=on \
+  LCPDTE_GAO_CPU_PROFILE= /tmp/lcpdte-benchmark-ckksint-a2b \
+  -host-id local-wsl-host -out /tmp/lattigo-v3.json
 ```
 
-The accepted same-host raw samples, complete native parameters, resource logs,
-and Gao/OpenFHE reproduction commands are under
+The same-host raw samples, complete native parameters, resource logs, and
+Gao/OpenFHE reproduction commands are under
 [`research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05`](research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05).
 `compare-ckksint` emits a ratio only for two canonical-v3 artifacts with the
 same protocol, workload, packing, host, thread count, and repetition policy.
-On the recorded Ryzen 7 H 255 run, Lattigo/OpenFHE mean and median latency
-ratios are `0.973112` and `0.950047`, with zero mismatches.
+It additionally requires the exact OpenFHE Q/P chains, first-Q width,
+secret weights, error sigma/effective bound, and decomposition counts on the
+Lattigo side. The earlier aggregate-only run is retained as historical evidence
+until the exact-parameter same-host rerun replaces it.
 
 ---
 

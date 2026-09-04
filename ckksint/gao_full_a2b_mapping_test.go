@@ -29,14 +29,14 @@ func TestGaoFullPackedA2BParameterInfoCopiesNativeProfile(t *testing.T) {
 		PModuli:                      []string{"107"},
 		QModuliBitLengths:            []int{7, 7},
 		PModuliBitLengths:            []int{7},
-		MainSecretDistribution:       "balanced-sparse-ternary",
+		MainSecretDistribution:       "fixed-h-symmetric-sparse-ternary",
 		MainSecretHammingWeight:      192,
-		EphemeralSecretDistribution:  "balanced-sparse-ternary",
+		EphemeralSecretDistribution:  "fixed-h-symmetric-sparse-ternary",
 		EphemeralSecretHammingWeight: 32,
 		ErrorSampler:                 "lattigo-bounded-discrete-gaussian",
-		ErrorSigma:                   3.2,
-		ErrorConfiguredBound:         19.2,
-		ErrorEffectiveIntegerBound:   19,
+		ErrorSigma:                   3.19,
+		ErrorConfiguredBound:         39,
+		ErrorEffectiveIntegerBound:   39,
 		KeySwitchTechnique:           "lattigo-rns-qp-gadget",
 		RNSDecompositionComponents:   3,
 		BaseTwoDecomposition:         0,
@@ -46,10 +46,10 @@ func TestGaoFullPackedA2BParameterInfoCopiesNativeProfile(t *testing.T) {
 
 	got := gaoFullPackedA2BParameterInfo(report)
 	if got.FirstModulusBits != 43 || got.ActualFirstQModulusBits != 44 ||
-		got.MainSecretDistribution != "balanced-sparse-ternary" || got.MainSecretHammingWeight != 192 ||
-		got.EphemeralSecretDistribution != "balanced-sparse-ternary" || got.EphemeralSecretHammingWeight != 32 ||
-		got.ErrorSampler != "lattigo-bounded-discrete-gaussian" || got.ErrorSigma != 3.2 ||
-		got.ErrorConfiguredBound != 19.2 || got.ErrorEffectiveIntegerBound != 19 ||
+		got.MainSecretDistribution != "fixed-h-symmetric-sparse-ternary" || got.MainSecretHammingWeight != 192 ||
+		got.EphemeralSecretDistribution != "fixed-h-symmetric-sparse-ternary" || got.EphemeralSecretHammingWeight != 32 ||
+		got.ErrorSampler != "lattigo-bounded-discrete-gaussian" || got.ErrorSigma != 3.19 ||
+		got.ErrorConfiguredBound != 39 || got.ErrorEffectiveIntegerBound != 39 ||
 		got.KeySwitchTechnique != "lattigo-rns-qp-gadget" || got.RNSDecompositionComponents != 3 ||
 		got.BaseTwoDecomposition != 0 || got.SecuritySelector != "external-estimator" ||
 		got.SecurityEvidence != "full-packed-profile-not-assessed" {

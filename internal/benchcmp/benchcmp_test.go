@@ -827,6 +827,8 @@ func TestComparisonRejectsAnyUnmatchedOrNonCanonicalProtocolDimension(t *testing
 		{name: "protocol", mutate: func(a, b *benchcmp.Measurement) { b.Protocol = "other-protocol" }, wantMessage: "protocol mismatch"},
 		{name: "workload", mutate: func(a, b *benchcmp.Measurement) { b.WorkloadID = "other-workload" }, wantMessage: "workload_id mismatch"},
 		{name: "packing id", mutate: func(a, b *benchcmp.Measurement) { b.PackingID = "other-packing" }, wantMessage: "packing_id mismatch"},
+		{name: "exact Q chain", mutate: func(a, b *benchcmp.Measurement) { b.NativeParameters.QModuli[0] = "8796093022211" }, wantMessage: "q_moduli mismatch"},
+		{name: "exact P chain", mutate: func(a, b *benchcmp.Measurement) { b.NativeParameters.PModuli[0] = "1125899906842621" }, wantMessage: "p_moduli mismatch"},
 		{name: "scope", mutate: func(a, b *benchcmp.Measurement) { b.TimingScope = "setup-and-online" }, wantMessage: "timing scope"},
 		{name: "warmup verification", mutate: func(a, b *benchcmp.Measurement) { b.WarmupVerified = false }, wantMessage: "warmup_verified"},
 		{name: "verification", mutate: func(a, b *benchcmp.Measurement) { b.VerifiedEvaluations = 4 }, wantMessage: "verified_evaluations"},
@@ -945,8 +947,6 @@ func canonicalParameters() *benchcmp.GaoParameterSemantics {
 func canonicalNativeParameters(implementation string) *benchcmp.NativeParameters {
 	openFHEQBits := []uint32{44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 44, 44, 43, 44}
 	openFHEPBits := []uint32{50, 50, 50, 50, 50, 50, 50}
-	lattigoQBits := []uint32{43, 43, 43, 43, 44, 43, 44, 43, 43, 43, 44, 44, 44, 44, 44, 44, 44, 44, 43, 44, 43}
-	lattigoPBits := []uint32{51, 50, 51, 50, 51, 51, 49}
 
 	native := &benchcmp.NativeParameters{
 		MainSecretDistribution:        "balanced-sparse-ternary",
@@ -957,19 +957,21 @@ func canonicalNativeParameters(implementation string) *benchcmp.NativeParameters
 		KeySwitchBaseTwoDecomposition: 0,
 	}
 	if implementation == benchcmp.FocusedLattigoSource {
-		bound := 19.2
-		native.ActualFirstQModulusBits = 43
+		bound := 39.0
+		native.MainSecretDistribution = "fixed-h-symmetric-sparse-ternary"
+		native.EphemeralSecretDistribution = "fixed-h-symmetric-sparse-ternary"
+		native.ActualFirstQModulusBits = 44
 		native.ErrorSampler = "lattigo-bounded-discrete-gaussian"
-		native.ErrorSigma = 3.2
+		native.ErrorSigma = 3.19
 		native.ErrorConfiguredBound = &bound
-		native.ErrorEffectiveIntegerBound = 19
+		native.ErrorEffectiveIntegerBound = 39
 		native.KeySwitchTechnique = "lattigo-rns-qp-gadget"
 		native.SecuritySelector = "external-estimator"
 		native.SecurityEvidence = "full-packed-profile-not-assessed"
-		native.QModuliBitLengths = lattigoQBits
-		native.PModuliBitLengths = lattigoPBits
-		native.QModuli = syntheticModuli(lattigoQBits, 43, 1_000)
-		native.PModuli = syntheticModuli(lattigoPBits, 50, 1_000)
+		native.QModuliBitLengths = openFHEQBits
+		native.PModuliBitLengths = openFHEPBits
+		native.QModuli = syntheticModuli(openFHEQBits, 43, 1)
+		native.PModuli = syntheticModuli(openFHEPBits, 50, 1)
 		return native
 	}
 	native.ActualFirstQModulusBits = 44

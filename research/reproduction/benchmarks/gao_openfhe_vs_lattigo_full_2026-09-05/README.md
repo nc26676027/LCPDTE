@@ -2,7 +2,9 @@
 
 ## 结论
 
-本机生产验收通过。两端均处理 8,192 个 8-bit word（65,536 bits），使用
+下表是 2026-09-05 的 aggregate-aligned 历史结果；精确 Q/P 与误差参数适配已使其
+失效，不能作为当前代码的生产验收结论。新的同机双后端结果将在本目录替换。
+两端均处理 8,192 个 8-bit word（65,536 bits），使用
 `N=65536`、32,768 个 complex slots、1 次已验证 warmup 和 5 次逐轮解密验证的
 prepared-online 调用；全部结果零失配。
 
@@ -11,8 +13,8 @@ prepared-online 调用；全部结果零失配。
 | Gao/OpenFHE | 26.3093, 24.6022, 24.9413, 23.1328, 22.3423 | 24.2656 | 24.6022 | 337.60 |
 | Lattigo | 23.3733, 24.7981, 23.1930, 23.4274, 23.2739 | 23.6131 | 23.3733 | 346.93 |
 
-Lattigo/OpenFHE 的均值与中位数延迟比为 `0.973112` 和 `0.950047`；有效吞吐比为
-`1.027631`。严格 gate 要求两个延迟比均不高于 `1.0`，结果为 `pass=true`。
+该历史运行的 Lattigo/OpenFHE 均值与中位数延迟比为 `0.973112` 和 `0.950047`；
+有效吞吐比为 `1.027631`。当前比较器会拒绝这两个旧 artifact 的参数差异。
 
 ## 对齐范围
 
@@ -49,7 +51,7 @@ wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/WorkSpace/LCPDTE && GOAMD64=v4 go build
 
 wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/WorkSpace/LCPDTE && GOAMD64=v4 GOMAXPROCS=1 GOGC=100 GOMEMLIMIT=20GiB POST_WARMUP_GC=on LCPDTE_GAO_CPU_PROFILE= /tmp/lcpdte-benchmark-ckksint-a2b -host-id ryzen-7-h-255 -out /tmp/lattigo-v3.json'
 
-go run ./cmd/compare-ckksint -openfhe-json /tmp/openfhe-v3.json -lattigo-json /tmp/lattigo-v3.json -out /tmp/comparison-v3.json
+wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/WorkSpace/LCPDTE && go run ./cmd/compare-ckksint -openfhe-json /tmp/openfhe-v3.json -lattigo-json /tmp/lattigo-v3.json -out /tmp/comparison-v3.json'
 ```
 
 OpenFHE build 会校验 pinned checkout、driver SHA 与 binary SHA；Lattigo benchmark
@@ -68,7 +70,12 @@ go run ./examples/ckksint/gao_full_a2b
 等价的自动验收入口为：
 
 ```powershell
-go test -count=1 -run '^TestGaoFullPackedA2BEndToEnd$' -v ./ckksint
+$env:LCPDTE_GAO_FULL_A2B_E2E = "1"
+try {
+    go test -count=1 -run '^TestGaoFullPackedA2BEndToEnd$' -v ./ckksint
+} finally {
+    Remove-Item Env:LCPDTE_GAO_FULL_A2B_E2E -ErrorAction SilentlyContinue
+}
 ```
 
 本机实测峰值约为 18 GiB；应预留至少 20 GiB 可用内存。完整双后端复跑约 12 分钟，
@@ -83,4 +90,3 @@ go test -count=1 -run '^TestGaoFullPackedA2BEndToEnd$' -v ./ckksint
 - `*-run-start.txt` / `*-run-end.txt`：UTC 运行顺序。
 - `gao-openfhe-a2b-full.build-stamp`：OpenFHE driver/binary 绑定。
 - `environment.md`：硬件、工具链、提交和二进制身份。
-

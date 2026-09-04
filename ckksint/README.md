@@ -156,10 +156,13 @@ finished in 106.18 seconds with maximum error `2.88e-7` and zero mismatches.
 
 ## Gao/OpenFHE A2B comparison
 
-Generate the Lattigo side from the repository root:
+Generate the Lattigo side from the repository root inside WSL:
 
-```powershell
-go run ./cmd/benchmark-ckksint-a2b -host-id <host-id> -out lattigo-a2b.json
+```bash
+GOAMD64=v4 go build -o /tmp/lcpdte-benchmark-ckksint-a2b ./cmd/benchmark-ckksint-a2b
+GOAMD64=v4 GOMAXPROCS=1 GOGC=100 GOMEMLIMIT=20GiB POST_WARMUP_GC=on \
+  LCPDTE_GAO_CPU_PROFILE= /tmp/lcpdte-benchmark-ckksint-a2b \
+  -host-id local-wsl-host -out /tmp/lattigo-v3.json
 ```
 
 The canonical Gao/OpenFHE driver is in
@@ -186,16 +189,21 @@ native parameters: complete Q/P modulus chains, actual first-Q width, main and
 ephemeral secret distributions, error sampler, key-switch decomposition and
 security selector/evidence. They also bind public-key encryption, resident
 transform factors, backend-native scale/BSGS plans, clean source revisions,
-compiler/runtime/build profile, OS and architecture. The comparator passes only
-when both the Lattigo/OpenFHE mean and median latency ratios are at most 1.
+compiler/runtime/build profile, OS and architecture. Cross-backend admission
+requires identical ordered Q/P chains, actual first-Q width, H=192/H=32,
+sigma=3.19/effective bound=39, and RNS/base-two decomposition counts. The
+backend-native sparse-sign law, Gaussian implementation, key-switch engine,
+scale schedule, and BSGS planner remain explicitly identified rather than
+being mislabeled as the same implementation. The comparator passes only when
+both the Lattigo/OpenFHE mean and median latency ratios are at most 1.
 The Lattigo full-packed artifact reports `full-packed-profile-not-assessed`;
 the separate C75 `CONDITIONAL-PASS` remains bound to its selected-child circuit
 and is not reused as evidence for this benchmark profile.
 
-The accepted 2026-09-05 same-host run is preserved in
+The 2026-09-05 same-host evidence is preserved in
 [`research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05`](../research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05):
-Lattigo/OpenFHE mean and median latency ratios are `0.973112` and `0.950047`,
-and all five evaluations on both backends have zero bit mismatches.
+the aggregate-only result is historical and will be replaced by the
+exact-parameter rerun before acceptance.
 
 ## Profiles and interoperation
 
