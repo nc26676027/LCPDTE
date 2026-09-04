@@ -182,8 +182,8 @@ and private remote delivery remain later gates.
 - [x] Report whole-call latency, effective integer throughput, lane count, warmup and repetition count without mixing source-provided and locally measured results.
 - [x] Expose the minimum public `ckksint` seam required by setup/keygen, client encryption, server evaluation, client decryption and result verification.
 - [x] Add a self-contained Lattigo-style end-to-end example that imports only `ckksint` and prints phase timings.
-- [ ] Run focused tests, the affected package suite, the end-to-end command and independent Standards/Spec review; commit the accepted implementation on `main` without pushing.
-- **Status:** first Standards/Spec review findings repaired and post-fix verification complete; final independent re-review and fix commit remain
+- [x] Run focused tests, the affected package suite, the end-to-end command and independent Standards/Spec review; commit the accepted implementation on `main` without pushing.
+- **Status:** COMPLETE for the frozen Phase-9 scope; the same-host Gao/OpenFHE comparison and public Route-B example passed real execution, byte-stable replay, full-result validation, package/static gates, and final independent Standards/Spec review
 
 ## Candidate Research Questions
 
