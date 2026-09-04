@@ -90,6 +90,7 @@ func TestBenchmarkRejectsNonAcceptanceBuildBeforeSessionConstruction(t *testing.
 			return sessionOps{}, ckksint.GaoFullPackedA2BSetupInfo{}, nil
 		},
 		func() (benchmarkExecutionMetadata, error) { return metadata, nil },
+		time.Now,
 	)
 	if err == nil || !strings.Contains(err.Error(), "build_profile") || constructed {
 		t.Fatalf("error=%v session_constructed=%t", err, constructed)
@@ -284,9 +285,27 @@ func TestBenchmarkRecordsOnlyPreparedOnlineSamples(t *testing.T) {
 			}(), nil
 	}
 
-	got, err := runCanonicalBenchmarkWithFactory("same-host", factory, func() (benchmarkExecutionMetadata, error) {
-		return testExecutionMetadata(), nil
-	})
+	base := time.Unix(1_700_000_000, 0)
+	clockValues := make([]time.Time, 0, 2*benchmarkRepeats)
+	for repeat := 0; repeat < benchmarkRepeats; repeat++ {
+		started := base.Add(time.Duration(repeat) * time.Second)
+		clockValues = append(clockValues, started, started.Add(time.Duration(201+repeat)*time.Nanosecond))
+	}
+	clockIndex := 0
+	now := func() time.Time {
+		if clockIndex >= len(clockValues) {
+			t.Fatal("benchmark clock read beyond the five timed public calls")
+		}
+		value := clockValues[clockIndex]
+		clockIndex++
+		return value
+	}
+	got, err := runCanonicalBenchmarkWithFactory(
+		"same-host",
+		factory,
+		func() (benchmarkExecutionMetadata, error) { return testExecutionMetadata(), nil },
+		now,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +318,7 @@ func TestBenchmarkRecordsOnlyPreparedOnlineSamples(t *testing.T) {
 	// The canonical samples wrap the complete prepared public Evaluate call,
 	// matching the OpenFHE driver's call-boundary timer. The narrower internal
 	// OnlineWallTime values above must not be emitted.
-	wantSamples := []uint64{112, 113, 114, 115, 116}
+	wantSamples := []uint64{201, 202, 203, 204, 205}
 	if !reflect.DeepEqual(got.TimedSamplesNanoseconds, wantSamples) {
 		t.Fatalf("samples=%v, want %v", got.TimedSamplesNanoseconds, wantSamples)
 	}

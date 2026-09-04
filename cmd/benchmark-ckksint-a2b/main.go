@@ -359,14 +359,18 @@ func parseBuildBool(value string) (bool, error) {
 }
 
 func runCanonicalBenchmark(hostID string) (benchcmp.CanonicalArtifact, error) {
-	return runCanonicalBenchmarkWithFactory(hostID, newSession, currentExecutionMetadata)
+	return runCanonicalBenchmarkWithFactory(hostID, newSession, currentExecutionMetadata, time.Now)
 }
 
 func runCanonicalBenchmarkWithFactory(
 	hostID string,
 	factory sessionFactory,
 	readMetadata executionMetadataReader,
+	now func() time.Time,
 ) (benchcmp.CanonicalArtifact, error) {
+	if now == nil {
+		return benchcmp.CanonicalArtifact{}, fmt.Errorf("benchmark clock is required")
+	}
 	execution, err := readMetadata()
 	if err != nil {
 		return benchcmp.CanonicalArtifact{}, fmt.Errorf("read benchmark execution metadata: %w", err)
@@ -422,7 +426,9 @@ func runCanonicalBenchmarkWithFactory(
 
 	samples := make([]uint64, benchmarkRepeats)
 	for repeat := 0; repeat < benchmarkRepeats; repeat++ {
+		callStarted := now()
 		output, phase, err := session.evaluate(input)
+		callWallTime := now().Sub(callStarted)
 		if err != nil {
 			return benchcmp.CanonicalArtifact{}, fmt.Errorf("evaluate repeat %d: %w", repeat+1, err)
 		}
@@ -430,7 +436,10 @@ func runCanonicalBenchmarkWithFactory(
 			phase.WallTime <= 0 || phase.WallTime < phase.OnlineWallTime {
 			return benchcmp.CanonicalArtifact{}, fmt.Errorf("evaluate repeat %d: prepared call timing is invalid", repeat+1)
 		}
-		samples[repeat] = uint64(phase.WallTime / time.Nanosecond)
+		if callWallTime <= 0 {
+			return benchcmp.CanonicalArtifact{}, fmt.Errorf("evaluate repeat %d: public call wall time is invalid", repeat+1)
+		}
+		samples[repeat] = uint64(callWallTime / time.Nanosecond)
 
 		bits, err := session.decrypt(output)
 		if err != nil {
