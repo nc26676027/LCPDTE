@@ -409,6 +409,7 @@ Update this file after every two browsing/view operations and after each materia
 - OpenFHE reports consumed levels while Lattigo exposes remaining levels. Translating both as `L=20-O` is required for the same circuit: the original full path entered transforms at incorrect Lattigo levels even though its numeric labels looked similar.
 - A same-host CPU profile attributes the remaining time primarily to native DFT planning/execution and the exp46/LUT kernels. Lattigo ratio 3 reduced BSGS work but increased pre-rotation work, memory pressure and sample variance; ratio 2 is the measured backend-native choice. OpenFHE `dim1=[0,0]` and Lattigo ratio 2 describe different native planners for the same mathematical DFT, not identical operation graphs.
 - Only returned low4/high4 outputs define the focused A2B API. First-round low self-removal and final high self-removal are dead for those outputs, while the first-round `ID0/16` high update is live and mandatory. The benchmark records `live-output-optimized` so the operation-graph difference is explicit rather than presented as backend-identical execution.
+- The post-warmup full Go GC is beneficial for this allocation-heavy graph. Removing it increased mean latency by `6.85%` and peak RSS by about `1.38 GiB` in a five-sample diagnostic. Retain the GC outside the timer, after releasing warmup outputs; decryption and verification remain outside every sample.
 
 ### Phase-10 diagnosis and repaired benchmark
 
