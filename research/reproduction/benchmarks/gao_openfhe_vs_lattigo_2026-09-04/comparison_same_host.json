@@ -1,0 +1,35 @@
+{
+  "schema": "lcpdte-ckksint-a2b-comparison-v1",
+  "openfhe": {
+    "source": "gao-openfhe-benchmark-full",
+    "provenance": "research/upstream/fhe-simd-alu/build-acceptance/clean-build/bench.log",
+    "a2b_latency_nanoseconds": 19569300000,
+    "effective_words_per_second": 418.6148712524209,
+    "word_bits": 8,
+    "ring_dimension": 65536,
+    "lanes": 8192,
+    "warmup": 1,
+    "repeats": 5,
+    "mismatch_count": 0
+  },
+  "lattigo": {
+    "source": "lattigo-route-b-l11-a2b-full",
+    "provenance": "research/upstream/fhe-simd-alu/build-acceptance/lattigo-wsl-a2b.json",
+    "a2b_latency_nanoseconds": 32693327852,
+    "effective_words_per_second": 15.660687780631624,
+    "word_bits": 8,
+    "ring_dimension": 65536,
+    "lanes": 512,
+    "warmup": 0,
+    "repeats": 1,
+    "mismatch_count": 0
+  },
+  "comparison": {
+    "lane_mismatch": true,
+    "openfhe_lanes_per_lattigo_lane": 16,
+    "same_word_bits": true,
+    "same_ring_dimension": true,
+    "whole_call_latency_ratio_lattigo_over_openfhe": 1.670643704782491,
+    "effective_throughput_ratio_lattigo_over_openfhe": 0.03741072966131768
+  }
+}

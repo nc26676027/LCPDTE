@@ -13,19 +13,35 @@ Implementation of the **LCPDTE** protocol — a CKKS-based non-interactive Priva
 The supported Go library entry point is
 `github.com/nc26676027/LCPDTE/ckksint`. It packages the Gao--Zheng modular
 integer representation, full 8-bit A2B/B2A, signed comparison, and the
-selected-child depth-2 evaluator behind opaque values and context-owned keys.
-Runnable programs are under [`examples/ckksint`](examples/ckksint); the API and
-security boundary are documented in [`ckksint/README.md`](ckksint/README.md).
+canonical Route-B selected-child depth-2 evaluator behind a client/server API.
+Runnable programs are under [`examples/ckksint`](examples/ckksint); the API is
+documented in [`ckksint/README.md`](ckksint/README.md).
 
 ```bash
 go test -count=1 ./ckksint
 go run ./examples/ckksint/basic
 go run ./examples/ckksint/conversion
 go run ./examples/ckksint/depth2
+go run ./examples/ckksint/routeb_depth2
 ```
 
-The example constructors are functional tests with deliberately insecure
-parameters. They are labeled `DemoOnly` and are not production defaults.
+`routeb_depth2` is the full N=2^16 workflow: setup and key generation, client
+encryption, server evaluation, client decryption, and an independent plaintext
+check. The other three examples use the small `DemoOnly` profile for fast API
+experiments.
+
+Compare the complete 8-bit A2B call with Gao et al.'s OpenFHE result:
+
+```bash
+go run ./cmd/compare-ckksint \
+  -openfhe-log research/reproduction/benchmarks/gao_openfhe_vs_lattigo_2026-09-04/gao_openfhe_bench8_source.log \
+  -lattigo-json research/reproduction/route_b/route_b_l11_a2b_full_2026-09-01.json
+```
+
+The report includes call latency, effective integer throughput, lane count,
+ring dimension, word width, warmup/repeat policy, and source provenance. The
+recorded source-artifact and same-host results are under
+[`research/reproduction/benchmarks/gao_openfhe_vs_lattigo_2026-09-04`](research/reproduction/benchmarks/gao_openfhe_vs_lattigo_2026-09-04).
 
 ---
 

@@ -6,7 +6,12 @@
 // and bound to the Context that created them; a detached Lattigo ciphertext is
 // available only through the explicit interoperability method.
 //
-// The Demo constructors use deliberately small functional parameters and make
-// no security claim. Applications that supply their own parameter tuple must
-// label its security boundary explicitly.
+// Functional8 is the compact conversion/tree profile. The canonical Route-B
+// entry point returns a split client/server session for one encrypted depth-2
+// batch: the client owns encryption and decryption state, while the server owns
+// the installed evaluator.
+//
+// The Demo constructors use deliberately small functional parameters.
+// Applications that supply their own parameter tuple label its boundary
+// explicitly.
 package ckksint

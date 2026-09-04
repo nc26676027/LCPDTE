@@ -1,0 +1,65 @@
+Scaling Factor: 43 bits
+Auxiliary Prime Size: 50 bits
+Level Budget: 3 2
+Multiplicative Depth: 20
+CKKS scheme ring dimension: 65536
+log2(Q) = 904 log2(P) = 350 log2(QP) = 1254
+Bootstrapping parameters: zN = 8, zSlots = 8192
+
+Arith ct DecryptResult:
+  Value[0]: 0xaf
+  Value[1]: 0xb0
+  Value[2]: 0xb1
+  Value[3]: 0xb2
+  ... (total 8192 slots)
+  logMaxNoise: -24.6699
+  level: 0
+  Scaling factor log2: 43
+  Encoding type: ZMode
+Bool ct DecryptResult:
+  Value[0]: 0xaf
+  Value[1]: 0xb0
+  Value[2]: 0xb1
+  Value[3]: 0xb2
+  ... (total 8192 slots)
+  logMaxNoise: -23.1668
+  level: 0
+  Scaling factor log2: 43
+  Encoding type: BModeFull
+
+MultFull Current Noise -21.5361, Difference: 3.1338
+Finished Warmup for MultFull 0.91364 s
+Time for MultFull : 0.0941889 s
+
+BooleanOR Current Noise -22.7456, Difference: 1.92426
+Finished Warmup for BooleanOR 0.453223 s
+Time for BooleanOR : 0.197615 s
+
+B2A Current Noise -23.538, Difference: 1.13188
+Finished Warmup for B2A 2.08133 s
+Time for B2A : 0.66466 s
+
+B2B Current Noise -20.6941, Difference: 2.47265
+Finished Warmup for B2B 58.859 s
+Time for B2B : 5.90538 s
+
+A2AI Current Noise -24.3579, Difference: 0.0721687
+Finished Warmup for A2AI 17.9732 s
+Time for A2AI : 4.28671 s
+
+A2Ae Current Noise -24.1019, Difference: 0.328142
+Finished Warmup for A2Ae 7.8567 s
+Time for A2Ae : 5.87556 s
+
+A2A Current Noise -24.5606, Difference: -0.130547
+Finished Warmup for A2A 10.91 s
+Time for A2A : 10.0497 s
+
+B-A2B-0 Current Noise -20.9807, Difference: 3.68915
+B-A2B-1 Current Noise -21.0375, Difference: 3.39254
+Finished Warmup for B-A2B 14.4934 s
+Time for B-A2B : 13.13 s
+
+A2B Current Noise -21.2704, Difference: 3.15959
+Finished Warmup for A2B 10.321 s
+Time for A2B : 10.1368 s

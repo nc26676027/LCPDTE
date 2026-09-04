@@ -175,6 +175,16 @@ and private remote delivery remain later gates.
 - [x] Run independent Standards/Spec code review, resolve actionable findings, and commit the acceptance candidate on `main` without pushing it.
 - **Status:** acceptance candidate complete; branch consolidation was a verified no-op because only `main` exists, while physical removal of the ignored historical `tmp` tree remains policy-blocked
 
+### Phase 9: Gao/OpenFHE performance acceptance and end-to-end library example
+
+- [x] Freeze the acceptance scope to a Gao `benchmark-full` comparison plus one public-library end-to-end workflow.
+- [x] Add a reproducible benchmark manifest and runner for the Gao OpenFHE `zN=8` baseline and the Lattigo Route-B 8-bit path.
+- [x] Report whole-call latency, effective integer throughput, lane count, warmup and repetition count without mixing source-provided and locally measured results.
+- [x] Expose the minimum public `ckksint` seam required by setup/keygen, client encryption, server evaluation, client decryption and result verification.
+- [x] Add a self-contained Lattigo-style end-to-end example that imports only `ckksint` and prints phase timings.
+- [ ] Run focused tests, the affected package suite, the end-to-end command and independent Standards/Spec review; commit the accepted implementation on `main` without pushing.
+- **Status:** implementation, real N=2^16 acceptance runs and affected-suite verification complete; independent Standards/Spec review and commit remain
+
 ## Candidate Research Questions
 
 1. Which algebraic, packing, and lazy-key-switch properties give the CCS 2026 CKKS evaluator its reported low complexity, and how do its separate BFV/BGV/TFHE baselines affect the comparison?

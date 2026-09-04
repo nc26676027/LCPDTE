@@ -1,0 +1,16 @@
+{
+  "schema": "lcpdte-route-b-l11-a2b-full-result-v1",
+  "result": {
+    "first_operation": {
+      "LogN": 16,
+      "PackingSlots": 2048,
+      "WordBits": 8,
+      "WordCapacity": 512
+    },
+    "full_a2b": {
+      "wall_nanoseconds": 25830240800
+    },
+    "input_words": 512,
+    "mismatch_count": 0
+  }
+}

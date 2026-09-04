@@ -1,0 +1,16 @@
+{
+  "command": "go run ./examples/ckksint/routeb_depth2",
+  "working_directory": "D:\\WorkSpace\\LCPDTE",
+  "started_at": "2026-09-04T12:10:09.5029614+08:00",
+  "ended_at": "2026-09-04T12:11:55.6893036+08:00",
+  "wall_seconds": 106.183339,
+  "exit_code": 0,
+  "sampled_peak_process_tree_working_set_bytes": 14710878208,
+  "sampled_peak_process_tree_working_set_gib": 13.700573,
+  "sampled_peak_individual_working_set_bytes": 14667161600,
+  "sampled_peak_individual_working_set_gib": 13.659859,
+  "sampled_peak_individual_name": "routeb_depth2.exe",
+  "sampling_interval_milliseconds": 500,
+  "stdout_sha256": "ed806cf234493ae8af159a630cbd6c8b0291b37ee1112a113f441246ba9b9350",
+  "stderr_bytes": 0
+}

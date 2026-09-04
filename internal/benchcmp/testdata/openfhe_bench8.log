@@ -1,0 +1,6 @@
+Scaling Factor: 43 bits
+CKKS scheme ring dimension: 65536
+Bootstrapping parameters: zN = 8, zSlots = 8192
+
+Finished Warmup for A2B 10.321 s
+Time for A2B : 10.1368 s
