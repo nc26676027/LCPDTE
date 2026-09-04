@@ -22,8 +22,11 @@ The command admits only the fixed acceptance process profile
 `POST_WARMUP_GC=on`, with CPU profiling off. It verifies `GOAMD64=v4` from the executable's embedded
 Go build settings, checks the live scheduler and GC/memory-limit state, and
 requires `LCPDTE_GAO_CPU_PROFILE` to be empty. It exits before constructing the
-HE session when any value differs. The single
-post-warmup GC runs before the five measured calls.
+HE session when any value differs. `POST_WARMUP_GC=on` enables the complete
+fixed lifecycle: a collection runs after the verified warmup and between
+consecutive verified timed samples. All collections, output release,
+decryption, and validation are outside the timed
+`EvaluateA2B` call; no separate inter-sample GC environment variable is needed.
 The acceptance path uses an explicit `go build`: on this toolchain `go run`
 does not embed the required `vcs.revision` and is rejected before setup.
 
@@ -43,8 +46,11 @@ full-packed Lattigo path reports `full-packed-profile-not-assessed`; it does not
 reuse the circuit-specific C75 `CONDITIONAL-PASS`. The comparison parser
 recomputes chain counts and product bit lengths rather than trusting emitted
 aggregates. Cross-backend comparison requires the exact ordered Q/P values,
-actual first-Q width, H=192/H=32, sigma=3.19/effective bound=39, and
-decomposition counts. Backend-native sampling algorithms, key switching,
+namely all 21 Q and 7 P decimal moduli in order, with 904/350 aggregate bits,
+43-bit scale/first-modulus requests, an actual 44-bit first Q, depth 20,
+three large digits, H=192/H=32, sigma=3.19/effective bound=39, 3/0 RNS/base-two
+decomposition, level budget `[3,2]`, automatic-BSGS request `[0,0]`, chunk
+width 4, and cutoff -24. Backend-native sampling algorithms, key switching,
 security selection, scale schedules, and planners remain explicit.
 
 The artifact also records the Go VCS revision, clean/modified flag, runtime,

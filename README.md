@@ -43,15 +43,27 @@ GOAMD64=v4 GOMAXPROCS=1 GOGC=100 GOMEMLIMIT=20GiB POST_WARMUP_GC=on \
   -host-id local-wsl-host -out /tmp/lattigo-v3.json
 ```
 
+`POST_WARMUP_GC=on` selects the fixed acceptance lifecycle: the benchmark
+collects after the verified warmup and between consecutive verified timed
+samples. Output release, collection, decryption, and validation are all outside
+the timed `EvaluateA2B` interval; no additional GC environment variable is
+required.
+
 The same-host raw samples, complete native parameters, resource logs, and
 Gao/OpenFHE reproduction commands are under
 [`research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05`](research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05).
 `compare-ckksint` emits a ratio only for two canonical-v3 artifacts with the
 same protocol, workload, packing, host, thread count, and repetition policy.
-It additionally requires the exact OpenFHE Q/P chains, first-Q width,
-secret weights, error sigma/effective bound, and decomposition counts on the
-Lattigo side. The earlier aggregate-only run is retained as historical evidence
-until the exact-parameter same-host rerun replaces it.
+The fixed workload is `N=65536`, 32,768 complex slots, 8,192 distinct 8-bit
+words, and two low4/high4 output ciphertexts. Admission compares all 21 Q and
+7 P decimal moduli in order, not only their 904/350-bit aggregates, and also
+requires the 43-bit scale/first-modulus requests, actual 44-bit first Q, depth
+20, three large digits, H=192/H=32 secrets, sigma=3.19/effective bound=39,
+3/0 RNS/base-two decomposition, level budget `[3,2]`, automatic-BSGS request
+`[0,0]`, chunk width 4, and cutoff -24. Only an exact-parameter
+OpenFHE-then-Lattigo serial rerun on the same local hardware is acceptance
+evidence; aggregate-only runs remain historical and carry no performance
+conclusion.
 
 ---
 

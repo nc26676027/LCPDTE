@@ -62,7 +62,9 @@ with `go run ./examples/ckksint/routeb_a2b`.
 This API matches the Gao/OpenFHE benchmark shape: `N=65536`, `logSlots=15`,
 `zN=8`, `zSlots=8192`, and `w=4`. Construction prepares the full reusable
 server graph, so every evaluation reports zero `PreparationWallTime` and its
-homomorphic interval in `OnlineWallTime`.
+homomorphic interval in `OnlineWallTime`. The acceptance profile uses the
+exact 21-Q/7-P ordered OpenFHE modulus chains rather than regenerating primes
+from aggregate bit sizes.
 
 ```go
 client, server, setup, err := ckksint.NewGaoFullPackedA2B()
@@ -165,6 +167,12 @@ GOAMD64=v4 GOMAXPROCS=1 GOGC=100 GOMEMLIMIT=20GiB POST_WARMUP_GC=on \
   -host-id local-wsl-host -out /tmp/lattigo-v3.json
 ```
 
+The command needs no second collection switch. `POST_WARMUP_GC=on` enables the
+fixed acceptance lifecycle: one collection follows the verified warmup, and
+another runs between consecutive verified timed samples. These collections,
+output release, decryption, and correctness checks remain outside each timed
+public `EvaluateA2B` call.
+
 The canonical Gao/OpenFHE driver is in
 `research/benchmarks/gao_openfhe_a2b_full`. Both implementations evaluate the
 same 8,192-word input (`0..255` repeated 32 times), use all 32,768 complex
@@ -190,11 +198,14 @@ ephemeral secret distributions, error sampler, key-switch decomposition and
 security selector/evidence. They also bind public-key encryption, resident
 transform factors, backend-native scale/BSGS plans, clean source revisions,
 compiler/runtime/build profile, OS and architecture. Cross-backend admission
-requires identical ordered Q/P chains, actual first-Q width, H=192/H=32,
-sigma=3.19/effective bound=39, and RNS/base-two decomposition counts. The
-backend-native sparse-sign law, Gaussian implementation, key-switch engine,
-scale schedule, and BSGS planner remain explicitly identified rather than
-being mislabeled as the same implementation. The comparator passes only when
+requires all 21 Q and 7 P decimal moduli to match in order, with 904/350
+aggregate bits, 43-bit scale/first-modulus requests, an actual 44-bit first Q,
+depth 20, three large digits, H=192/H=32, sigma=3.19/effective bound=39, 3/0
+RNS/base-two decomposition, level budget `[3,2]`, automatic-BSGS request
+`[0,0]`, chunk width 4, and cutoff -24. The backend-native sparse-sign law,
+Gaussian implementation, key-switch engine, scale schedule, and BSGS planner
+remain explicitly identified rather than being mislabeled as the same
+implementation. The comparator passes only when
 both the Lattigo/OpenFHE mean and median latency ratios are at most 1.
 The Lattigo full-packed artifact reports `full-packed-profile-not-assessed`;
 the separate C75 `CONDITIONAL-PASS` remains bound to its selected-child circuit
@@ -202,8 +213,10 @@ and is not reused as evidence for this benchmark profile.
 
 The 2026-09-05 same-host evidence is preserved in
 [`research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05`](../research/reproduction/benchmarks/gao_openfhe_vs_lattigo_full_2026-09-05):
-the aggregate-only result is historical and will be replaced by the
-exact-parameter rerun before acceptance.
+only the exact-parameter OpenFHE-then-Lattigo serial rerun on that local
+hardware is acceptance evidence. Aggregate-only runs are historical and carry
+no performance conclusion; the generated comparison artifact is the source of
+record for the final mean and median ratios.
 
 ## Profiles and interoperation
 
